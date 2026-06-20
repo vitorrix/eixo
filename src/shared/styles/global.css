@@ -1116,3 +1116,122 @@ html, body {
   cursor: pointer;
 }
 .form-check-item input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+
+/* ── Produtos ─────────────────────────────────── */
+
+/* Form layout */
+.produto-form { display: flex; flex-direction: column; }
+.produto-form-top {
+  display: flex;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 2px;
+}
+.produto-form-fields { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+/* Image upload */
+.produto-img-wrap { display: flex; flex-direction: column; gap: 6px; }
+.produto-img-wrap label { font-size: 12px; font-weight: 600; color: var(--color-muted); }
+.produto-img-box {
+  width: 110px;
+  height: 110px;
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--color-bg);
+  transition: border-color .15s;
+  flex-shrink: 0;
+}
+.produto-img-box:hover { border-color: var(--color-primary); }
+.produto-img-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 11px;
+  padding: 8px;
+  text-align: center;
+}
+.produto-img-hint svg { opacity: .5; }
+
+/* Margem display in form */
+.margem-display {
+  font-size: 18px;
+  font-weight: 700;
+  padding-top: 24px;
+  min-width: 120px;
+}
+.margem-display.green { color: #10b981; }
+.margem-display.red   { color: var(--color-danger); }
+
+/* Estoque toggle */
+.estoque-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.estoque-toggle-label { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.estoque-toggle {
+  padding: 5px 20px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.estoque-toggle.active {
+  background: #d1fae5;
+  border-color: #10b981;
+  color: #065f46;
+}
+.estoque-fields { display: flex; gap: 14px; }
+
+/* List table */
+.produtos-table .th-img { width: 52px; }
+.td-produto-img { width: 52px; padding: 6px 8px !important; }
+.produto-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  display: block;
+}
+.produto-thumb-placeholder {
+  width: 40px;
+  height: 40px;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+/* Margem % in list */
+.margem-pct { font-weight: 700; font-size: 13px; }
+.margem-pct.green { color: #10b981; }
+.margem-pct.red   { color: var(--color-danger); }
+
+/* Estoque badge */
+.estoque-badge {
+  font-size: 13px;
+  font-weight: 600;
+  display: block;
+}
+.estoque-badge.estoque-baixo { color: var(--color-danger); }
+.estoque-min-hint {
+  font-size: 11px;
+  color: var(--color-muted);
+  display: block;
+}

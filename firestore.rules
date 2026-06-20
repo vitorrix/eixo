@@ -51,6 +51,14 @@ service cloud.firestore {
       allow delete: if hasPermission('fornecedores', 'delete');
     }
 
+    // ── /produtos ─────────────────────────────────────────────────────────
+    match /produtos/{id} {
+      allow read:   if hasPermission('produtos', 'view');
+      allow create: if hasPermission('produtos', 'create');
+      allow update: if hasPermission('produtos', 'edit');
+      allow delete: if hasPermission('produtos', 'delete');
+    }
+
     // ── /clientes ─────────────────────────────────────────────────────────
     match /clientes/{id} {
       allow read:   if hasPermission('clientes', 'view');
