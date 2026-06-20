@@ -6,12 +6,12 @@ const routes = {
   '/': { module: null, loader: () => import('../modules/dashboard/index.js') },
   '/pedidos': { module: 'pedidos', loader: () => import('../modules/pedidos/index.js') },
   '/clientes':     { module: 'clientes',     loader: () => import('../modules/clientes/index.js') },
-  '/fornecedores': { module: 'fornecedores', loader: () => import('../modules/fornecedores/index.js') },
-  '/orcamento': { module: 'orcamento', loader: () => import('../modules/orcamento/index.js') },
-  '/recibo': { module: 'recibo', loader: () => import('../modules/recibo/index.js') },
-  '/relatorios': { module: 'relatorios', loader: () => import('../modules/relatorios/index.js') },
-  '/financeiro': { module: 'financeiro', loader: () => import('../modules/financeiro/index.js') },
-  '/usuarios': { module: 'usuarios', loader: () => import('../modules/usuarios/index.js') },
+  '/fornecedores':  { module: 'fornecedores',  loader: () => import('../modules/fornecedores/index.js') },
+  '/recibo':        { module: 'recibo',        loader: () => import('../modules/recibo/index.js') },
+  '/relatorios':    { module: 'relatorios',    loader: () => import('../modules/relatorios/index.js') },
+  '/financeiro':    { module: 'financeiro',    loader: () => import('../modules/financeiro/index.js') },
+  '/configuracoes': { module: 'configuracoes', loader: () => import('../modules/configuracoes/index.js') },
+  '/usuarios':      { module: 'usuarios',      loader: () => import('../modules/usuarios/index.js') },
 }
 
 const app = document.getElementById('app')

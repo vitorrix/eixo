@@ -5,14 +5,14 @@ import { createCotacaoWidget } from '../shared/components/CotacaoDolar.js'
 
 const PAGE_LABELS = {
   '/': 'Painel Inicial',
-  '/pedidos': 'Pedidos',
-  '/clientes':     'Clientes',
-  '/fornecedores': 'Fornecedores',
-  '/orcamento': 'Orçamentos',
-  '/recibo': 'Recibos',
-  '/relatorios': 'Relatórios',
-  '/financeiro': 'Financeiro',
-  '/usuarios': 'Usuários',
+  '/pedidos':       'Pedidos',
+  '/clientes':      'Clientes',
+  '/fornecedores':  'Fornecedores',
+  '/recibo':        'Notas de Venda',
+  '/relatorios':    'Relatórios',
+  '/financeiro':    'Financeiro',
+  '/configuracoes': 'Configurações',
+  '/usuarios':      'Usuários',
 }
 
 const NAV_ICONS = {
@@ -26,10 +26,6 @@ const NAV_ICONS = {
   clientes: [
     'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2',
     'M12 11a4 4 0 100-8 4 4 0 000 8z'
-  ],
-  orcamento: [
-    'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z',
-    'M14 2v6h6M16 13H8M16 17H8M10 9H8'
   ],
   recibo: [
     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2',
@@ -46,6 +42,10 @@ const NAV_ICONS = {
     'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',
     'M9 22V12h6v10'
   ],
+  configuracoes: [
+    'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3',
+    'M1 14h6M9 8h6M17 16h6'
+  ],
   usuarios: [
     'M12 15a3 3 0 100-6 3 3 0 000 6z',
     'M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z'
@@ -55,13 +55,13 @@ const NAV_ICONS = {
 const NAV_ITEMS = [
   { path: '/',          label: 'Dashboard',   module: null,        iconKey: 'dashboard'  },
   { path: '/pedidos',   label: 'Pedidos',     module: 'pedidos',   iconKey: 'pedidos'    },
-  { path: '/clientes',      label: 'Clientes',     module: 'clientes',     iconKey: 'clientes'     },
-  { path: '/fornecedores',  label: 'Fornecedores', module: 'fornecedores', iconKey: 'fornecedores' },
-  { path: '/orcamento', label: 'Orçamentos',  module: 'orcamento', iconKey: 'orcamento'  },
-  { path: '/recibo',    label: 'Recibos',     module: 'recibo',    iconKey: 'recibo'     },
-  { path: '/relatorios',label: 'Relatórios',  module: 'relatorios',iconKey: 'relatorios' },
-  { path: '/financeiro',label: 'Financeiro',  module: 'financeiro',iconKey: 'financeiro' },
-  { path: '/usuarios',  label: 'Usuários',    module: 'usuarios',  iconKey: 'usuarios'   },
+  { path: '/clientes',      label: 'Clientes',      module: 'clientes',      iconKey: 'clientes'      },
+  { path: '/fornecedores',  label: 'Fornecedores',  module: 'fornecedores',  iconKey: 'fornecedores'  },
+  { path: '/recibo',        label: 'Notas de Venda',module: 'recibo',        iconKey: 'recibo'        },
+  { path: '/relatorios',    label: 'Relatórios',    module: 'relatorios',    iconKey: 'relatorios'    },
+  { path: '/financeiro',    label: 'Financeiro',    module: 'financeiro',    iconKey: 'financeiro'    },
+  { path: '/configuracoes', label: 'Configurações', module: 'configuracoes', iconKey: 'configuracoes' },
+  { path: '/usuarios',      label: 'Usuários',      module: 'usuarios',      iconKey: 'usuarios'      },
 ]
 
 function buildIcon(key) {

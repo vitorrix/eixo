@@ -37,6 +37,12 @@ service cloud.firestore {
       allow delete: if false; // desativação via campo active, nunca deleção
     }
 
+    // ── /configuracoes ───────────────────────────────────────────────────
+    match /configuracoes/{docId} {
+      allow read:  if isActive();
+      allow write: if isMaster();
+    }
+
     // ── /fornecedores ────────────────────────────────────────────────────
     match /fornecedores/{id} {
       allow read:   if hasPermission('fornecedores', 'view');
