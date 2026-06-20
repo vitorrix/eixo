@@ -2,8 +2,7 @@ import {
   collection, addDoc, updateDoc, deleteDoc,
   doc, onSnapshot, query, orderBy, serverTimestamp,
 } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '../../firebase.js'
+import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
 
 const COL = 'produtos'
@@ -16,42 +15,18 @@ export function subscribeProdutos(callback, onError) {
   )
 }
 
-export async function uploadImagem(file, id) {
-  const storageRef = ref(storage, `produtos/${id}/imagem`)
-  const snap = await uploadBytes(storageRef, file)
-  return getDownloadURL(snap.ref)
-}
-
-export async function createProduto(data, imagemFile) {
+export async function createProduto(data) {
   const { uid } = getCurrentProfile()
-  const docRef = await addDoc(collection(db, COL), {
+  return addDoc(collection(db, COL), {
     ...sanitize(data),
-    imageUrl: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     createdBy: uid,
   })
-  if (imagemFile) {
-    try {
-      const url = await uploadImagem(imagemFile, docRef.id)
-      await updateDoc(docRef, { imageUrl: url })
-    } catch (e) {
-      console.warn('Upload de imagem falhou:', e)
-    }
-  }
-  return docRef
 }
 
-export async function updateProduto(id, data, imagemFile) {
-  const fields = { ...sanitize(data), updatedAt: serverTimestamp() }
-  if (imagemFile) {
-    try {
-      fields.imageUrl = await uploadImagem(imagemFile, id)
-    } catch (e) {
-      console.warn('Upload de imagem falhou:', e)
-    }
-  }
-  return updateDoc(doc(db, COL, id), fields)
+export async function updateProduto(id, data) {
+  return updateDoc(doc(db, COL, id), { ...sanitize(data), updatedAt: serverTimestamp() })
 }
 
 export async function deleteProduto(id) {

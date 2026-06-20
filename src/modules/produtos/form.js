@@ -1,35 +1,10 @@
-import { el, svgEl, mount } from '../../shared/utils/dom.js'
+import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
 import { createProduto, updateProduto } from './service.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
 export function renderProdutoForm(container, close, produto, categorias) {
   const isEdit = !!produto
-  let selectedFile = null
-
-  // ── Imagem ────────────────────────────────────────────────────────────────
-  const fileInput = el('input', { type: 'file', accept: 'image/*', style: 'display:none' })
-  const imgEl = el('img', { style: 'display:none;width:100%;height:100%;object-fit:cover;border-radius:8px' })
-  const imgHint = el('div', { class: 'produto-img-hint' },
-    _cameraIcon(),
-    el('span', {}, produto?.imageUrl ? 'Trocar imagem' : 'Adicionar imagem')
-  )
-  if (produto?.imageUrl) {
-    imgEl.src = produto.imageUrl
-    imgEl.style.display = 'block'
-    imgHint.style.display = 'none'
-  }
-  const imgBox = el('div', { class: 'produto-img-box' }, fileInput, imgEl, imgHint)
-  imgBox.addEventListener('click', () => fileInput.click())
-  fileInput.addEventListener('change', () => {
-    const file = fileInput.files[0]
-    if (!file) return
-    selectedFile = file
-    const url = URL.createObjectURL(file)
-    imgEl.src = url
-    imgEl.style.display = 'block'
-    imgHint.style.display = 'none'
-  })
 
   // ── Campos ────────────────────────────────────────────────────────────────
   const nomeInp = el('input', { type: 'text', id: 'pf-nome', placeholder: 'ex: iPhone 17 Pro Max 256GB' })
@@ -118,10 +93,10 @@ export function renderProdutoForm(container, close, produto, categorias) {
 
     try {
       if (isEdit) {
-        await updateProduto(produto.id, data, selectedFile)
+        await updateProduto(produto.id, data)
         toastSuccess('Produto atualizado.')
       } else {
-        await createProduto(data, selectedFile)
+        await createProduto(data)
         toastSuccess('Produto criado.')
       }
       close()
@@ -137,21 +112,15 @@ export function renderProdutoForm(container, close, produto, categorias) {
   container.append(
     catList,
     el('div', { class: 'produto-form' },
-      el('div', { class: 'produto-form-top' },
-        el('div', { class: 'produto-form-fields' },
-          el('div', { class: 'field field-full' },
-            el('label', { for: 'pf-nome' }, 'Nome do produto'),
-            nomeInp
-          ),
-          el('div', { class: 'field' },
-            el('label', { for: 'pf-cat' }, 'Categoria'),
-            catInp
-          ),
+      el('div', { class: 'form-grid' },
+        el('div', { class: 'field field-full' },
+          el('label', { for: 'pf-nome' }, 'Nome do produto'),
+          nomeInp
         ),
-        el('div', { class: 'produto-img-wrap' },
-          el('label', {}, 'Imagem'),
-          imgBox
-        )
+        el('div', { class: 'field' },
+          el('label', { for: 'pf-cat' }, 'Categoria'),
+          catInp
+        ),
       ),
       el('div', { class: 'form-section' },
         el('p', { class: 'form-section-title' }, 'Valores'),
@@ -181,15 +150,4 @@ export function renderProdutoForm(container, close, produto, categorias) {
     ),
     el('div', { class: 'modal-footer' }, cancelBtn, submitBtn)
   )
-}
-
-function _cameraIcon() {
-  const svg = svgEl('svg', {
-    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-    'stroke-width': '1.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-    width: '24', height: '24',
-  })
-  svg.appendChild(svgEl('path', { d: 'M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z' }))
-  svg.appendChild(svgEl('circle', { cx: '12', cy: '13', r: '4' }))
-  return svg
 }

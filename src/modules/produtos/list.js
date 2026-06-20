@@ -36,7 +36,6 @@ export function renderProdutoList(container, produtos) {
   const table = el('table', { class: 'data-table produtos-table' },
     el('thead', {},
       el('tr', {},
-        el('th', { class: 'th-img' }, ''),
         el('th', {}, 'Nome'),
         el('th', {}, 'Categoria'),
         el('th', { class: 'th-money' }, 'Custo'),
@@ -76,14 +75,6 @@ export function renderProdutoList(container, produtos) {
     tbody.replaceChildren()
 
     for (const p of filtered) {
-      const imgCell = el('td', { class: 'td-produto-img' })
-      if (p.imageUrl) {
-        const img = el('img', { src: p.imageUrl, alt: p.nome, class: 'produto-thumb' })
-        imgCell.appendChild(img)
-      } else {
-        imgCell.appendChild(el('div', { class: 'produto-thumb-placeholder' }, '📦'))
-      }
-
       const margem = p.margemPct ?? 0
       const margemCell = el('td', { class: 'td-money' },
         el('span', { class: 'margem-pct ' + (margem >= 0 ? 'green' : 'red') },
@@ -107,7 +98,6 @@ export function renderProdutoList(container, produtos) {
       }
 
       const row = el('tr', {},
-        imgCell,
         el('td', { class: 'td-name' }, p.nome),
         el('td', {}, p.categoria || '—'),
         el('td', { class: 'td-money' }, brl(p.precoCusto)),
