@@ -8,7 +8,7 @@ import { getCurrentProfile } from '../../auth/session.js'
 const COL = 'pedidos'
 
 export function subscribePedidos(callback, onError) {
-  const q = query(collection(db, COL), orderBy('data', 'desc'), orderBy('createdAt', 'desc'))
+  const q = query(collection(db, COL), orderBy('data', 'desc'))
   return onSnapshot(q,
     snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
     onError

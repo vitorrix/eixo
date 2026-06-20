@@ -13,9 +13,8 @@ const MODULE_CARDS = [
 ]
 
 const STAT_CARDS = [
-  { label: 'Clientes',     collection: 'clientes',     color: '#10B981', path: '/clientes'     },
-  { label: 'Pedidos',      collection: 'pedidos',      color: '#6366f1', path: '/pedidos'      },
-  { label: 'Fornecedores', collection: 'fornecedores', color: '#f59e0b', path: '/fornecedores' },
+  { label: 'Clientes', collection: 'clientes', color: '#10B981', path: '/clientes' },
+  { label: 'Pedidos',  collection: 'pedidos',  color: '#6366f1', path: '/pedidos'  },
 ]
 
 const ICON_PATHS = {
