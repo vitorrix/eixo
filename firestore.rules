@@ -1,0 +1,91 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Funções auxiliares ────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isMaster() {
+      return isAuthenticated() && userDoc().role == 'master' && userDoc().active == true;
+    }
+
+    function isActive() {
+      return isAuthenticated() && userDoc().active == true;
+    }
+
+    function hasPermission(module, action) {
+      return isActive() &&
+        (userDoc().role == 'master' ||
+         userDoc().permissions[module][action] == true);
+    }
+
+    // ── /users ────────────────────────────────────────────────────────────
+    // Apenas master cria/edita usuários.
+    // Cada usuário pode ler e atualizar apenas seu próprio perfil (ex: senha não está aqui).
+    match /users/{uid} {
+      allow read: if isMaster() || (isActive() && request.auth.uid == uid);
+      allow create: if isMaster();
+      allow update: if isMaster();
+      allow delete: if false; // desativação via campo active, nunca deleção
+    }
+
+    // ── /clientes ─────────────────────────────────────────────────────────
+    match /clientes/{id} {
+      allow read:   if hasPermission('clientes', 'view');
+      allow create: if hasPermission('clientes', 'create');
+      allow update: if hasPermission('clientes', 'edit');
+      allow delete: if hasPermission('clientes', 'delete');
+    }
+
+    // ── /pedidos ──────────────────────────────────────────────────────────
+    match /pedidos/{id} {
+      allow read:   if hasPermission('pedidos', 'view');
+      allow create: if hasPermission('pedidos', 'create');
+      allow update: if hasPermission('pedidos', 'edit');
+      allow delete: if hasPermission('pedidos', 'delete');
+    }
+
+    // ── /orcamentos ───────────────────────────────────────────────────────
+    match /orcamentos/{id} {
+      allow read:   if hasPermission('orcamento', 'view');
+      allow create: if hasPermission('orcamento', 'create');
+      allow update: if hasPermission('orcamento', 'edit');
+      allow delete: if hasPermission('orcamento', 'delete');
+    }
+
+    // ── /recibos ──────────────────────────────────────────────────────────
+    match /recibos/{id} {
+      allow read:   if hasPermission('recibo', 'view');
+      allow create: if hasPermission('recibo', 'create');
+      allow update: if hasPermission('recibo', 'edit');
+      allow delete: if hasPermission('recibo', 'delete');
+    }
+
+    // ── /relatorios (coleção gerada por aggregações — somente leitura) ────
+    match /relatorios/{id} {
+      allow read:   if hasPermission('relatorios', 'view');
+      allow write:  if isMaster();
+    }
+
+    // ── /financeiro ───────────────────────────────────────────────────────
+    match /financeiro/{tipo}/{id} {
+      allow read:   if hasPermission('financeiro', 'view');
+      allow create: if hasPermission('financeiro', 'create');
+      allow update: if hasPermission('financeiro', 'edit');
+      allow delete: if hasPermission('financeiro', 'delete');
+    }
+
+    // Bloqueia todo o resto por padrão
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
