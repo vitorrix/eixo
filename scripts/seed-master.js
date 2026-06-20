@@ -1,27 +1,28 @@
 /**
- * Cria o documento do usuário MASTER no Firestore após o primeiro login.
- * Execute uma vez no console do navegador (ou adapte para Node com Admin SDK).
+ * Cria o documento do usuário MASTER no Firestore.
  *
  * Como usar:
- *  1. Faça login no Firebase Console e crie o usuário com email/senha.
- *  2. Abra o console do navegador na aplicação logada.
- *  3. Cole este snippet (substituindo UID e dados reais).
- *
- * Estrutura do documento /users/{uid}:
+ *  1. Acesse Firebase Console → Authentication → Add user
+ *     Email: vitor.rix@icloud.com  |  Senha: (defina uma)
+ *  2. Copie o UID gerado
+ *  3. Abra o console do navegador na aplicação (eixo.barukstore.com.br)
+ *  4. Cole o trecho abaixo substituindo SEU_UID_AQUI pelo UID real
  */
+
+const UID = 'SEU_UID_AQUI'
+
 const MASTER_PROFILE = {
-  name: 'Baruk',
-  email: 'barukerstore@gmail.com',
+  name: 'Vitor',
+  email: 'vitor.rix@icloud.com',
   role: 'master',
   active: true,
-  permissions: {},  // master ignora permissões, campo vazio
+  permissions: {},
   createdAt: new Date().toISOString(),
 }
 
-// Via Admin SDK (Node.js):
-// const admin = require('firebase-admin')
-// admin.initializeApp({ credential: admin.credential.applicationDefault() })
-// await admin.firestore().doc(`users/${UID}`).set(MASTER_PROFILE)
+// Cole no console do navegador após importar db do Firebase:
+// import { doc, setDoc } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js'
+// await setDoc(doc(db, 'users', UID), MASTER_PROFILE)
 
-console.log('Perfil master a ser criado:', JSON.stringify(MASTER_PROFILE, null, 2))
-console.log('Substitua o UID pelo uid real do Firebase Auth antes de executar.')
+console.log('Perfil master:', JSON.stringify(MASTER_PROFILE, null, 2))
+console.log('UID a substituir:', UID)
