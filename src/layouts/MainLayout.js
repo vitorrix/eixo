@@ -6,7 +6,8 @@ import { createCotacaoWidget } from '../shared/components/CotacaoDolar.js'
 const PAGE_LABELS = {
   '/': 'Painel Inicial',
   '/pedidos': 'Pedidos',
-  '/clientes': 'Clientes',
+  '/clientes':     'Clientes',
+  '/fornecedores': 'Fornecedores',
   '/orcamento': 'Orçamentos',
   '/recibo': 'Recibos',
   '/relatorios': 'Relatórios',
@@ -41,6 +42,10 @@ const NAV_ICONS = {
   financeiro: [
     'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'
   ],
+  fornecedores: [
+    'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',
+    'M9 22V12h6v10'
+  ],
   usuarios: [
     'M12 15a3 3 0 100-6 3 3 0 000 6z',
     'M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z'
@@ -50,7 +55,8 @@ const NAV_ICONS = {
 const NAV_ITEMS = [
   { path: '/',          label: 'Dashboard',   module: null,        iconKey: 'dashboard'  },
   { path: '/pedidos',   label: 'Pedidos',     module: 'pedidos',   iconKey: 'pedidos'    },
-  { path: '/clientes',  label: 'Clientes',    module: 'clientes',  iconKey: 'clientes'   },
+  { path: '/clientes',      label: 'Clientes',     module: 'clientes',     iconKey: 'clientes'     },
+  { path: '/fornecedores',  label: 'Fornecedores', module: 'fornecedores', iconKey: 'fornecedores' },
   { path: '/orcamento', label: 'Orçamentos',  module: 'orcamento', iconKey: 'orcamento'  },
   { path: '/recibo',    label: 'Recibos',     module: 'recibo',    iconKey: 'recibo'     },
   { path: '/relatorios',label: 'Relatórios',  module: 'relatorios',iconKey: 'relatorios' },

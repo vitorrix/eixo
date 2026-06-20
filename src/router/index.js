@@ -5,7 +5,8 @@ import { getCurrentProfile, can } from '../auth/session.js'
 const routes = {
   '/': { module: null, loader: () => import('../modules/dashboard/index.js') },
   '/pedidos': { module: 'pedidos', loader: () => import('../modules/pedidos/index.js') },
-  '/clientes': { module: 'clientes', loader: () => import('../modules/clientes/index.js') },
+  '/clientes':     { module: 'clientes',     loader: () => import('../modules/clientes/index.js') },
+  '/fornecedores': { module: 'fornecedores', loader: () => import('../modules/fornecedores/index.js') },
   '/orcamento': { module: 'orcamento', loader: () => import('../modules/orcamento/index.js') },
   '/recibo': { module: 'recibo', loader: () => import('../modules/recibo/index.js') },
   '/relatorios': { module: 'relatorios', loader: () => import('../modules/relatorios/index.js') },

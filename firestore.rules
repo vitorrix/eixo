@@ -37,6 +37,14 @@ service cloud.firestore {
       allow delete: if false; // desativação via campo active, nunca deleção
     }
 
+    // ── /fornecedores ────────────────────────────────────────────────────
+    match /fornecedores/{id} {
+      allow read:   if hasPermission('fornecedores', 'view');
+      allow create: if hasPermission('fornecedores', 'create');
+      allow update: if hasPermission('fornecedores', 'edit');
+      allow delete: if hasPermission('fornecedores', 'delete');
+    }
+
     // ── /clientes ─────────────────────────────────────────────────────────
     match /clientes/{id} {
       allow read:   if hasPermission('clientes', 'view');
