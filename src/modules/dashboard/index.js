@@ -6,24 +6,23 @@ import { collection, getCountFromServer } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 
 const MODULE_CARDS = [
-  { label: 'Pedidos',    sub: 'Gerenciar pedidos',    path: '/pedidos',   color: '#6366f1', icon: 'pedidos'    },
-  { label: 'Clientes',   sub: 'Cadastro de clientes', path: '/clientes',  color: '#10B981', icon: 'clientes'   },
-  { label: 'Orçamentos', sub: 'Criar e consultar',    path: '/orcamento', color: '#f59e0b', icon: 'orcamento'  },
-  { label: 'Recibos',    sub: 'Emitir recibos',       path: '/recibo',    color: '#3b82f6', icon: 'recibo'     },
+  { label: 'Pedidos',      sub: 'Gerenciar pedidos',       path: '/pedidos',       color: '#6366f1', icon: 'pedidos'      },
+  { label: 'Clientes',     sub: 'Cadastro de clientes',    path: '/clientes',      color: '#10B981', icon: 'clientes'     },
+  { label: 'Fornecedores', sub: 'Cadastro de fornecedores',path: '/fornecedores',  color: '#f59e0b', icon: 'fornecedores' },
+  { label: 'Financeiro',   sub: 'Receitas e despesas',     path: '/financeiro',    color: '#3b82f6', icon: 'financeiro'   },
 ]
 
 const STAT_CARDS = [
-  { label: 'Clientes',    collection: 'clientes',   color: '#10B981', path: '/clientes'  },
-  { label: 'Pedidos',     collection: 'pedidos',    color: '#6366f1', path: '/pedidos'   },
-  { label: 'Orçamentos',  collection: 'orcamentos', color: '#f59e0b', path: '/orcamento' },
-  { label: 'Recibos',     collection: 'recibos',    color: '#3b82f6', path: '/recibo'    },
+  { label: 'Clientes',     collection: 'clientes',     color: '#10B981', path: '/clientes'     },
+  { label: 'Pedidos',      collection: 'pedidos',      color: '#6366f1', path: '/pedidos'      },
+  { label: 'Fornecedores', collection: 'fornecedores', color: '#f59e0b', path: '/fornecedores' },
 ]
 
 const ICON_PATHS = {
-  pedidos:   ['M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z','M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12'],
-  clientes:  ['M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2','M12 11a4 4 0 100-8 4 4 0 000 8z'],
-  orcamento: ['M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z','M14 2v6h6','M16 13H8','M16 17H8','M10 9H8'],
-  recibo:    ['M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2','M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2','M9 12h6M9 16h4'],
+  pedidos:      ['M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z','M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12'],
+  clientes:     ['M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2','M12 11a4 4 0 100-8 4 4 0 000 8z'],
+  fornecedores: ['M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z','M9 22V12h6v10'],
+  financeiro:   ['M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6'],
 }
 
 function buildIcon(key, color) {

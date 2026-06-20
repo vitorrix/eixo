@@ -38,6 +38,18 @@ export function rawDigits(v) {
   return v.replace(/\D/g, '')
 }
 
+export function brl(v) {
+  return (v || 0).toLocaleString('pt-BR', {
+    style: 'currency', currency: 'BRL',
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  })
+}
+
+export function shortDate(iso) {
+  if (!iso || iso.length < 10) return iso || '—'
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+}
+
 // Retorna "MM-DD" para queries de aniversário
 export function birthdayMD(dateStr) {
   if (!dateStr || dateStr.length < 10) return ''
