@@ -4,8 +4,10 @@ import { el, svgEl, mount } from '../shared/utils/dom.js'
 import { createCotacaoWidget } from '../shared/components/CotacaoDolar.js'
 
 const PAGE_LABELS = {
-  '/': 'Painel Inicial',
+  '/':              'Painel Inicial',
   '/pedidos':       'Pedidos',
+  '/compras':       'Compras',
+  '/vendas':        'Vendas',
   '/clientes':      'Clientes',
   '/fornecedores':  'Fornecedores',
   '/produtos':      'Produtos',
@@ -27,6 +29,15 @@ const NAV_ICONS = {
   clientes: [
     'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2',
     'M12 11a4 4 0 100-8 4 4 0 000 8z'
+  ],
+  compras: [
+    'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z',
+    'M3 6h18',
+    'M16 10a4 4 0 01-8 0',
+  ],
+  vendas: [
+    'M23 6l-9.5 9.5-5-5L1 18',
+    'M17 6h6v6',
   ],
   recibo: [
     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2',
@@ -59,7 +70,9 @@ const NAV_ICONS = {
 
 const NAV_ITEMS = [
   { path: '/',          label: 'Dashboard',   module: null,        iconKey: 'dashboard'  },
-  { path: '/pedidos',   label: 'Pedidos',     module: 'pedidos',   iconKey: 'pedidos'    },
+  { path: '/pedidos',       label: 'Pedidos',       module: 'pedidos',       iconKey: 'pedidos'       },
+  { path: '/compras',       label: 'Compras',       module: 'compras',       iconKey: 'compras'       },
+  { path: '/vendas',        label: 'Vendas',        module: 'vendas',        iconKey: 'vendas'        },
   { path: '/clientes',      label: 'Clientes',      module: 'clientes',      iconKey: 'clientes'      },
   { path: '/fornecedores',  label: 'Fornecedores',  module: 'fornecedores',  iconKey: 'fornecedores'  },
   { path: '/produtos',      label: 'Produtos',      module: 'produtos',      iconKey: 'produtos'      },

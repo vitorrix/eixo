@@ -75,6 +75,22 @@ service cloud.firestore {
       allow delete: if hasPermission('pedidos', 'delete');
     }
 
+    // ── /compras ──────────────────────────────────────────────────────────
+    match /compras/{id} {
+      allow read:   if hasPermission('compras', 'view');
+      allow create: if hasPermission('pedidos', 'edit'); // criado via confirmarPagamento
+      allow update: if hasPermission('compras', 'edit');
+      allow delete: if isMaster();
+    }
+
+    // ── /vendas ───────────────────────────────────────────────────────────
+    match /vendas/{id} {
+      allow read:   if hasPermission('vendas', 'view');
+      allow create: if hasPermission('pedidos', 'edit'); // criado via confirmarPagamento
+      allow update: if hasPermission('vendas', 'edit');
+      allow delete: if isMaster();
+    }
+
     // ── /orcamentos ───────────────────────────────────────────────────────
     match /orcamentos/{id} {
       allow read:   if hasPermission('orcamento', 'view');

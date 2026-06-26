@@ -3,42 +3,34 @@ import { brl, shortDate } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { deletePedido } from './service.js'
+import { deletePedido, patchPedido, confirmarPagamento } from './service.js'
 import { renderPedidoForm } from './form.js'
 
-const STATUS_CHIP = {
-  aguardando: { label: 'Aguardando Pgto', cls: 'chip-aguardando' },
-  pago:       { label: 'Pago',            cls: 'chip-pago'       },
-  logistica:  { label: 'Em Logística',    cls: 'chip-logistica'  },
-  entregue:   { label: 'Entregue',        cls: 'chip-entregue'   },
-  pos_venda:  { label: 'Pós-venda',       cls: 'chip-pos_venda'  },
+const STATUS_META = {
+  negociando:           { label: 'Negociando',       cls: 'badge-negociando'    },
+  aguardando_pagamento: { label: 'Aguard. Pgto',     cls: 'badge-aguard-pgto'   },
+  pago:                 { label: 'Pago',              cls: 'badge-pago'          },
+  cancelado:            { label: 'Cancelado',         cls: 'badge-cancelado'     },
 }
 
-const LOG_LABEL = { motoboy: 'Motoboy', correio: 'Correios', retirada: 'Retirada' }
+const PAG_LABEL = { pix: '🏦 PIX', dinheiro: '💰 Dinheiro', cartao: '💳 Cartão', link: '🏪 Link' }
 
 function monthKey(iso) { return iso ? iso.slice(0, 7) : '' }
-function monthLabel(ym) {
-  if (!ym) return ''
-  const [y, m] = ym.split('-')
-  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-  return `${months[parseInt(m, 10) - 1]} ${y}`
+
+function nowMonth() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function calcStats(pedidos, month) {
-  const list = pedidos.filter(p => monthKey(p.data) === month)
-  const fat   = list.reduce((s, p) => s + (p.totalVenda  || 0), 0)
-  const mar   = list.reduce((s, p) => s + (p.totalMargem || 0), 0)
-  const pend  = list.filter(p => p.statusEntrega !== 'entregue').length
-  return {
-    count:       list.length,
-    faturamento: fat,
-    margem:      mar,
-    ticket:      list.length ? Math.round(fat / list.length) : 0,
-    pendentes:   pend,
-  }
+function calcStats(list) {
+  const total   = list.length
+  const valor   = list.reduce((s, p) => s + (p.valorNegociado || p.totalVenda || 0), 0)
+  const pagos   = list.filter(p => p.status === 'pago').length
+  const pend    = list.filter(p => p.status === 'negociando' || p.status === 'aguardando_pagamento').length
+  return { total, valor, pagos, pend }
 }
 
-function statCard(label, valueEl, sub) {
+function kpiCard(label, valueEl, sub) {
   return el('div', { class: 'pedido-stat' },
     el('div', { class: 'pedido-stat-label' }, label),
     valueEl,
@@ -46,97 +38,120 @@ function statCard(label, valueEl, sub) {
   )
 }
 
-export function renderPedidoList(container, pedidos, { clientes, fornecedores, operacoes }) {
+export function renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores }) {
   const canCreate = can('pedidos', 'create')
   const canEdit   = can('pedidos', 'edit')
   const canDelete = can('pedidos', 'delete')
 
-  const formasPagamento = operacoes?.formasPagamento || []
+  // ── KPIs ─────────────────────────────────────────────────────────────────
+  const totalEl  = el('div', { class: 'pedido-stat-value' })
+  const valorEl  = el('div', { class: 'pedido-stat-value green' })
+  const pagosEl  = el('div', { class: 'pedido-stat-value green' })
+  const pendEl   = el('div', { class: 'pedido-stat-value' })
+  const subLabel = el('span', {})
 
-  // ── Mês atual ─────────────────────────────────────────────────────────────
-  const now = new Date()
-  let currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-
-  // ── Stat cards ────────────────────────────────────────────────────────────
-  const countEl   = el('div', { class: 'pedido-stat-value' })
-  const fatEl     = el('div', { class: 'pedido-stat-value green' })
-  const marEl     = el('div', { class: 'pedido-stat-value green' })
-  const ticketEl  = el('div', { class: 'pedido-stat-value' })
-  const pendEl    = el('div', { class: 'pedido-stat-value' })
-  const monthLabelEl = el('span', { class: 'month-nav-label' })
-
-  function updateStats() {
-    monthLabelEl.textContent = monthLabel(currentMonth)
-    const s = calcStats(pedidos, currentMonth)
-    countEl.textContent  = s.count
-    fatEl.textContent    = brl(s.faturamento)
-    marEl.textContent    = brl(s.margem)
-    ticketEl.textContent = brl(s.ticket)
-    pendEl.textContent   = s.pendentes
-    pendEl.className     = 'pedido-stat-value ' + (s.pendentes > 0 ? 'red' : '')
-    renderTable()
+  function updateKpis(list) {
+    const s = calcStats(list)
+    totalEl.textContent = s.total
+    valorEl.textContent = brl(s.valor)
+    pagosEl.textContent = s.pagos
+    pendEl.textContent  = s.pend
+    pendEl.className    = 'pedido-stat-value ' + (s.pend > 0 ? 'red' : '')
+    subLabel.textContent = currentMonth ? monthLabel(currentMonth) : 'total'
   }
 
+  let currentMonth = nowMonth()
+
+  function monthLabel(ym) {
+    const [y, m] = ym.split('-')
+    const ms = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+    return `${ms[+m - 1]} ${y}`
+  }
+
+  function shiftMonth(ym, delta) {
+    const [y, m] = ym.split('-').map(Number)
+    const d = new Date(y, m - 1 + delta, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }
+
+  const monthNavLabel = el('span', { class: 'month-nav-label' })
   const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
   const nextBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '›')
-  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); updateStats() })
-  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); updateStats() })
+  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); refresh() })
+  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); refresh() })
 
-  const statsRow = el('div', { class: 'pedidos-stats' },
-    statCard('Pedidos',       countEl,  monthLabelEl.cloneNode(true)),
-    statCard('Faturamento',   fatEl,    'receita do mês'),
-    statCard('Margem Bruta',  marEl,    'lucro acumulado'),
-    statCard('Ticket Médio',  ticketEl, 'por pedido'),
-    statCard('Pendentes',     pendEl,   'não entregues'),
+  const kpisRow = el('div', { class: 'pedidos-stats' },
+    kpiCard('Pedidos',       totalEl, subLabel),
+    kpiCard('Valor Negoc.',  valorEl, 'total'),
+    kpiCard('Pagos',         pagosEl, 'confirmados'),
+    kpiCard('Pendentes',     pendEl,  'negoc. + aguard.'),
   )
 
   // ── Toolbar ───────────────────────────────────────────────────────────────
+  const searchInp = el('input', { type: 'text', class: 'search-input', placeholder: 'Buscar por cliente ou produto...' })
+  searchInp.addEventListener('input', () => refresh())
+
   const newBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Novo Pedido')
   newBtn.style.display = canCreate ? '' : 'none'
   newBtn.addEventListener('click', () => openPedidoModal(null))
 
-  const monthNav = el('div', { class: 'month-nav' },
-    prevBtn, monthLabelEl, nextBtn
-  )
-
+  const countBadge = el('span', { class: 'count-badge' })
   const toolbar = el('div', { class: 'toolbar' },
     el('div', { style: 'display:flex;gap:10px;align-items:center' },
-      newBtn, monthNav
+      newBtn,
+      el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
     ),
-    el('span', { class: 'count-badge', id: 'pedido-count' }, String(pedidos.length))
+    countBadge
   )
 
-  // ── Table ─────────────────────────────────────────────────────────────────
+  // ── Tabela ─────────────────────────────────────────────────────────────────
   const tbody = document.createElement('tbody')
-  const table = el('table', { class: 'data-table pedidos-table' },
+  const colCount = (canEdit || canDelete) ? 8 : 7
+  const table = el('table', { class: 'data-table' },
     el('thead', {},
       el('tr', {},
         el('th', {}, 'Data'),
         el('th', {}, 'Cliente'),
         el('th', {}, 'Produtos'),
-        el('th', {}, 'Acessórios'),
-        el('th', { class: 'th-money' }, 'Custo'),
-        el('th', { class: 'th-money' }, 'Venda'),
-        el('th', { class: 'th-money' }, 'Margem'),
+        el('th', { class: 'th-money' }, 'Valor'),
+        el('th', {}, 'Pgto'),
         el('th', {}, 'Status'),
-        ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, '')] : []),
+        ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, 'Ações')] : []),
       )
     ),
     tbody
   )
   const tableWrap  = el('div', { class: 'table-wrapper' }, table)
   const emptyState = el('div', { class: 'empty-state hidden' },
-    el('p', {}, 'Nenhum pedido neste mês.'),
+    el('p', {}, 'Nenhum pedido encontrado.'),
     el('p', { class: 'text-muted', style: 'font-size:13px;margin-top:4px' },
       canCreate ? 'Clique em "+ Novo Pedido" para começar.' : '')
   )
 
-  function renderTable() {
-    tbody.replaceChildren()
-    const monthPedidos = pedidos.filter(p => monthKey(p.data) === currentMonth)
-    document.getElementById('pedido-count').textContent = monthPedidos.length
+  function filteredList() {
+    const q = searchInp.value.trim().toLowerCase()
+    let list = pedidos.filter(p => monthKey(p.dataContato || p.data || '') === currentMonth)
+    if (q) {
+      list = list.filter(p => {
+        const cliente = (p.cliente || p.clienteNome || '').toLowerCase()
+        const prods   = (p.produtos || []).map(pr => pr.nome || '').join(' ').toLowerCase()
+        return cliente.includes(q) || prods.includes(q)
+      })
+    }
+    return list
+  }
 
-    if (!monthPedidos.length) {
+  function refresh() {
+    monthNavLabel.textContent = monthLabel(currentMonth)
+    const list = filteredList()
+    countBadge.textContent = list.length
+    updateKpis(list)
+    renderTable(list)
+  }
+
+  function renderTable(list) {
+    tbody.replaceChildren()
+    if (!list.length) {
       tableWrap.classList.add('hidden')
       emptyState.classList.remove('hidden')
       return
@@ -144,102 +159,142 @@ export function renderPedidoList(container, pedidos, { clientes, fornecedores, o
     tableWrap.classList.remove('hidden')
     emptyState.classList.add('hidden')
 
-    let lastDate = null
-    for (const p of monthPedidos) {
-      // Date group header
-      if (p.data !== lastDate) {
-        lastDate = p.data
-        const hdr = document.createElement('tr')
-        const td  = document.createElement('td')
-        td.colSpan = 9
-        td.className = 'pedidos-date-header'
-        td.textContent = formatFullDate(p.data)
-        hdr.appendChild(td)
-        tbody.appendChild(hdr)
-      }
+    for (const p of list) {
+      const meta = STATUS_META[p.status] || { label: p.status || '—', cls: 'badge-negociando' }
 
       // Produtos cell
-      const produtosCell = el('td', { class: 'td-produtos' })
+      const prodsCell = el('td', { class: 'td-produtos' })
       ;(p.produtos || []).forEach(pr => {
-        const lucro   = pr.lucro || 0
-        const lucroEl = el('span', { class: 'pedido-lucro ' + (lucro >= 0 ? 'pos' : 'neg') },
-          (lucro >= 0 ? '+' : '') + brl(lucro)
-        )
         const line = el('div', { class: 'pedido-produto-line' },
           el('span', { class: 'dot' }, '●'),
           el('span', { class: 'pedido-produto-nome' }, pr.nome || '—'),
         )
-        const sub = el('div', { class: 'pedido-produto-sub' })
-        if (pr.fornecedorNome) sub.appendChild(el('span', { class: 'pedido-forn' }, pr.fornecedorNome))
-        sub.appendChild(el('span', { class: 'pedido-financials' },
-          ` custo ${brl(pr.custo)} → venda ${brl(pr.venda)} `,
-        ))
-        sub.appendChild(lucroEl)
-        produtosCell.appendChild(line)
-        produtosCell.appendChild(sub)
+        prodsCell.appendChild(line)
+        if (pr.acessorios?.length) {
+          const sub = el('div', { class: 'pedido-produto-sub' })
+          pr.acessorios.forEach(a => sub.appendChild(el('span', { class: 'acessorios-tag' }, a)))
+          prodsCell.appendChild(sub)
+        }
       })
 
-      // Acessórios cell
-      const acessCell = el('td', { class: 'td-acessorios' })
-      if (p.acessorios?.length) {
-        p.acessorios.forEach(a => acessCell.appendChild(el('span', { class: 'acessorios-tag' }, a)))
-      } else {
-        acessCell.textContent = '—'
+      // Valor
+      const valor = p.valorNegociado ?? p.totalVenda ?? 0
+
+      // Ações
+      const actionsCell = el('td', { class: 'td-actions' })
+      if (canEdit) {
+        const editBtn = el('button', { class: 'btn btn-sm btn-outline', type: 'button' }, 'Editar')
+        editBtn.addEventListener('click', () => openPedidoModal(p))
+        actionsCell.appendChild(editBtn)
       }
 
-      // Status cell
-      const chip = STATUS_CHIP[p.statusEntrega] || { label: p.statusEntrega, cls: 'chip-default' }
-      const statusCell = el('td', { class: 'td-status' })
-      statusCell.appendChild(el('span', { class: `pedido-chip ${chip.cls}` }, chip.label))
-      if (p.pagamento) statusCell.appendChild(el('span', { class: 'pedido-chip chip-default' }, p.pagamento))
-      if (p.logistica) statusCell.appendChild(el('span', { class: 'pedido-chip chip-default' }, LOG_LABEL[p.logistica] || p.logistica))
-      if (p.sistemaOk) statusCell.appendChild(el('span', { class: 'pedido-chip chip-ok' }, '✓ Sistema'))
-      if (p.notaEnviada) statusCell.appendChild(el('span', { class: 'pedido-chip chip-ok' }, '✓ Nota'))
-      if (p.inclui_troca) statusCell.appendChild(el('span', { class: 'pedido-chip chip-troca' }, '⇄ Troca'))
+      if (canEdit && p.status === 'negociando') {
+        const moveBtn = el('button', { class: 'btn btn-sm btn-outline-blue', type: 'button' }, '→ Aguardar Pgto')
+        moveBtn.addEventListener('click', () => advanceStatus(p, 'aguardando_pagamento'))
+        actionsCell.appendChild(moveBtn)
+      }
+
+      if (canEdit && p.status === 'aguardando_pagamento') {
+        const confBtn = el('button', { class: 'btn btn-sm btn-success', type: 'button' }, '✓ Confirmar Pgto')
+        confBtn.addEventListener('click', () => openConfirmarModal(p))
+        actionsCell.appendChild(confBtn)
+      }
+
+      if (canEdit && (p.status === 'negociando' || p.status === 'aguardando_pagamento')) {
+        const cancelBtn = el('button', { class: 'btn btn-sm btn-danger-outline', type: 'button' }, 'Cancelar')
+        cancelBtn.addEventListener('click', () => advanceStatus(p, 'cancelado'))
+        actionsCell.appendChild(cancelBtn)
+      }
+
+      if (canDelete && (p.status === 'cancelado')) {
+        const delBtn = el('button', { class: 'btn btn-sm btn-danger-outline', type: 'button' }, 'Excluir')
+        delBtn.addEventListener('click', () => confirmDelete(p))
+        actionsCell.appendChild(delBtn)
+      }
 
       const row = el('tr', {},
-        el('td', { class: 'td-date' }, shortDate(p.data)),
-        el('td', { class: 'td-name' }, p.clienteNome || '—'),
-        produtosCell,
-        acessCell,
-        el('td', { class: 'td-money' }, brl(p.totalCusto)),
-        el('td', { class: 'td-money' }, brl(p.totalVenda)),
-        el('td', { class: 'td-money money-margem' }, (p.totalMargem >= 0 ? '+' : '') + brl(p.totalMargem)),
-        statusCell,
+        el('td', { class: 'td-date' }, shortDate(p.dataContato || p.data || '')),
+        el('td', { class: 'td-name' }, p.cliente || p.clienteNome || '—'),
+        prodsCell,
+        el('td', { class: 'td-money' }, brl(valor)),
+        el('td', {}, p.formaPagamento ? (PAG_LABEL[p.formaPagamento] || p.formaPagamento) : '—'),
+        el('td', {}, el('span', { class: `status-badge ${meta.cls}` }, meta.label)),
+        ...(canEdit || canDelete ? [actionsCell] : []),
       )
-
-      if (canEdit || canDelete) {
-        const actions = el('td', { class: 'td-actions' })
-        if (canEdit) {
-          const editBtn = el('button', { class: 'btn btn-sm btn-outline', type: 'button' }, 'Editar')
-          editBtn.addEventListener('click', () => openPedidoModal(p))
-          actions.appendChild(editBtn)
-        }
-        if (canDelete) {
-          const delBtn = el('button', { class: 'btn btn-sm btn-danger-outline', type: 'button' }, 'Excluir')
-          delBtn.addEventListener('click', () => confirmDelete(p))
-          actions.appendChild(delBtn)
-        }
-        row.appendChild(actions)
-      }
-
       tbody.appendChild(row)
     }
   }
 
-  // ── Modal helpers ─────────────────────────────────────────────────────────
+  // ── Modais ─────────────────────────────────────────────────────────────────
   function openPedidoModal(p) {
     openModal({
-      title: p ? 'Editar Pedido' : 'Novo Pedido',
-      size:  'lg',
-      renderBody: (body, close) => renderPedidoForm(body, close, p, { clientes, fornecedores, formasPagamento }),
+      title:      p ? 'Editar Pedido' : 'Novo Pedido',
+      size:       'lg',
+      renderBody: (body, close) =>
+        renderPedidoForm(body, close, p, { clientes, produtosCatalogo, fornecedores }),
     })
+  }
+
+  function openConfirmarModal(pedido) {
+    openModal({
+      title: 'Confirmar Pagamento',
+      size:  'md',
+      renderBody: (body, close) => {
+        const fornInp  = el('input', { type: 'text', list: 'cf-forn-list', placeholder: 'ex: Mohamed, XFB...' })
+        const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+        const dl = el('datalist', { id: 'cf-forn-list' })
+        fornecedores.forEach(f => dl.appendChild(el('option', { value: f.name })))
+
+        const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+        cancelBtn.addEventListener('click', close)
+
+        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Confirmar e gerar Compra + Venda')
+        okBtn.addEventListener('click', async () => {
+          if (!fornInp.value.trim()) { toastError('Informe o fornecedor.'); return }
+          if (!custoInp.value) { toastError('Informe o custo de compra.'); return }
+          okBtn.disabled = true; okBtn.textContent = 'Processando...'
+          try {
+            await confirmarPagamento(pedido, { fornecedor: fornInp.value, custo: custoInp.value })
+            toastSuccess('Pagamento confirmado — Compra e Venda gerados.')
+            close()
+          } catch (err) {
+            console.error(err)
+            toastError('Erro ao confirmar pagamento.')
+            okBtn.disabled = false; okBtn.textContent = 'Confirmar e gerar Compra + Venda'
+          }
+        })
+
+        mount(body,
+          dl,
+          el('p', { class: 'confirm-message', style: 'margin-bottom:16px' },
+            `Confirmar pagamento do pedido de "${pedido.cliente || pedido.clienteNome || '?'}"?`,
+          ),
+          el('p', { class: 'confirm-message', style: 'margin-bottom:20px;font-size:12px' },
+            'Isso criará um registro em Compras e um em Vendas automaticamente.'
+          ),
+          el('div', { class: 'form-grid' },
+            el('div', { class: 'field' }, el('label', {}, 'Fornecedor'), fornInp),
+            el('div', { class: 'field' }, el('label', {}, 'Custo de compra R$'), custoInp),
+          ),
+          el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
+        )
+      },
+    })
+  }
+
+  async function advanceStatus(p, status) {
+    try {
+      await patchPedido(p.id, { status })
+      toastSuccess(`Pedido ${status === 'cancelado' ? 'cancelado' : 'atualizado'}.`)
+    } catch {
+      toastError('Erro ao atualizar status.')
+    }
   }
 
   function confirmDelete(p) {
     openConfirm({
       title:        'Excluir pedido',
-      message:      `Excluir pedido de "${p.clienteNome}"? Esta ação não pode ser desfeita.`,
+      message:      `Excluir pedido de "${p.cliente || p.clienteNome}"? Não pode ser desfeito.`,
       confirmLabel: 'Excluir',
       danger:       true,
       onConfirm:    async () => {
@@ -249,27 +304,10 @@ export function renderPedidoList(container, pedidos, { clientes, fornecedores, o
     })
   }
 
-  mount(container, statsRow, toolbar, tableWrap, emptyState)
-  updateStats()
+  mount(container, kpisRow, toolbar, searchInp, tableWrap, emptyState)
+  refresh()
 
   return {
-    update(newPedidos) {
-      pedidos = newPedidos
-      updateStats()
-    },
+    update(newPedidos) { pedidos = newPedidos; refresh() },
   }
-}
-
-function shiftMonth(ym, delta) {
-  const [y, m] = ym.split('-').map(Number)
-  const date = new Date(y, m - 1 + delta, 1)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-function formatFullDate(iso) {
-  if (!iso || iso.length < 10) return iso || '—'
-  const [y, m, d] = iso.split('-')
-  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
-  return `${d} de ${months[parseInt(m, 10) - 1]} de ${y}`
 }

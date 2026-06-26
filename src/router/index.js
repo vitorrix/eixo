@@ -4,7 +4,9 @@ import { getCurrentProfile, can } from '../auth/session.js'
 // Cada rota define: módulo requerido + ação 'view' (null = livre para autenticados)
 const routes = {
   '/': { module: null, loader: () => import('../modules/dashboard/index.js') },
-  '/pedidos': { module: 'pedidos', loader: () => import('../modules/pedidos/index.js') },
+  '/pedidos':  { module: 'pedidos',  loader: () => import('../modules/pedidos/index.js')  },
+  '/compras':  { module: 'compras',  loader: () => import('../modules/compras/index.js')  },
+  '/vendas':   { module: 'vendas',   loader: () => import('../modules/vendas/index.js')   },
   '/clientes':     { module: 'clientes',     loader: () => import('../modules/clientes/index.js') },
   '/fornecedores':  { module: 'fornecedores',  loader: () => import('../modules/fornecedores/index.js') },
   '/produtos':      { module: 'produtos',      loader: () => import('../modules/produtos/index.js') },

@@ -1,4 +1,4 @@
-import { collection, getDocs, getDoc, doc, query, orderBy } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
 import { toastError } from '../../shared/components/Toast.js'
@@ -11,17 +11,17 @@ export function render(container) {
 }
 
 async function _init(container) {
-  let clientes = [], fornecedores = [], operacoes = { formasPagamento: [], contas: [] }
+  let clientes = [], produtosCatalogo = [], fornecedores = []
 
   try {
-    const [cSnap, fSnap, opSnap] = await Promise.all([
+    const [cSnap, pSnap, fSnap] = await Promise.all([
       getDocs(query(collection(db, 'clientes'),     orderBy('nameLower'))),
+      getDocs(query(collection(db, 'produtos'),     orderBy('nameLower'))),
       getDocs(query(collection(db, 'fornecedores'), orderBy('nameLower'))),
-      getDoc(doc(db, 'configuracoes', 'operacoes')),
     ])
-    clientes     = cSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-    fornecedores = fSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-    if (opSnap.exists()) operacoes = opSnap.data()
+    clientes         = cSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    produtosCatalogo = pSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    fornecedores     = fSnap.docs.map(d => ({ id: d.id, ...d.data() }))
   } catch (err) {
     console.error('Erro ao carregar dependências:', err)
   }
@@ -33,7 +33,7 @@ async function _init(container) {
     pedidos => {
       if (firstLoad) {
         firstLoad = false
-        listController = renderPedidoList(container, pedidos, { clientes, fornecedores, operacoes })
+        listController = renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores })
       } else {
         listController?.update(pedidos)
       }

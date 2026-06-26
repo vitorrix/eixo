@@ -3,95 +3,105 @@ import { brl } from '../../shared/utils/formatters.js'
 import { createPedido, updatePedido } from './service.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
-const STATUS_OPTIONS = [
-  { value: 'aguardando', label: 'Aguardando Pgto' },
-  { value: 'pago',       label: 'Pago' },
-  { value: 'logistica',  label: 'Em Logística' },
-  { value: 'entregue',   label: 'Entregue' },
-  { value: 'pos_venda',  label: 'Pós-venda' },
+const PAGAMENTO_OPTS = [
+  { value: 'pix',      label: '🏦 PIX'      },
+  { value: 'dinheiro', label: '💰 Dinheiro'  },
+  { value: 'cartao',   label: '💳 Cartão'   },
+  { value: 'link',     label: '🏪 Link'     },
 ]
 
-const LOGISTICA_OPTIONS = [
-  { value: '',         label: '— Logística —' },
-  { value: 'motoboy',  label: 'Motoboy' },
-  { value: 'correio',  label: 'Correios' },
-  { value: 'retirada', label: 'Retirada' },
-]
-
-const ACESSORIOS = ['Case', 'Película', 'Fonte', 'Cabo', 'AirPods']
+const ACESSORIOS_RAPIDOS = ['Case', 'Película', 'Fonte', 'Cabo', 'AirPods', 'Baseus', 'Peining']
 
 function todayISO() { return new Date().toISOString().slice(0, 10) }
 
-export function renderPedidoForm(container, close, pedido, { clientes, fornecedores, formasPagamento }) {
+export function renderPedidoForm(container, close, pedido, { clientes, produtosCatalogo, fornecedores }) {
   const isEdit = !!pedido
 
-  // ── Totais (declarados antes das funções que os referenciam) ─────────────
-  const custoTotalEl  = el('span', { class: 'total-value' })
-  const vendaTotalEl  = el('span', { class: 'total-value' })
-  const margemTotalEl = el('span', { class: 'total-value total-margem' })
+  // ── Estado reativo ─────────────────────────────────────────────────────────
+  let produtos = (pedido?.produtos || [{ nome: '', acessorios: [] }]).map(p => ({
+    nome:       p.nome       || '',
+    acessorios: [...(p.acessorios || [])],
+  }))
+  if (!produtos.length) produtos = [{ nome: '', acessorios: [] }]
 
-  function recalcTotals() {
-    const c = produtos.reduce((s, p) => s + (p.custo || 0), 0)
-    const v = produtos.reduce((s, p) => s + (p.venda || 0), 0)
-    const m = v - c
-    custoTotalEl.textContent  = brl(c)
-    vendaTotalEl.textContent  = brl(v)
-    margemTotalEl.textContent = (m >= 0 ? '+' : '') + brl(m)
-    margemTotalEl.className   = 'total-value total-margem ' + (m >= 0 ? 'green' : 'red')
-  }
+  let formaPagamento = pedido?.formaPagamento || ''
+  let trocaAtiva     = !!pedido?.troca
 
-  // ── Produtos ─────────────────────────────────────────────────────────────
-  let produtos = pedido?.produtos?.map(p => ({ ...p }))
-    || [{ nome: '', fornecedorId: null, fornecedorNome: '', custo: 0, venda: 0 }]
+  // ── Datalists ──────────────────────────────────────────────────────────────
+  const clientesDatalistId = 'pf2-clientes'
+  const produtosDatalistId = 'pf2-produtos'
+  const fornDatalistId     = 'pf2-forn'
 
+  const clientesDatalist = el('datalist', { id: clientesDatalistId })
+  clientes.forEach(c => clientesDatalist.appendChild(el('option', { value: c.name })))
+
+  const produtosDatalist = el('datalist', { id: produtosDatalistId })
+  produtosCatalogo.forEach(p => produtosDatalist.appendChild(el('option', { value: p.nome })))
+
+  const fornDatalist = el('datalist', { id: fornDatalistId })
+  fornecedores.forEach(f => fornDatalist.appendChild(el('option', { value: f.name })))
+
+  // ── Identificação ──────────────────────────────────────────────────────────
+  const dataInp = el('input', { type: 'date' })
+  dataInp.value = pedido?.dataContato || todayISO()
+
+  const clienteInp = el('input', { type: 'text', list: clientesDatalistId, placeholder: 'Nome do cliente' })
+  clienteInp.value = pedido?.cliente || pedido?.clienteNome || ''
+
+  // ── Produtos ───────────────────────────────────────────────────────────────
   const produtosWrap = el('div', { class: 'produtos-wrap' })
 
   function renderProdutos() {
     produtosWrap.replaceChildren()
     produtos.forEach((p, i) => {
-      const lucroEl = el('div', { class: 'lucro-display' })
 
-      function updateLucro() {
-        const l = (produtos[i].venda || 0) - (produtos[i].custo || 0)
-        lucroEl.textContent = (l >= 0 ? '+' : '') + brl(l)
-        lucroEl.className   = 'lucro-display ' + (l >= 0 ? 'green' : 'red')
+      // Acessórios deste produto
+      const acessListEl = el('div', { class: 'acessorios-selected' })
+
+      function renderAcessProduto() {
+        acessListEl.replaceChildren()
+        produtos[i].acessorios.forEach((a, j) => {
+          const rm = el('button', { type: 'button', class: 'acessorio-remove-btn' }, '×')
+          rm.addEventListener('click', () => {
+            produtos[i].acessorios.splice(j, 1)
+            renderAcessProduto()
+          })
+          acessListEl.appendChild(el('span', { class: 'acessorio-item' }, a, rm))
+        })
       }
 
-      const nomeInp = el('input', { type: 'text', placeholder: 'ex: iPhone 17 Pro Max 256GB' })
+      function addAcessProduto(nome) {
+        const n = nome.trim()
+        if (!n || produtos[i].acessorios.includes(n)) return
+        produtos[i].acessorios.push(n)
+        renderAcessProduto()
+      }
+
+      renderAcessProduto()
+
+      const quickBtns = ACESSORIOS_RAPIDOS.map(a => {
+        const btn = el('button', { type: 'button', class: 'acessorio-quick-btn' }, a)
+        btn.addEventListener('click', () => addAcessProduto(a))
+        return btn
+      })
+
+      const acessInp = el('input', { type: 'text', class: 'acessorio-custom-inp',
+        placeholder: 'ex: Película 3D, Fonte Tipo C...' })
+      acessInp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addAcessProduto(acessInp.value); acessInp.value = '' }
+      })
+      const acessAddBtn = el('button', { type: 'button', class: 'btn btn-sm btn-outline' }, '+ Add')
+      acessAddBtn.addEventListener('click', () => { addAcessProduto(acessInp.value); acessInp.value = '' })
+
+      const nomeInp = el('input', { type: 'text', list: produtosDatalistId, placeholder: 'ex: iPhone 17 Pro Max 256GB' })
       nomeInp.value = p.nome || ''
       nomeInp.addEventListener('input', () => { produtos[i].nome = nomeInp.value })
-
-      const fornSel = el('select', { class: 'field-select' })
-      fornSel.appendChild(el('option', { value: '' }, '— Fornecedor —'))
-      fornecedores.forEach(f => fornSel.appendChild(el('option', { value: f.id }, f.name)))
-      if (p.fornecedorId) fornSel.value = p.fornecedorId
-      fornSel.addEventListener('change', () => {
-        const found = fornecedores.find(f => f.id === fornSel.value)
-        produtos[i].fornecedorId   = fornSel.value || null
-        produtos[i].fornecedorNome = found?.name || ''
-      })
-
-      const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
-      custoInp.value = p.custo || ''
-      custoInp.addEventListener('input', () => {
-        produtos[i].custo = parseFloat(custoInp.value) || 0
-        updateLucro(); recalcTotals()
-      })
-
-      const vendaInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
-      vendaInp.value = p.venda || ''
-      vendaInp.addEventListener('input', () => {
-        produtos[i].venda = parseFloat(vendaInp.value) || 0
-        updateLucro(); recalcTotals()
-      })
 
       const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
       delBtn.addEventListener('click', () => {
         if (produtos.length === 1) return
-        produtos.splice(i, 1); renderProdutos(); recalcTotals()
+        produtos.splice(i, 1); renderProdutos()
       })
-
-      updateLucro()
 
       produtosWrap.appendChild(
         el('div', { class: 'form-produto-block' },
@@ -99,14 +109,12 @@ export function renderPedidoForm(container, close, pedido, { clientes, fornecedo
             el('span', { class: 'form-produto-label' }, `Produto ${i + 1}`),
             delBtn
           ),
-          el('div', { class: 'field field-full' },
-            el('label', {}, 'Nome do produto'), nomeInp
-          ),
-          el('div', { class: 'form-produto-row' },
-            el('div', { class: 'field' }, el('label', {}, 'Fornecedor'), fornSel),
-            el('div', { class: 'field field-num' }, el('label', {}, 'Custo R$'), custoInp),
-            el('div', { class: 'field field-num' }, el('label', {}, 'Venda R$'), vendaInp),
-            el('div', { class: 'field' }, el('label', {}, 'Lucro'), lucroEl),
+          el('div', { class: 'field' }, el('label', {}, 'Item'), nomeInp),
+          el('div', { class: 'form-section-sub' },
+            el('p', { class: 'form-sub-label' }, 'Acessórios'),
+            el('div', { class: 'acessorios-quickadd' }, ...quickBtns),
+            el('div', { class: 'acessorio-custom-row' }, acessInp, acessAddBtn),
+            acessListEl
           )
         )
       )
@@ -114,68 +122,68 @@ export function renderPedidoForm(container, close, pedido, { clientes, fornecedo
   }
 
   renderProdutos()
-  recalcTotals()
 
   const addProdutoBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ produto')
   addProdutoBtn.addEventListener('click', () => {
-    produtos.push({ nome: '', fornecedorId: null, fornecedorNome: '', custo: 0, venda: 0 })
+    produtos.push({ nome: '', acessorios: [] })
     renderProdutos()
   })
 
-  // ── Identificação ────────────────────────────────────────────────────────
-  const dataInp = el('input', { type: 'date', id: 'pf-data' })
-  dataInp.value = pedido?.data || todayISO()
+  // ── Financeiro ─────────────────────────────────────────────────────────────
+  const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+  valorInp.value = pedido?.valorNegociado || ''
 
-  const clienteSel = el('select', { id: 'pf-cliente', class: 'field-select' })
-  clienteSel.appendChild(el('option', { value: '' }, '— Selecionar cliente —'))
-  clientes.forEach(c => clienteSel.appendChild(el('option', { value: c.id }, c.name)))
-  if (pedido?.clienteId) clienteSel.value = pedido.clienteId
-
-  // ── Acessórios ───────────────────────────────────────────────────────────
-  let selectedAcessorios = [...(pedido?.acessorios || [])]
-  const acessorioBtns = ACESSORIOS.map(a => {
-    const btn = el('button', { type: 'button', class: 'acessorio-btn' }, a)
-    if (selectedAcessorios.includes(a)) btn.classList.add('active')
-    btn.addEventListener('click', () => {
-      if (selectedAcessorios.includes(a)) {
-        selectedAcessorios = selectedAcessorios.filter(x => x !== a)
-        btn.classList.remove('active')
-      } else {
-        selectedAcessorios.push(a)
-        btn.classList.add('active')
-      }
+  // Chips de pagamento
+  function makePagChips() {
+    const wrap = el('div', { class: 'status-chips-row' })
+    const btns = PAGAMENTO_OPTS.map(opt => {
+      const btn = el('button', { type: 'button', class: 'status-chip-btn' }, opt.label)
+      if (formaPagamento === opt.value) btn.classList.add('active')
+      btn.addEventListener('click', () => {
+        formaPagamento = formaPagamento === opt.value ? '' : opt.value
+        btns.forEach((b, j) => b.classList.toggle('active', formaPagamento === PAGAMENTO_OPTS[j].value))
+      })
+      return btn
     })
-    return btn
+    btns.forEach(b => wrap.appendChild(b))
+    return wrap
+  }
+
+  // ── Troca ──────────────────────────────────────────────────────────────────
+  const trocaProdutoInp  = el('input', { type: 'text', placeholder: 'Produto recebido na troca' })
+  const trocaCreditoInp  = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+  trocaProdutoInp.value  = pedido?.troca?.produto      || ''
+  trocaCreditoInp.value  = pedido?.troca?.valorCredito || ''
+
+  const trocaSection = el('div', { class: 'troca-section' })
+  function renderTroca() {
+    trocaSection.replaceChildren()
+    if (trocaAtiva) {
+      mount(trocaSection,
+        el('div', { class: 'form-grid' },
+          el('div', { class: 'field' }, el('label', {}, 'Produto da troca'), trocaProdutoInp),
+          el('div', { class: 'field' }, el('label', {}, 'Crédito R$'), trocaCreditoInp),
+        )
+      )
+    }
+  }
+
+  const trocaToggle = el('button', { type: 'button', class: 'btn btn-outline btn-sm' },
+    trocaAtiva ? '↔️ Troca ativa' : '↔️ Inclui troca?')
+  trocaToggle.classList.toggle('btn-active-outline', trocaAtiva)
+  trocaToggle.addEventListener('click', () => {
+    trocaAtiva = !trocaAtiva
+    trocaToggle.textContent = trocaAtiva ? '↔️ Troca ativa' : '↔️ Inclui troca?'
+    trocaToggle.classList.toggle('btn-active-outline', trocaAtiva)
+    renderTroca()
   })
+  renderTroca()
 
-  // ── Status / Pagamento / Logística ────────────────────────────────────────
-  const statusSel = el('select', { id: 'pf-status', class: 'field-select' })
-  STATUS_OPTIONS.forEach(s => statusSel.appendChild(el('option', { value: s.value }, s.label)))
-  statusSel.value = pedido?.statusEntrega || 'aguardando'
-
-  const pagSel = el('select', { id: 'pf-pag', class: 'field-select' })
-  pagSel.appendChild(el('option', { value: '' }, '— Pagamento —'))
-  formasPagamento.forEach(f => pagSel.appendChild(el('option', { value: f.nome }, f.nome)))
-  if (pedido?.pagamento) pagSel.value = pedido.pagamento
-
-  const logSel = el('select', { id: 'pf-log', class: 'field-select' })
-  LOGISTICA_OPTIONS.forEach(o => logSel.appendChild(el('option', { value: o.value }, o.label)))
-  if (pedido?.logistica) logSel.value = pedido.logistica
-
-  // ── Checkboxes ────────────────────────────────────────────────────────────
-  const sistemaChk = el('input', { type: 'checkbox', id: 'pf-sistema' })
-  sistemaChk.checked = !!pedido?.sistemaOk
-  const notaChk = el('input', { type: 'checkbox', id: 'pf-nota' })
-  notaChk.checked = !!pedido?.notaEnviada
-  const trocaChk = el('input', { type: 'checkbox', id: 'pf-troca' })
-  trocaChk.checked = !!pedido?.inclui_troca
-
-  // ── Observações ───────────────────────────────────────────────────────────
-  const obsInp = el('textarea', { id: 'pf-obs', rows: '3', class: 'field-textarea',
-    placeholder: 'Serial, modelo, notas...' })
+  // ── Observações ────────────────────────────────────────────────────────────
+  const obsInp = el('textarea', { rows: '2', class: 'field-textarea', placeholder: 'Observações, serial, modelo...' })
   obsInp.value = pedido?.observacoes || ''
 
-  // ── Botões ────────────────────────────────────────────────────────────────
+  // ── Botões ─────────────────────────────────────────────────────────────────
   const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
   cancelBtn.addEventListener('click', close)
 
@@ -183,29 +191,26 @@ export function renderPedidoForm(container, close, pedido, { clientes, fornecedo
     isEdit ? 'Salvar alterações' : 'Criar pedido')
 
   submitBtn.addEventListener('click', async () => {
-    const clienteId   = clienteSel.value || null
-    const clienteNome = clientes.find(c => c.id === clienteId)?.name || ''
-
-    if (!clienteId) { toastError('Selecione um cliente.'); return }
+    const cliente = clienteInp.value.trim()
+    if (!cliente) { toastError('Informe o nome do cliente.'); return }
     if (!dataInp.value) { toastError('Informe a data.'); return }
+
+    const troca = trocaAtiva
+      ? { produto: trocaProdutoInp.value.trim(), valorCredito: parseFloat(trocaCreditoInp.value) || 0 }
+      : null
 
     submitBtn.disabled = true
     submitBtn.textContent = 'Salvando...'
 
     try {
       const data = {
-        data:          dataInp.value,
-        clienteId,
-        clienteNome,
+        dataContato:    dataInp.value,
+        cliente,
         produtos,
-        acessorios:    selectedAcessorios,
-        pagamento:     pagSel.value,
-        logistica:     logSel.value,
-        statusEntrega: statusSel.value,
-        sistemaOk:     sistemaChk.checked,
-        notaEnviada:   notaChk.checked,
-        inclui_troca:  trocaChk.checked,
-        observacoes:   obsInp.value,
+        valorNegociado: valorInp.value,
+        formaPagamento,
+        troca,
+        observacoes:    obsInp.value,
       }
       if (isEdit) {
         await updatePedido(pedido.id, data)
@@ -223,14 +228,15 @@ export function renderPedidoForm(container, close, pedido, { clientes, fornecedo
     }
   })
 
-  // ── Layout ────────────────────────────────────────────────────────────────
+  // ── Layout ─────────────────────────────────────────────────────────────────
   container.append(
+    clientesDatalist, produtosDatalist, fornDatalist,
     el('div', { class: 'pedido-form' },
       el('div', { class: 'form-section' },
         el('p', { class: 'form-section-title' }, 'Identificação'),
         el('div', { class: 'form-grid' },
-          el('div', { class: 'field' }, el('label', { for: 'pf-data' }, 'Data'), dataInp),
-          el('div', { class: 'field field-full' }, el('label', { for: 'pf-cliente' }, 'Cliente'), clienteSel),
+          el('div', { class: 'field' }, el('label', {}, 'Data do contato'), dataInp),
+          el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteInp),
         )
       ),
       el('div', { class: 'form-section' },
@@ -238,36 +244,25 @@ export function renderPedidoForm(container, close, pedido, { clientes, fornecedo
           el('p', { class: 'form-section-title', style: 'margin:0' }, 'Produtos'),
           addProdutoBtn
         ),
-        produtosWrap,
-        el('div', { class: 'form-totais-row' },
-          el('span', { class: 'total-label' }, 'Custo: '), custoTotalEl,
-          el('span', { class: 'total-sep' }, '·'),
-          el('span', { class: 'total-label' }, 'Venda: '), vendaTotalEl,
-          el('span', { class: 'total-sep' }, '·'),
-          el('span', { class: 'total-label' }, 'Margem: '), margemTotalEl,
-        )
+        produtosWrap
       ),
       el('div', { class: 'form-section' },
-        el('p', { class: 'form-section-title' }, 'Acessórios incluídos'),
-        el('div', { class: 'acessorios-toggle' }, ...acessorioBtns)
-      ),
-      el('div', { class: 'form-section' },
-        el('p', { class: 'form-section-title' }, 'Status e Pagamento'),
+        el('p', { class: 'form-section-title' }, 'Negociação'),
         el('div', { class: 'form-grid' },
-          el('div', { class: 'field' }, el('label', { for: 'pf-status' }, 'Status'), statusSel),
-          el('div', { class: 'field' }, el('label', { for: 'pf-pag' }, 'Pagamento'), pagSel),
-          el('div', { class: 'field' }, el('label', { for: 'pf-log' }, 'Logística'), logSel),
+          el('div', { class: 'field' },
+            el('label', {}, 'Valor negociado R$'), valorInp
+          ),
+          el('div', { class: 'field field-full' },
+            el('label', {}, 'Forma de pagamento'),
+            makePagChips()
+          ),
         ),
-        el('div', { class: 'form-check-row' },
-          el('label', { class: 'form-check-item', for: 'pf-sistema' }, sistemaChk, ' Sistema OK'),
-          el('label', { class: 'form-check-item', for: 'pf-nota' },    notaChk,    ' Nota enviada'),
-          el('label', { class: 'form-check-item', for: 'pf-troca' },   trocaChk,   ' Inclui troca'),
-        )
+        el('div', { class: 'troca-row' }, trocaToggle),
+        trocaSection,
       ),
       el('div', { class: 'form-section' },
-        el('div', { class: 'field field-full' },
-          el('label', { for: 'pf-obs' }, 'Observações (serial, modelo, etc.)'),
-          obsInp
+        el('div', { class: 'field' },
+          el('label', {}, 'Observações'), obsInp
         )
       )
     ),

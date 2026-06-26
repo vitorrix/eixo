@@ -1235,3 +1235,287 @@ html, body {
   color: var(--color-muted);
   display: block;
 }
+
+/* ── Pedidos — chips de status atualizados ───────── */
+.chip-confirmado { background: #d1fae5; color: #065f46; }
+.chip-manutencao { background: #e5e7eb; color: #374151; }
+.chip-pesquisar  { background: #dbeafe; color: #1e40af; }
+.chip-pag        { background: #ede9fe; color: #5b21b6; }
+.chip-compra     { background: #fef3c7; color: #92400e; }
+.chip-falta      { background: #fee2e2; color: #991b1b; }
+
+/* ── Pedidos — form: produto block ──────────────── */
+.form-produto-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.form-produto-financials {
+  display: grid;
+  grid-template-columns: 130px 130px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.lucro-display-inline {
+  font-size: 18px;
+  font-weight: 700;
+  padding-top: 26px;
+}
+.lucro-display-inline.green { color: #10b981; }
+.lucro-display-inline.red   { color: var(--color-danger); }
+
+/* ── Pedidos — form: acessórios ─────────────────── */
+.acessorios-quickadd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.acessorio-quick-btn {
+  padding: 5px 13px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all .15s;
+}
+.acessorio-quick-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.acessorio-custom-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.acessorio-custom-inp {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+.acessorio-custom-inp:focus { border-color: var(--color-primary); }
+
+.acessorios-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.acessorio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 10px;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #065f46;
+}
+
+.acessorio-remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #065f46;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: .65;
+  font-family: var(--font);
+}
+.acessorio-remove-btn:hover { opacity: 1; }
+
+/* ── Pedidos — form: grupos de status ───────────── */
+.status-group {
+  margin-bottom: 16px;
+}
+.status-group:last-child { margin-bottom: 0; }
+
+.status-group-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--color-muted);
+  margin-bottom: 7px;
+}
+
+.status-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.status-chip-btn {
+  padding: 6px 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 20px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: border-color .15s, background .15s, color .15s;
+}
+.status-chip-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.status-chip-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+/* Checklist chips ficam com fundo verde claro (não sólido) */
+.checklist-chips .status-chip-btn.active {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+}
+
+/* Stat card sub com mês */
+.pedido-stat-sub-month {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+/* ── Status badges (pedidos/compras/vendas) ──────── */
+.status-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  white-space: nowrap;
+}
+.badge-negociando    { background: #fef3c7; color: #92400e; }
+.badge-aguard-pgto   { background: #dbeafe; color: #1e40af; }
+.badge-pago          { background: #d1fae5; color: #065f46; }
+.badge-cancelado     { background: #f3f4f6; color: #6b7280; }
+.badge-pendente      { background: #fef3c7; color: #92400e; }
+.badge-comprado      { background: #dbeafe; color: #1e40af; }
+.badge-recebido      { background: #d1fae5; color: #065f46; }
+
+/* ── Inline status select (looks like a badge) ────── */
+.status-inline-sel {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 3px 22px 3px 9px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a7a82'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  background-size: 8px;
+  transition: opacity .15s;
+}
+.status-inline-sel:focus { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.status-inline-sel:disabled { opacity: .65; cursor: default; }
+.status-inline-sel.badge-negociando  { background-color: #fef3c7; color: #92400e; }
+.status-inline-sel.badge-aguard-pgto { background-color: #dbeafe; color: #1e40af; }
+.status-inline-sel.badge-pago        { background-color: #d1fae5; color: #065f46; }
+.status-inline-sel.badge-cancelado   { background-color: #f3f4f6; color: #6b7280; }
+.status-inline-sel.badge-pendente    { background-color: #fef3c7; color: #92400e; }
+.status-inline-sel.badge-comprado    { background-color: #dbeafe; color: #1e40af; }
+.status-inline-sel.badge-recebido    { background-color: #d1fae5; color: #065f46; }
+
+/* ── Recibo toggle ────────────────────────────────── */
+.recibo-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-muted);
+}
+.recibo-chk { width: 14px; height: 14px; cursor: pointer; accent-color: var(--color-primary); }
+
+/* ── Extra button variants ───────────────────────── */
+.btn-success {
+  background: #10b981;
+  color: #fff;
+  border: none;
+}
+.btn-success:hover:not(:disabled) { background: #0ea572; }
+
+.btn-outline-blue {
+  background: transparent;
+  border: 1px solid #3b82f6;
+  color: #1d4ed8;
+}
+.btn-outline-blue:hover:not(:disabled) { background: #eff6ff; }
+
+.btn-active-outline {
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+.btn-active-outline:hover:not(:disabled) { background: #ecfdf5; }
+
+/* ── Pedidos form — troca section ────────────────── */
+.troca-section {
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+.troca-row {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 10px;
+  align-items: start;
+}
+
+/* ── Pedidos form — subsection ───────────────────── */
+.form-section-sub {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+}
+.form-sub-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--color-muted);
+  margin-bottom: 8px;
+}
+
+/* ── Action row buttons in pedidos list ──────────── */
+.pedido-actions-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
