@@ -280,9 +280,16 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     catch { toastError('Erro ao confirmar pagamento.') }
   }
 
-  async function confirmarEntrega(id) {
-    try { await marcarEntregue(id); toastSuccess('Pedido marcado como entregue.') }
-    catch { toastError('Erro ao marcar entrega.') }
+  function confirmarEntrega(id) {
+    openConfirm({
+      title: 'Confirmar entrega',
+      message: 'O pedido foi entregue ao cliente?',
+      confirmLabel: 'Sim, foi entregue',
+      onConfirm: async () => {
+        try { await marcarEntregue(id); toastSuccess('Pedido marcado como entregue.') }
+        catch { toastError('Erro ao marcar entrega.') }
+      },
+    })
   }
 
   function cancelarPedido(p) {
