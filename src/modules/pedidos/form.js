@@ -243,7 +243,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   }
 
   // ── Troca ─────────────────────────────────────────────────────────────────
-  const trocaProdutoInp = el('input', { type: 'text', placeholder: 'Produto recebido na troca' })
+  const trocaProdutoInp = el('input', { type: 'text', list: produtosDatalistId, placeholder: 'ex: iPhone 16 Pro 128GB S/N' })
   const trocaCreditoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
   trocaProdutoInp.value = pedido?.troca?.produto      || ''
   trocaCreditoInp.value = pedido?.troca?.valorCredito || ''
