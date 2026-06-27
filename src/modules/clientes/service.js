@@ -31,6 +31,25 @@ export function subscribeAniversariantes(callback) {
   )
 }
 
+export async function createClienteRapido(name, phone = '', type = 'PF') {
+  const { uid } = getCurrentProfile()
+  return addDoc(collection(db, COL), {
+    type,
+    name: name.trim(),
+    nameLower: name.trim().toLowerCase(),
+    document: '',
+    phone: phone.replace(/\D/g, ''),
+    email: '',
+    birthdate: '',
+    birthdayMD: '',
+    address: { cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '' },
+    notes: '',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    createdBy: uid,
+  })
+}
+
 export async function createCliente(data) {
   const { uid } = getCurrentProfile()
   return addDoc(collection(db, COL), {

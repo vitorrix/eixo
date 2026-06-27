@@ -1519,3 +1519,18 @@ html, body {
   gap: 6px;
   flex-wrap: wrap;
 }
+
+/* ── Cadastro rápido de cliente ──────────────────── */
+.cliente-cadastrar-hint { margin-top: 5px; }
+.btn-cadastrar-rapido {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.btn-cadastrar-rapido:hover { color: var(--color-primary-hover); }

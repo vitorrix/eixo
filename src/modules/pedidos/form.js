@@ -1,6 +1,8 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
 import { createPedido, updatePedido } from './service.js'
+import { createClienteRapido } from '../clientes/service.js'
+import { openModal } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
 const PAGAMENTO_OPTS = [
@@ -32,8 +34,14 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   const produtosDatalistId = 'pf2-produtos'
   const fornDatalistId     = 'pf2-forn'
 
+  let clientesList = [...clientes]
+
   const clientesDatalist = el('datalist', { id: clientesDatalistId })
-  clientes.forEach(c => clientesDatalist.appendChild(el('option', { value: c.name })))
+  function refreshClientesDatalist() {
+    clientesDatalist.replaceChildren()
+    clientesList.forEach(c => clientesDatalist.appendChild(el('option', { value: c.name })))
+  }
+  refreshClientesDatalist()
 
   const produtosDatalist = el('datalist', { id: produtosDatalistId })
   produtosCatalogo.forEach(p => produtosDatalist.appendChild(el('option', { value: p.nome })))
@@ -47,6 +55,90 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
   const clienteInp = el('input', { type: 'text', list: clientesDatalistId, placeholder: 'Nome do cliente' })
   clienteInp.value = pedido?.cliente || pedido?.clienteNome || ''
+
+  // ── Hint de cadastro rápido ────────────────────────────────────────────────
+  const cadastrarHint = el('div', { class: 'cliente-cadastrar-hint hidden' })
+
+  function isClienteExistente(nome) {
+    return clientesList.some(c => c.name.toLowerCase() === nome.toLowerCase())
+  }
+
+  function updateCadastrarHint() {
+    const nome = clienteInp.value.trim()
+    if (!nome || isClienteExistente(nome)) {
+      cadastrarHint.classList.add('hidden')
+      return
+    }
+    cadastrarHint.replaceChildren()
+    const btn = el('button', { type: 'button', class: 'btn-cadastrar-rapido' },
+      `+ Cadastrar "${nome}" como novo cliente`)
+    btn.addEventListener('click', () => abrirCadastroRapido(nome))
+    cadastrarHint.appendChild(btn)
+    cadastrarHint.classList.remove('hidden')
+  }
+
+  clienteInp.addEventListener('input', updateCadastrarHint)
+
+  function abrirCadastroRapido(nomeInicial) {
+    openModal({
+      title: 'Novo cliente',
+      size: 'sm',
+      renderBody: (body, closeModal) => {
+        let tipo = 'PF'
+
+        const pfBtn = el('button', { type: 'button', class: 'type-btn active' }, 'PF')
+        const pjBtn = el('button', { type: 'button', class: 'type-btn' }, 'PJ')
+        pfBtn.addEventListener('click', () => {
+          tipo = 'PF'
+          pfBtn.classList.add('active'); pjBtn.classList.remove('active')
+        })
+        pjBtn.addEventListener('click', () => {
+          tipo = 'PJ'
+          pjBtn.classList.add('active'); pfBtn.classList.remove('active')
+        })
+
+        const nomeRapidoInp = el('input', { type: 'text', placeholder: 'Nome completo' })
+        nomeRapidoInp.value = nomeInicial
+
+        const telefoneInp = el('input', { type: 'tel', placeholder: '(00) 00000-0000' })
+
+        const cancelarBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+        cancelarBtn.addEventListener('click', closeModal)
+
+        const salvarBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Cadastrar')
+        salvarBtn.addEventListener('click', async () => {
+          const nome = nomeRapidoInp.value.trim()
+          if (!nome) { toastError('Informe o nome do cliente.'); return }
+          salvarBtn.disabled = true
+          salvarBtn.textContent = 'Salvando...'
+          try {
+            const docRef = await createClienteRapido(nome, telefoneInp.value, tipo)
+            clientesList.push({ id: docRef.id, name: nome, nameLower: nome.toLowerCase() })
+            clientesList.sort((a, b) => a.nameLower.localeCompare(b.nameLower))
+            refreshClientesDatalist()
+            clienteInp.value = nome
+            updateCadastrarHint()
+            toastSuccess(`"${nome}" cadastrado.`)
+            closeModal()
+          } catch (err) {
+            console.error(err)
+            toastError('Erro ao cadastrar cliente.')
+            salvarBtn.disabled = false
+            salvarBtn.textContent = 'Cadastrar'
+          }
+        })
+
+        body.append(
+          el('div', { class: 'type-toggle', style: 'margin-bottom:16px' }, pfBtn, pjBtn),
+          el('div', { class: 'field', style: 'margin-bottom:12px' }, el('label', {}, 'Nome'), nomeRapidoInp),
+          el('div', { class: 'field', style: 'margin-bottom:20px' }, el('label', {}, 'Telefone'), telefoneInp),
+          el('div', { style: 'display:flex;gap:8px;justify-content:flex-end' }, cancelarBtn, salvarBtn)
+        )
+
+        setTimeout(() => nomeRapidoInp.focus(), 50)
+      },
+    })
+  }
 
   // ── Produtos ───────────────────────────────────────────────────────────────
   const produtosWrap = el('div', { class: 'produtos-wrap' })
@@ -236,7 +328,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
         el('p', { class: 'form-section-title' }, 'Identificação'),
         el('div', { class: 'form-grid' },
           el('div', { class: 'field' }, el('label', {}, 'Data do contato'), dataInp),
-          el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteInp),
+          el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteInp, cadastrarHint),
         )
       ),
       el('div', { class: 'form-section' },
