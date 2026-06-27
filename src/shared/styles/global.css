@@ -508,7 +508,7 @@ html, body {
 }
 
 .data-table tbody tr:last-child td { border-bottom: none; }
-.data-table tbody tr:hover td { background: #f5f5f7; }
+.data-table tbody tr:hover td { background: #ddeef1; }
 
 .td-name { font-weight: 500; }
 .col-actions, .td-actions { text-align: right; white-space: nowrap; }
@@ -1572,8 +1572,13 @@ html, body {
 }
 
 /* ── Zebra rows ──────────────────────────────────── */
-.data-table tbody tr:nth-child(even) td { background: #f8f9fa; }
-.data-table tbody tr:nth-child(even):hover td { background: #f0f0f2; }
+.data-table tbody tr:nth-child(even) td { background: #eef5f6; }
+.data-table tbody tr:nth-child(even):hover td { background: #ddeef1; }
+
+.th-sortable { cursor: pointer; user-select: none; }
+.th-sortable:hover { color: var(--color-primary); }
+.th-sortable.sort-active { color: var(--color-primary); }
+.sort-ind { font-size: 10px; opacity: .8; }
 
 /* ── Logística modal ─────────────────────────────── */
 .logistica-opts { display: flex; flex-direction: column; gap: 10px; }

@@ -126,6 +126,31 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
   let currentMonth = nowMonth()
   let periodoFiltro = 'mes'
+  let sortCol = 'data'
+  let sortDir = 'desc'
+
+  function sortList(list) {
+    return [...list].sort((a, b) => {
+      let va, vb
+      if (sortCol === 'data') {
+        va = a.dataContato || a.data || ''; vb = b.dataContato || b.data || ''
+      } else if (sortCol === 'cliente') {
+        va = (a.cliente || a.clienteNome || '').toLowerCase()
+        vb = (b.cliente || b.clienteNome || '').toLowerCase()
+      } else if (sortCol === 'produto') {
+        va = ((a.produtos || [])[0]?.nome || '').toLowerCase()
+        vb = ((b.produtos || [])[0]?.nome || '').toLowerCase()
+      } else if (sortCol === 'valor') {
+        va = a.valorNegociado ?? a.totalVenda ?? 0
+        vb = b.valorNegociado ?? b.totalVenda ?? 0
+      } else if (sortCol === 'status') {
+        va = a.status || ''; vb = b.status || ''
+      } else { return 0 }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1
+      if (va > vb) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+  }
 
   // ── Abas de período (só mês atual) ───────────────────────────────────────
   const PERIODOS = [{ key: 'hoje', label: 'Hoje' }, { key: 'semana', label: 'Semana' }, { key: 'mes', label: 'Mês' }]
@@ -171,16 +196,44 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   )
 
   // ── Tabela ────────────────────────────────────────────────────────────────
+  const SORT_DEFS = [
+    { key: 'data',    label: 'Data',     cls: '' },
+    { key: 'cliente', label: 'Cliente',  cls: '' },
+    { key: 'produto', label: 'Produtos', cls: '' },
+    { key: 'valor',   label: 'Valor',    cls: 'th-money' },
+    { key: null,      label: 'Pgto',     cls: '' },
+    { key: 'status',  label: 'Status',   cls: '' },
+  ]
+  const sortThs = SORT_DEFS.map(({ key, label, cls }) => {
+    const clsList = [cls, key ? 'th-sortable' : ''].filter(Boolean).join(' ')
+    const ind = key ? el('span', { class: 'sort-ind' }, '') : null
+    const th = el('th', { class: clsList }, label)
+    if (ind) th.appendChild(ind)
+    if (key) {
+      th.addEventListener('click', () => {
+        if (sortCol === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc'
+        else { sortCol = key; sortDir = 'asc' }
+        updateSortHeaders(); refresh()
+      })
+    }
+    return th
+  })
+
+  function updateSortHeaders() {
+    SORT_DEFS.forEach(({ key }, i) => {
+      if (!key) return
+      const th = sortThs[i]
+      th.classList.toggle('sort-active', sortCol === key)
+      const ind = th.querySelector('.sort-ind')
+      if (ind) ind.textContent = sortCol === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''
+    })
+  }
+  updateSortHeaders()
+
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {},
-      el('tr', {},
-        el('th', {}, 'Data'),
-        el('th', {}, 'Cliente'),
-        el('th', {}, 'Produtos'),
-        el('th', { class: 'th-money' }, 'Valor'),
-        el('th', {}, 'Pgto'),
-        el('th', {}, 'Status'),
+      el('tr', {}, ...sortThs,
         ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, 'Ações')] : []),
       )
     ),
@@ -210,7 +263,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       const pros = (p.produtos || []).map(pr => pr.nome || '').join(' ').toLowerCase()
       return cli.includes(q) || pros.includes(q)
     })
-    return list
+    return sortList(list)
   }
 
   function refresh() {
