@@ -261,7 +261,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         el('td', { class: 'td-name' }, p.cliente || p.clienteNome || '—'),
         prodsCell,
         el('td', { class: 'td-money' }, brl(valor)),
-        el('td', {}, p.formaPagamento ? (PAG_LABEL[p.formaPagamento] || p.formaPagamento) : '—'),
+        el('td', {}, (() => {
+          const fps = Array.isArray(p.formasPagamento) ? p.formasPagamento : (p.formaPagamento ? [p.formaPagamento] : [])
+          return fps.length ? fps.map(f => PAG_LABEL[f] || f).join(' + ') : '—'
+        })()),
         el('td', {}, el('span', { class: `status-badge ${meta.cls}` }, meta.label)),
         ...(canEdit || canDelete ? [actionsCell] : []),
       )

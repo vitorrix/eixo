@@ -1014,7 +1014,7 @@ html, body {
 /* Form sections */
 .pedido-form { display: flex; flex-direction: column; gap: 0; }
 .form-section {
-  padding: 18px 0 16px;
+  padding: 12px 0 10px;
   border-bottom: 1px solid var(--color-border);
 }
 .form-section:last-child { border-bottom: none; }
@@ -1024,7 +1024,34 @@ html, body {
   text-transform: uppercase;
   letter-spacing: .5px;
   color: var(--color-muted);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.form-row-ident {
+  display: grid;
+  grid-template-columns: 1fr 128px;
+  gap: 10px;
+  align-items: start;
+}
+.field-data input[type="date"] { width: 100%; }
+
+.troca-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-muted);
+  user-select: none;
+  width: fit-content;
+}
+.troca-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 /* Produto block in form */
@@ -1032,14 +1059,14 @@ html, body {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 14px;
-  margin-bottom: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
 }
 .form-produto-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .form-produto-label {
   font-size: 12px;
@@ -1503,8 +1530,8 @@ html, body {
 
 /* ── Pedidos form — subsection ───────────────────── */
 .form-section-sub {
-  margin-top: 12px;
-  padding-top: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px dashed var(--color-border);
 }
 .form-sub-label {

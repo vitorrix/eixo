@@ -7,10 +7,9 @@ import { openModal } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
 const PAGAMENTO_OPTS = [
-  { value: 'pix',      label: '🏦 PIX'      },
-  { value: 'dinheiro', label: '💰 Dinheiro'  },
-  { value: 'cartao',   label: '💳 Cartão'   },
-  { value: 'link',     label: '🏪 Link'     },
+  { value: 'pix',      label: '🏦 PIX'     },
+  { value: 'dinheiro', label: '💰 Dinheiro' },
+  { value: 'cartao',   label: '💳 Cartão'  },
 ]
 
 const ACESSORIOS_RAPIDOS = ['Case', 'Película', 'Fonte', 'Cabo', 'AirPods', 'Baseus', 'Peining']
@@ -29,8 +28,10 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   }))
   if (!produtos.length) produtos = [{ nome: '', cor: '', valor: '', acessorios: [] }]
 
-  let formaPagamento = pedido?.formaPagamento || ''
-  let trocaAtiva     = !!pedido?.troca
+  let formasPagamento = Array.isArray(pedido?.formasPagamento)
+    ? [...pedido.formasPagamento]
+    : (pedido?.formaPagamento ? [pedido.formaPagamento] : [])
+  let trocaAtiva = !!pedido?.troca
 
   const produtoNomes     = produtosCatalogo.map(p => p.nome)
   const produtoNomesSN   = produtosCatalogo.map(p => p.nome).filter(n => n.trim().toUpperCase().endsWith('S/N'))
@@ -205,16 +206,17 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   // ── Negociação ────────────────────────────────────────────────────────────
   function makePagChips() {
     const wrap = el('div', { class: 'status-chips-row' })
-    const btns = PAGAMENTO_OPTS.map(opt => {
+    PAGAMENTO_OPTS.forEach(opt => {
       const btn = el('button', { type: 'button', class: 'status-chip-btn' }, opt.label)
-      if (formaPagamento === opt.value) btn.classList.add('active')
+      if (formasPagamento.includes(opt.value)) btn.classList.add('active')
       btn.addEventListener('click', () => {
-        formaPagamento = formaPagamento === opt.value ? '' : opt.value
-        btns.forEach((b, j) => b.classList.toggle('active', formaPagamento === PAGAMENTO_OPTS[j].value))
+        const idx = formasPagamento.indexOf(opt.value)
+        if (idx === -1) formasPagamento.push(opt.value)
+        else formasPagamento.splice(idx, 1)
+        btn.classList.toggle('active', formasPagamento.includes(opt.value))
       })
-      return btn
+      wrap.appendChild(btn)
     })
-    btns.forEach(b => wrap.appendChild(b))
     return wrap
   }
 
@@ -242,15 +244,11 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     }
   }
 
-  const trocaToggle = el('button', { type: 'button', class: 'btn btn-outline btn-sm' },
-    trocaAtiva ? '↔️ Troca ativa' : '↔️ Inclui troca?')
-  trocaToggle.classList.toggle('btn-active-outline', trocaAtiva)
-  trocaToggle.addEventListener('click', () => {
-    trocaAtiva = !trocaAtiva
-    trocaToggle.textContent = trocaAtiva ? '↔️ Troca ativa' : '↔️ Inclui troca?'
-    trocaToggle.classList.toggle('btn-active-outline', trocaAtiva)
-    renderTroca()
-  })
+  const trocaCheckbox = el('input', { type: 'checkbox', class: 'troca-checkbox' })
+  trocaCheckbox.checked = trocaAtiva
+  trocaCheckbox.addEventListener('change', () => { trocaAtiva = trocaCheckbox.checked; renderTroca() })
+  const trocaToggleRow = el('label', { class: 'troca-toggle-row' }, trocaCheckbox,
+    el('span', {}, '↔ Inclui troca'))
   renderTroca()
 
   // ── Observações ───────────────────────────────────────────────────────────
@@ -262,8 +260,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
   cancelBtn.addEventListener('click', close)
 
-  const submitBtn = el('button', { type: 'button', class: 'btn btn-primary' },
-    isEdit ? 'Salvar alterações' : 'Criar pedido')
+  const submitBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Salvar')
 
   submitBtn.addEventListener('click', async () => {
     const cliente = clienteAc.getValue().trim()
@@ -278,7 +275,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     submitBtn.textContent = 'Salvando...'
 
     try {
-      const data = { dataContato: dataInp.value, cliente, produtos, formaPagamento, troca, observacoes: obsInp.value }
+      const data = { dataContato: dataInp.value, cliente, produtos, formasPagamento, troca, observacoes: obsInp.value }
       if (isEdit) {
         await editarPedido(pedido.id, data)
         const voltou = pedido.status && pedido.status !== 'negociando'
@@ -292,7 +289,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       console.error(err)
       toastError('Erro ao salvar pedido.')
       submitBtn.disabled = false
-      submitBtn.textContent = isEdit ? 'Salvar alterações' : 'Criar pedido'
+      submitBtn.textContent = 'Salvar'
     }
   })
 
@@ -301,9 +298,9 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     el('div', { class: 'pedido-form' },
       el('div', { class: 'form-section' },
         el('p', { class: 'form-section-title' }, 'Identificação'),
-        el('div', { class: 'form-grid' },
-          el('div', { class: 'field' }, el('label', {}, 'Data do contato'), dataInp),
-          el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteAc.el),
+        el('div', { class: 'form-row-ident' },
+          el('div', { class: 'field' }, el('label', {}, 'Cliente'), clienteAc.el),
+          el('div', { class: 'field field-data' }, el('label', {}, 'Data'), dataInp),
         )
       ),
       el('div', { class: 'form-section' },
@@ -317,7 +314,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       el('div', { class: 'form-section' },
         el('p', { class: 'form-section-title' }, 'Negociação'),
         el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), makePagChips()),
-        el('div', { class: 'troca-row', style: 'margin-top:12px' }, trocaToggle),
+        trocaToggleRow,
         trocaSection,
       ),
       el('div', { class: 'form-section' },
