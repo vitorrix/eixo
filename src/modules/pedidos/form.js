@@ -2,6 +2,7 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
 import { createPedido, updatePedido } from './service.js'
 import { createClienteRapido } from '../clientes/service.js'
+import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { openModal } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
@@ -16,7 +17,7 @@ const ACESSORIOS_RAPIDOS = ['Case', 'Película', 'Fonte', 'Cabo', 'AirPods', 'Ba
 
 function todayISO() { return new Date().toISOString().slice(0, 10) }
 
-export function renderPedidoForm(container, close, pedido, { clientes, produtosCatalogo, fornecedores }) {
+export function renderPedidoForm(container, close, pedido, { clientes, produtosCatalogo }) {
   const isEdit = !!pedido
 
   // ── Estado ────────────────────────────────────────────────────────────────
@@ -31,53 +32,10 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   let formaPagamento = pedido?.formaPagamento || ''
   let trocaAtiva     = !!pedido?.troca
 
-  // ── Datalists ─────────────────────────────────────────────────────────────
-  const clientesDatalistId = 'pf2-clientes'
-  const produtosDatalistId = 'pf2-produtos'
-  const fornDatalistId     = 'pf2-forn'
+  const produtoNomes  = produtosCatalogo.map(p => p.nome)
+  let clientesList    = [...clientes]
 
-  let clientesList = [...clientes]
-
-  const clientesDatalist = el('datalist', { id: clientesDatalistId })
-  function refreshClientesDatalist() {
-    clientesDatalist.replaceChildren()
-    clientesList.forEach(c => clientesDatalist.appendChild(el('option', { value: c.name })))
-  }
-  refreshClientesDatalist()
-
-  const produtosDatalist = el('datalist', { id: produtosDatalistId })
-  produtosCatalogo.forEach(p => produtosDatalist.appendChild(el('option', { value: p.nome })))
-
-  const fornDatalist = el('datalist', { id: fornDatalistId })
-  fornecedores.forEach(f => fornDatalist.appendChild(el('option', { value: f.name })))
-
-  // ── Identificação ─────────────────────────────────────────────────────────
-  const dataInp = el('input', { type: 'date' })
-  dataInp.value = pedido?.dataContato || todayISO()
-
-  const clienteInp = el('input', { type: 'text', list: clientesDatalistId, placeholder: 'Nome do cliente' })
-  clienteInp.value = pedido?.cliente || pedido?.clienteNome || ''
-
-  // ── Hint cadastro rápido ───────────────────────────────────────────────────
-  const cadastrarHint = el('div', { class: 'cliente-cadastrar-hint hidden' })
-
-  function isClienteExistente(nome) {
-    return clientesList.some(c => c.name.toLowerCase() === nome.toLowerCase())
-  }
-
-  function updateCadastrarHint() {
-    const nome = clienteInp.value.trim()
-    if (!nome || isClienteExistente(nome)) { cadastrarHint.classList.add('hidden'); return }
-    cadastrarHint.replaceChildren()
-    const btn = el('button', { type: 'button', class: 'btn-cadastrar-rapido' },
-      `+ Cadastrar "${nome}" como novo cliente`)
-    btn.addEventListener('click', () => abrirCadastroRapido(nome))
-    cadastrarHint.appendChild(btn)
-    cadastrarHint.classList.remove('hidden')
-  }
-
-  clienteInp.addEventListener('input', updateCadastrarHint)
-
+  // ── Cliente com autocomplete + cadastro rápido ────────────────────────────
   function abrirCadastroRapido(nomeInicial) {
     openModal({
       title: 'Novo cliente',
@@ -89,23 +47,23 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
         pfBtn.addEventListener('click', () => { tipo = 'PF'; pfBtn.classList.add('active'); pjBtn.classList.remove('active') })
         pjBtn.addEventListener('click', () => { tipo = 'PJ'; pjBtn.classList.add('active'); pfBtn.classList.remove('active') })
 
-        const nomeRapidoInp = el('input', { type: 'text', placeholder: 'Nome completo' })
-        nomeRapidoInp.value = nomeInicial
-        const telefoneInp = el('input', { type: 'tel', placeholder: '(00) 00000-0000' })
+        const nomeInp = el('input', { type: 'text', placeholder: 'Nome completo' })
+        nomeInp.value = nomeInicial
+        const foneInp    = el('input', { type: 'tel', placeholder: '(00) 00000-0000' })
         const cancelarBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelarBtn.addEventListener('click', closeModal)
+
         const salvarBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Cadastrar')
         salvarBtn.addEventListener('click', async () => {
-          const nome = nomeRapidoInp.value.trim()
+          const nome = nomeInp.value.trim()
           if (!nome) { toastError('Informe o nome do cliente.'); return }
           salvarBtn.disabled = true; salvarBtn.textContent = 'Salvando...'
           try {
-            const docRef = await createClienteRapido(nome, telefoneInp.value, tipo)
+            const docRef = await createClienteRapido(nome, foneInp.value, tipo)
             clientesList.push({ id: docRef.id, name: nome, nameLower: nome.toLowerCase() })
             clientesList.sort((a, b) => a.nameLower.localeCompare(b.nameLower))
-            refreshClientesDatalist()
-            clienteInp.value = nome
-            updateCadastrarHint()
+            clienteAc.setItems(clientesList.map(c => c.name))
+            clienteAc.setValue(nome)
             toastSuccess(`"${nome}" cadastrado.`)
             closeModal()
           } catch (err) {
@@ -114,25 +72,40 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
             salvarBtn.disabled = false; salvarBtn.textContent = 'Cadastrar'
           }
         })
+
         body.append(
           el('div', { class: 'type-toggle', style: 'margin-bottom:16px' }, pfBtn, pjBtn),
-          el('div', { class: 'field', style: 'margin-bottom:12px' }, el('label', {}, 'Nome'), nomeRapidoInp),
-          el('div', { class: 'field', style: 'margin-bottom:20px' }, el('label', {}, 'Telefone'), telefoneInp),
+          el('div', { class: 'field', style: 'margin-bottom:12px' }, el('label', {}, 'Nome'), nomeInp),
+          el('div', { class: 'field', style: 'margin-bottom:20px' }, el('label', {}, 'Telefone'), foneInp),
           el('div', { style: 'display:flex;gap:8px;justify-content:flex-end' }, cancelarBtn, salvarBtn)
         )
-        setTimeout(() => nomeRapidoInp.focus(), 50)
+        setTimeout(() => nomeInp.focus(), 50)
       },
     })
   }
 
+  const clienteAc = createAutocomplete({
+    placeholder:  'Nome do cliente',
+    items:        clientesList.map(c => c.name),
+    initialValue: pedido?.cliente || pedido?.clienteNome || '',
+    extraOption: {
+      getLabel: q => `+ Cadastrar "${q}" como novo cliente`,
+      action:   q => abrirCadastroRapido(q),
+    },
+  })
+  clienteAc.el.style.width = '100%'
+
+  // ── Identificação ─────────────────────────────────────────────────────────
+  const dataInp = el('input', { type: 'date' })
+  dataInp.value = pedido?.dataContato || todayISO()
+
   // ── Produtos ──────────────────────────────────────────────────────────────
-  const produtosWrap  = el('div', { class: 'produtos-wrap' })
-  const totalDisplay  = el('div', { class: 'pedido-total-display' })
+  const produtosWrap = el('div', { class: 'produtos-wrap' })
+  const totalDisplay = el('div', { class: 'pedido-total-display' })
 
   function calcTotal() {
     return produtos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0)
   }
-
   function updateTotal() {
     const t = calcTotal()
     totalDisplay.textContent = t > 0 ? `Total: ${brl(t)}` : ''
@@ -152,14 +125,11 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
           acessListEl.appendChild(el('span', { class: 'acessorio-item' }, a, rm))
         })
       }
-
       function addAcess(nome) {
         const n = nome.trim()
         if (!n || produtos[i].acessorios.includes(n)) return
-        produtos[i].acessorios.push(n)
-        renderAcess()
+        produtos[i].acessorios.push(n); renderAcess()
       }
-
       renderAcess()
 
       const quickBtns = ACESSORIOS_RAPIDOS.map(a => {
@@ -167,7 +137,6 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
         btn.addEventListener('click', () => addAcess(a))
         return btn
       })
-
       const acessInp = el('input', { type: 'text', class: 'acessorio-custom-inp',
         placeholder: 'ex: Película 3D, Fonte Tipo C...' })
       acessInp.addEventListener('keydown', e => {
@@ -176,9 +145,15 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       const acessAddBtn = el('button', { type: 'button', class: 'btn btn-sm btn-outline' }, '+ Add')
       acessAddBtn.addEventListener('click', () => { addAcess(acessInp.value); acessInp.value = '' })
 
-      const nomeInp = el('input', { type: 'text', list: produtosDatalistId, placeholder: 'ex: iPhone 17 Pro Max 256GB' })
-      nomeInp.value = p.nome || ''
-      nomeInp.addEventListener('input', () => { produtos[i].nome = nomeInp.value })
+      // Autocomplete do item
+      const nomeAc = createAutocomplete({
+        placeholder:  'ex: iPhone 17 Pro Max 256GB',
+        items:        produtoNomes,
+        initialValue: p.nome,
+        onSelect:     v => { produtos[i].nome = v },
+      })
+      nomeAc.el.style.width = '100%'
+      nomeAc.el.addEventListener('input', () => { produtos[i].nome = nomeAc.getValue() })
 
       const corInp = el('input', { type: 'text', placeholder: 'ex: Preto, Branco...' })
       corInp.value = p.cor || ''
@@ -201,7 +176,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
             delBtn
           ),
           el('div', { class: 'form-produto-row3' },
-            el('div', { class: 'field' }, el('label', {}, 'Item'), nomeInp),
+            el('div', { class: 'field' }, el('label', {}, 'Item'), nomeAc.el),
             el('div', { class: 'field field-cor' }, el('label', {}, 'Cor'), corInp),
             el('div', { class: 'field field-valor' }, el('label', {}, 'Valor R$'), valorInp),
           ),
@@ -243,9 +218,14 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   }
 
   // ── Troca ─────────────────────────────────────────────────────────────────
-  const trocaProdutoInp = el('input', { type: 'text', list: produtosDatalistId, placeholder: 'ex: iPhone 16 Pro 128GB S/N' })
+  const trocaAc = createAutocomplete({
+    placeholder:  'ex: iPhone 16 Pro 128GB S/N',
+    items:        produtoNomes,
+    initialValue: pedido?.troca?.produto || '',
+  })
+  trocaAc.el.style.width = '100%'
+
   const trocaCreditoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
-  trocaProdutoInp.value = pedido?.troca?.produto      || ''
   trocaCreditoInp.value = pedido?.troca?.valorCredito || ''
 
   const trocaSection = el('div', { class: 'troca-section' })
@@ -254,7 +234,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     if (trocaAtiva) {
       mount(trocaSection,
         el('div', { class: 'form-grid' },
-          el('div', { class: 'field' }, el('label', {}, 'Produto da troca'), trocaProdutoInp),
+          el('div', { class: 'field' }, el('label', {}, 'Produto da troca'), trocaAc.el),
           el('div', { class: 'field' }, el('label', {}, 'Crédito R$'), trocaCreditoInp),
         )
       )
@@ -273,7 +253,8 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   renderTroca()
 
   // ── Observações ───────────────────────────────────────────────────────────
-  const obsInp = el('textarea', { rows: '2', class: 'field-textarea', placeholder: 'Observações, serial, modelo...' })
+  const obsInp = el('textarea', { rows: '2', class: 'field-textarea',
+    placeholder: 'Observações, serial, modelo...' })
   obsInp.value = pedido?.observacoes || ''
 
   // ── Botões ────────────────────────────────────────────────────────────────
@@ -284,12 +265,12 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     isEdit ? 'Salvar alterações' : 'Criar pedido')
 
   submitBtn.addEventListener('click', async () => {
-    const cliente = clienteInp.value.trim()
+    const cliente = clienteAc.getValue().trim()
     if (!cliente) { toastError('Informe o nome do cliente.'); return }
     if (!dataInp.value) { toastError('Informe a data.'); return }
 
     const troca = trocaAtiva
-      ? { produto: trocaProdutoInp.value.trim(), valorCredito: parseFloat(trocaCreditoInp.value) || 0 }
+      ? { produto: trocaAc.getValue().trim(), valorCredito: parseFloat(trocaCreditoInp.value) || 0 }
       : null
 
     submitBtn.disabled = true
@@ -315,13 +296,12 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
   // ── Layout ────────────────────────────────────────────────────────────────
   container.append(
-    clientesDatalist, produtosDatalist, fornDatalist,
     el('div', { class: 'pedido-form' },
       el('div', { class: 'form-section' },
         el('p', { class: 'form-section-title' }, 'Identificação'),
         el('div', { class: 'form-grid' },
           el('div', { class: 'field' }, el('label', {}, 'Data do contato'), dataInp),
-          el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteInp, cadastrarHint),
+          el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteAc.el),
         )
       ),
       el('div', { class: 'form-section' },

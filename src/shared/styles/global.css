@@ -1546,6 +1546,41 @@ html, body {
 }
 .pedido-total-display:empty { display: none; }
 
+/* ── Autocomplete customizado ────────────────────── */
+.ac-dropdown {
+  position: absolute;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 24px rgba(18,60,67,.14);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 9000;
+}
+.ac-opt {
+  padding: 9px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--color-text);
+  border-bottom: 1px solid #f4f4f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-opt:last-child { border-bottom: none; }
+.ac-opt:hover, .ac-opt.active {
+  background: var(--color-bg);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.ac-opt-extra {
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  border-top: 1px solid var(--color-border);
+}
+.ac-opt-extra:hover, .ac-opt-extra.active { background: #ecfdf5; }
+
 /* ── Cadastro rápido de cliente ──────────────────── */
 .cliente-cadastrar-hint { margin-top: 5px; }
 .btn-cadastrar-rapido {
