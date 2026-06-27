@@ -469,10 +469,27 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
         const copyBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '📋 Copiar')
         copyBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(previewEl.value).then(() => {
+          const text = previewEl.value
+          const done = () => {
             copyBtn.textContent = '✓ Copiado!'
             setTimeout(() => { copyBtn.textContent = '📋 Copiar' }, 2000)
-          })
+          }
+          const fallback = () => {
+            const tmp = document.createElement('textarea')
+            tmp.value = text
+            tmp.style.cssText = 'position:fixed;opacity:0;top:0;left:0'
+            document.body.appendChild(tmp)
+            tmp.focus()
+            tmp.select()
+            try { document.execCommand('copy') } catch (_) {}
+            document.body.removeChild(tmp)
+            done()
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(fallback)
+          } else {
+            fallback()
+          }
         })
 
         const waBtn = el('button', { type: 'button', class: 'btn btn-success' }, '📱 WhatsApp')
