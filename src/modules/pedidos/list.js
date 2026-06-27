@@ -62,6 +62,14 @@ function nowMonth() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
+function todayISO() { return new Date().toISOString().slice(0, 10) }
+function weekRange() {
+  const now = new Date()
+  const diff = now.getDay() === 0 ? -6 : 1 - now.getDay()
+  const mon = new Date(now); mon.setDate(now.getDate() + diff)
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+  return { start: mon.toISOString().slice(0, 10), end: sun.toISOString().slice(0, 10) }
+}
 function monthLabel(ym) {
   const [y, m] = ym.split('-')
   const ms = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
@@ -103,7 +111,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   const pendEl  = el('div', { class: 'pedido-stat-value' })
   const subLabel = el('span', {})
 
-  function updateKpis(list) {
+  function updateKpis(list, periodo) {
     const valor = list.reduce((s, p) => s + (p.valorNegociado || p.totalVenda || 0), 0)
     const pagos = list.filter(p => PAID_STATUSES.has(p.status)).length
     const pend  = list.filter(p => ACTIVE_STATUSES.has(p.status)).length
@@ -112,10 +120,25 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     pagosEl.textContent = pagos
     pendEl.textContent  = pend
     pendEl.className    = 'pedido-stat-value ' + (pend > 0 ? 'red' : '')
-    subLabel.textContent = monthLabel(currentMonth)
+    const pLabels = { hoje: 'hoje', semana: 'esta semana', mes: monthLabel(currentMonth) }
+    subLabel.textContent = pLabels[periodo] || monthLabel(currentMonth)
   }
 
   let currentMonth = nowMonth()
+  let periodoFiltro = 'mes'
+
+  // ── Abas de período (só mês atual) ───────────────────────────────────────
+  const PERIODOS = [{ key: 'hoje', label: 'Hoje' }, { key: 'semana', label: 'Semana' }, { key: 'mes', label: 'Mês' }]
+  const periodoBtns = PERIODOS.map(({ key, label }) => {
+    const btn = el('button', { type: 'button', class: 'periodo-btn' + (key === periodoFiltro ? ' active' : '') }, label)
+    btn.addEventListener('click', () => {
+      periodoFiltro = key
+      periodoBtns.forEach((b, i) => b.classList.toggle('active', PERIODOS[i].key === periodoFiltro))
+      refresh()
+    })
+    return btn
+  })
+  const periodoRow = el('div', { class: 'periodo-row' }, ...periodoBtns)
 
   const monthNavLabel = el('span', { class: 'month-nav-label' })
   const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
@@ -173,6 +196,15 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   function filteredList() {
     const q = searchInp.value.trim().toLowerCase()
     let list = pedidos.filter(p => monthKey(p.dataContato || p.data || '') === currentMonth)
+    if (currentMonth === nowMonth()) {
+      if (periodoFiltro === 'hoje') {
+        const today = todayISO()
+        list = list.filter(p => (p.dataContato || p.data || '').slice(0, 10) === today)
+      } else if (periodoFiltro === 'semana') {
+        const { start, end } = weekRange()
+        list = list.filter(p => { const d = (p.dataContato || p.data || '').slice(0, 10); return d >= start && d <= end })
+      }
+    }
     if (q) list = list.filter(p => {
       const cli  = (p.cliente || p.clienteNome || '').toLowerCase()
       const pros = (p.produtos || []).map(pr => pr.nome || '').join(' ').toLowerCase()
@@ -183,9 +215,12 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
   function refresh() {
     monthNavLabel.textContent = monthLabel(currentMonth)
+    const isCurrent = currentMonth === nowMonth()
+    periodoRow.style.display = isCurrent ? '' : 'none'
+    if (!isCurrent) periodoFiltro = 'mes'
     const list = filteredList()
     countBadge.textContent = list.length
-    updateKpis(list)
+    updateKpis(list, isCurrent ? periodoFiltro : null)
     renderTable(list)
   }
 
@@ -542,7 +577,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     })
   }
 
-  mount(container, kpisRow, toolbar, searchInp, tableWrap, emptyState)
+  mount(container, periodoRow, kpisRow, toolbar, searchInp, tableWrap, emptyState)
   refresh()
 
   return { update(newPedidos) { pedidos = newPedidos; refresh() } }

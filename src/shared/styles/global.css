@@ -868,6 +868,33 @@ html, body {
 /* ── Pedidos ─────────────────────────────────── */
 
 /* Stats */
+.periodo-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.periodo-btn {
+  padding: 4px 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--color-border);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: border-color .15s, background .15s, color .15s;
+}
+.periodo-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+.periodo-btn:hover:not(.active) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
 .pedidos-stats {
   display: flex;
   gap: 14px;
