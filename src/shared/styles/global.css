@@ -1520,6 +1520,32 @@ html, body {
   flex-wrap: wrap;
 }
 
+/* ── Form produto: linha 3 colunas (item | cor | valor) ─ */
+.form-produto-row3 {
+  display: grid;
+  grid-template-columns: 1fr 140px 110px;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: start;
+}
+.field-cor   input { }
+.field-valor input { font-weight: 700; }
+
+/* ── Total do pedido ─────────────────────────────── */
+.pedido-total-display {
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  color: #065f46;
+  text-align: right;
+  min-height: 0;
+}
+.pedido-total-display:empty { display: none; }
+
 /* ── Cadastro rápido de cliente ──────────────────── */
 .cliente-cadastrar-hint { margin-top: 5px; }
 .btn-cadastrar-rapido {

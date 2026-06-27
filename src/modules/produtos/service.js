@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc, deleteDoc,
-  doc, onSnapshot, query, orderBy, serverTimestamp,
+  doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -31,6 +31,32 @@ export async function updateProduto(id, data) {
 
 export async function deleteProduto(id) {
   return deleteDoc(doc(db, COL, id))
+}
+
+export async function importarProdutos(rows) {
+  const { uid } = getCurrentProfile()
+  const CHUNK = 500
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const batch = writeBatch(db)
+    rows.slice(i, i + CHUNK).forEach(row => {
+      const ref = doc(collection(db, COL))
+      batch.set(ref, {
+        ...sanitize({
+          nome:            String(row.nome        || '').trim(),
+          categoria:       String(row.categoria   || '').trim(),
+          precoCusto:      parseFloat(row.precocusto) || 0,
+          precoVenda:      parseFloat(row.precovenda) || 0,
+          controlaEstoque: String(row.controlaestoque || '').toLowerCase() === 'sim',
+          estoqueAtual:    0,
+          estoqueMinimo:   0,
+        }),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdBy: uid,
+      })
+    })
+    await batch.commit()
+  }
 }
 
 function sanitize(d) {

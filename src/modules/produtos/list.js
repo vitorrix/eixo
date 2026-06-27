@@ -3,7 +3,7 @@ import { brl } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { deleteProduto } from './service.js'
+import { deleteProduto, importarProdutos } from './service.js'
 import { renderProdutoForm } from './form.js'
 
 export function renderProdutoList(container, produtos) {
@@ -24,10 +24,41 @@ export function renderProdutoList(container, produtos) {
   newBtn.style.display = canCreate ? '' : 'none'
   newBtn.addEventListener('click', () => openProdutoModal(null))
 
+  // ── Importar XLS (temporário) ─────────────────────────────────────────────
+  const xlsInput = el('input', { type: 'file', accept: '.xlsx,.xls,.csv', style: 'display:none' })
+  const importBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '↑ Importar XLS')
+  importBtn.style.display = canCreate ? '' : 'none'
+  importBtn.addEventListener('click', () => xlsInput.click())
+  xlsInput.addEventListener('change', async () => {
+    const file = xlsInput.files?.[0]
+    if (!file) return
+    xlsInput.value = ''
+    importBtn.disabled = true
+    importBtn.textContent = 'Importando...'
+    try {
+      const { read, utils } = await import('xlsx')
+      const buffer = await file.arrayBuffer()
+      const wb = read(buffer)
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = utils.sheet_to_json(ws, { defval: '' })
+      const validos = rows.filter(r => String(r.nome || '').trim())
+      if (!validos.length) { toastError('Nenhuma linha válida encontrada (coluna "nome" obrigatória).'); return }
+      await importarProdutos(validos)
+      toastSuccess(`${validos.length} produto(s) importado(s) com sucesso.`)
+    } catch (err) {
+      console.error(err)
+      toastError('Erro ao importar arquivo.')
+    } finally {
+      importBtn.disabled = false
+      importBtn.textContent = '↑ Importar XLS'
+    }
+  })
+
   const countBadge = el('span', { class: 'count-badge' })
 
   const toolbar = el('div', { class: 'toolbar' },
-    el('div', { style: 'display:flex;gap:10px;align-items:center' }, newBtn, searchInp),
+    el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' },
+      newBtn, importBtn, xlsInput, searchInp),
     countBadge
   )
 

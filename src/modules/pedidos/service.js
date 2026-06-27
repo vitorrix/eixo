@@ -80,15 +80,19 @@ function sanitize(d) {
   const produtos = (d.produtos || [])
     .map(p => ({
       nome:       (p.nome       || '').trim(),
+      cor:        (p.cor        || '').trim(),
+      valor:      parseFloat(p.valor) || 0,
       acessorios: (p.acessorios || []).filter(Boolean),
     }))
     .filter(p => p.nome)
+
+  const valorNegociado = produtos.reduce((s, p) => s + p.valor, 0)
 
   return {
     dataContato:    d.dataContato    || '',
     cliente:        (d.cliente       || '').trim(),
     produtos,
-    valorNegociado: parseFloat(d.valorNegociado) || 0,
+    valorNegociado,
     formaPagamento: d.formaPagamento || '',
     troca:          d.troca          || null,
     observacoes:    (d.observacoes   || '').trim(),
