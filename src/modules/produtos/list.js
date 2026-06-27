@@ -3,7 +3,7 @@ import { brl } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { deleteProduto, importarProdutos } from './service.js'
+import { deleteProduto, importarProdutos, deletarProdutos } from './service.js'
 import { renderProdutoForm } from './form.js'
 
 export function renderProdutoList(container, produtos) {
@@ -29,20 +29,15 @@ export function renderProdutoList(container, produtos) {
   const importBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '↑ Importar XLS')
   importBtn.style.display = canCreate ? '' : 'none'
   importBtn.addEventListener('click', () => xlsInput.click())
-  xlsInput.addEventListener('change', async () => {
-    const file = xlsInput.files?.[0]
-    if (!file) return
-    xlsInput.value = ''
+
+  async function executarImport(validos, substituir) {
     importBtn.disabled = true
-    importBtn.textContent = 'Importando...'
+    importBtn.textContent = substituir ? 'Apagando...' : 'Importando...'
     try {
-      const { read, utils } = await import('xlsx')
-      const buffer = await file.arrayBuffer()
-      const wb = read(buffer)
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows = utils.sheet_to_json(ws, { defval: '' })
-      const validos = rows.filter(r => String(r.nome || '').trim())
-      if (!validos.length) { toastError('Nenhuma linha válida encontrada (coluna "nome" obrigatória).'); return }
+      if (substituir && produtos.length) {
+        await deletarProdutos(produtos.map(p => p.id))
+      }
+      importBtn.textContent = 'Importando...'
       await importarProdutos(validos)
       toastSuccess(`${validos.length} produto(s) importado(s) com sucesso.`)
     } catch (err) {
@@ -51,6 +46,68 @@ export function renderProdutoList(container, produtos) {
     } finally {
       importBtn.disabled = false
       importBtn.textContent = '↑ Importar XLS'
+    }
+  }
+
+  xlsInput.addEventListener('change', async () => {
+    const file = xlsInput.files?.[0]
+    if (!file) return
+    xlsInput.value = ''
+    try {
+      const { read, utils } = await import('xlsx')
+      const buffer = await file.arrayBuffer()
+      const wb = read(buffer)
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = utils.sheet_to_json(ws, { defval: '' })
+      const validos = rows.filter(r => String(r.nome || '').trim())
+      if (!validos.length) {
+        toastError('Nenhuma linha válida encontrada (coluna "nome" obrigatória).')
+        return
+      }
+
+      if (!produtos.length) {
+        await executarImport(validos, false)
+        return
+      }
+
+      // Tem produtos cadastrados → perguntar o que fazer
+      openModal({
+        title: 'Importar produtos',
+        size: 'sm',
+        renderBody: (body, closeModal) => {
+          body.append(
+            el('p', { style: 'margin-bottom:8px;font-size:14px' },
+              `O arquivo contém ${validos.length} produto(s).`),
+            el('p', { style: 'margin-bottom:20px;font-size:14px;color:var(--color-muted)' },
+              `Há ${produtos.length} produto(s) já cadastrados.`),
+            el('div', { style: 'display:flex;flex-direction:column;gap:10px' },
+              (() => {
+                const btn = el('button', { type: 'button', class: 'btn btn-outline', style: 'text-align:left;padding:12px 16px' },
+                  el('strong', {}, 'Adicionar à lista'),
+                  el('br', {}),
+                  el('span', { style: 'font-size:12px;color:var(--color-muted)' },
+                    'Mantém os produtos existentes e insere os novos.')
+                )
+                btn.addEventListener('click', async () => { closeModal(); await executarImport(validos, false) })
+                return btn
+              })(),
+              (() => {
+                const btn = el('button', { type: 'button', class: 'btn btn-danger-outline', style: 'text-align:left;padding:12px 16px' },
+                  el('strong', {}, 'Substituir tudo'),
+                  el('br', {}),
+                  el('span', { style: 'font-size:12px' },
+                    `Apaga os ${produtos.length} produto(s) e importa só o arquivo.`)
+                )
+                btn.addEventListener('click', async () => { closeModal(); await executarImport(validos, true) })
+                return btn
+              })()
+            )
+          )
+        },
+      })
+    } catch (err) {
+      console.error(err)
+      toastError('Erro ao ler o arquivo.')
     }
   })
 

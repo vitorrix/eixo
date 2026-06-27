@@ -33,6 +33,15 @@ export async function deleteProduto(id) {
   return deleteDoc(doc(db, COL, id))
 }
 
+export async function deletarProdutos(ids) {
+  const CHUNK = 500
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const batch = writeBatch(db)
+    ids.slice(i, i + CHUNK).forEach(id => batch.delete(doc(db, COL, id)))
+    await batch.commit()
+  }
+}
+
 export async function importarProdutos(rows) {
   const { uid } = getCurrentProfile()
   const CHUNK = 500
