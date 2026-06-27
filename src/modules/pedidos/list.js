@@ -316,17 +316,17 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       }
 
       if (canEdit && p.status === 'negociando') {
-        actionsInner.appendChild(actionBtn('arrow', 'Aguardar Pgto', 'btn-outline-blue', () => advanceStatus(p.id, 'aguardando_pagamento')))
-        actionsInner.appendChild(actionBtn('x', 'Cancelar', 'btn-danger-outline', () => cancelarPedido(p)))
+        actionsInner.appendChild(actionBtn('arrow', 'Pagamento', 'btn-outline-blue', () => advanceStatus(p.id, 'aguardando_pagamento')))
+        actionsInner.appendChild(actionBtn('x', 'Excluir', 'btn-danger-outline', () => cancelarPedido(p)))
       }
 
       if (canEdit && p.status === 'aguardando_pagamento') {
         actionsInner.appendChild(actionBtn('check', 'Confirmar Pgto', 'btn-success', () => confirmarPgto(p.id)))
-        actionsInner.appendChild(actionBtn('x', 'Cancelar', 'btn-danger-outline', () => cancelarPedido(p)))
+        actionsInner.appendChild(actionBtn('x', 'Excluir', 'btn-danger-outline', () => cancelarPedido(p)))
       }
 
       if (canEdit && p.status === 'pago') {
-        actionsInner.appendChild(actionBtn('truck', 'Definir Entrega', 'btn-outline-blue', () => abrirLogisticaModal(p)))
+        actionsInner.appendChild(actionBtn('truck', 'Logística', 'btn-outline-blue', () => abrirLogisticaModal(p)))
       }
 
       if (canEdit && p.status === 'motoboy') {

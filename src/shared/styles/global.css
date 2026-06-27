@@ -972,6 +972,7 @@ html, body {
 .td-date  { white-space: nowrap; font-size: 13px; color: var(--color-muted); }
 .td-name  { font-weight: 600; white-space: nowrap; }
 .td-money { text-align: right; white-space: nowrap; font-size: 13px; }
+.td-pgto  { white-space: nowrap; font-size: 16px; letter-spacing: 1px; }
 .th-money { text-align: right; }
 .td-status { vertical-align: top; }
 .td-acessorios { vertical-align: top; }
