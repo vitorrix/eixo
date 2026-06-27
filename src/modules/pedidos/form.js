@@ -1,6 +1,6 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
-import { createPedido, updatePedido } from './service.js'
+import { createPedido, editarPedido } from './service.js'
 import { createClienteRapido } from '../clientes/service.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { openModal } from '../../shared/components/Modal.js'
@@ -280,8 +280,9 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     try {
       const data = { dataContato: dataInp.value, cliente, produtos, formaPagamento, troca, observacoes: obsInp.value }
       if (isEdit) {
-        await updatePedido(pedido.id, data)
-        toastSuccess('Pedido atualizado.')
+        await editarPedido(pedido.id, data)
+        const voltou = pedido.status && pedido.status !== 'negociando'
+        toastSuccess(voltou ? 'Pedido atualizado. Confirme o pagamento para prosseguir.' : 'Pedido atualizado.')
       } else {
         await createPedido(data)
         toastSuccess('Pedido criado.')

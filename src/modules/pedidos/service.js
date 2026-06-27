@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, serverTimestamp,
+  onSnapshot, query, orderBy, serverTimestamp, deleteField,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -29,6 +29,16 @@ export async function createPedido(data) {
 export async function updatePedido(id, data) {
   return updateDoc(doc(db, COL, id), {
     ...sanitize(data),
+    atualizadoEm: serverTimestamp(),
+  })
+}
+
+// Editar um pedido em qualquer status: reseta o fluxo para negociando
+export async function editarPedido(id, data) {
+  return updateDoc(doc(db, COL, id), {
+    ...sanitize(data),
+    status:       'negociando',
+    logistica:    deleteField(),
     atualizadoEm: serverTimestamp(),
   })
 }
