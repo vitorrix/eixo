@@ -26,6 +26,7 @@ const ACTIVE_STATUSES = new Set(['negociando', 'aguardando_pagamento'])
 const DELIVERY_STATUSES = new Set(['motoboy', 'retirada', 'correio'])
 
 const PAG_LABEL = { pix: '🏦 PIX', dinheiro: '💰 Dinheiro', cartao: '💳 Cartão', link: '🏪 Link' }
+const PAG_ICON  = { pix: '🏦', dinheiro: '💰', cartao: '💳', link: '🏪' }
 
 // ── Ícones SVG ────────────────────────────────────────────────────────────────
 const PATHS = {
@@ -212,7 +213,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     if (key) {
       th.addEventListener('click', () => {
         if (sortCol === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc'
-        else { sortCol = key; sortDir = 'asc' }
+        else { sortCol = key; sortDir = key === 'data' ? 'desc' : 'asc' }
         updateSortHeaders(); refresh()
       })
     }
@@ -350,9 +351,9 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         el('td', { class: 'td-name' }, p.cliente || p.clienteNome || '—'),
         prodsCell,
         el('td', { class: 'td-money' }, brl(valor)),
-        el('td', {}, (() => {
+        el('td', { class: 'td-pgto' }, (() => {
           const fps = Array.isArray(p.formasPagamento) ? p.formasPagamento : (p.formaPagamento ? [p.formaPagamento] : [])
-          return fps.length ? fps.map(f => PAG_LABEL[f] || f).join(' + ') : '—'
+          return fps.length ? fps.map(f => PAG_ICON[f] || PAG_LABEL[f] || f).join(' ') : '—'
         })()),
         el('td', {}, el('span', { class: `status-badge ${meta.cls}` }, meta.label)),
         ...(canEdit || canDelete ? [actionsCell] : []),
