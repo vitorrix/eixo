@@ -361,6 +361,18 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   }
 
   // ── Modal roteiro ─────────────────────────────────────────────────────────
+  function enderecoDoCliente(nomeCliente) {
+    const c = clientes.find(c => (c.name || '').toLowerCase() === (nomeCliente || '').toLowerCase())
+    if (!c?.address) return ''
+    const { logradouro, numero, complemento, bairro, cidade, estado } = c.address
+    return [
+      [logradouro, numero].filter(Boolean).join(', '),
+      complemento,
+      bairro,
+      [cidade, estado].filter(Boolean).join(' - '),
+    ].filter(Boolean).join(', ')
+  }
+
   function abrirRoteiroModal(pedido) {
     openModal({
       title: '🏍️ Roteiro de Entrega',
@@ -381,7 +393,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
             item: [pr.nome, pr.cor].filter(Boolean).join(' '),
             loja: '',
           }))
-          entrega = { endereco: '', cliente: pedido.cliente || '' }
+          entrega = {
+            endereco: enderecoDoCliente(pedido.cliente),
+            cliente:  pedido.cliente || '',
+          }
         }
 
         const retiradasWrap = el('div', { class: 'roteiro-paradas' })
