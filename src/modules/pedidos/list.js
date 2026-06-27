@@ -291,7 +291,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         actionsCell.appendChild(actionBtn('trash', 'Excluir', 'btn-danger-outline', () => confirmDelete(p)))
       }
 
-      const row = el('tr', { class: rowIdx % 2 === 1 ? 'row-alt' : '' },
+      const row = el('tr', {},
         el('td', { class: 'td-date' }, shortDate(p.dataContato || p.data || '')),
         el('td', { class: 'td-name' }, p.cliente || p.clienteNome || '—'),
         prodsCell,
