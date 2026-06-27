@@ -1414,6 +1414,10 @@ html, body {
 .badge-negociando    { background: #fef3c7; color: #92400e; }
 .badge-aguard-pgto   { background: #dbeafe; color: #1e40af; }
 .badge-pago          { background: #d1fae5; color: #065f46; }
+.badge-motoboy       { background: #ffedd5; color: #9a3412; }
+.badge-retirada      { background: #ede9fe; color: #5b21b6; }
+.badge-correio       { background: #e0f2fe; color: #075985; }
+.badge-entregue      { background: #052e16; color: #86efac; }
 .badge-cancelado     { background: #f3f4f6; color: #6b7280; }
 .badge-pendente      { background: #fef3c7; color: #92400e; }
 .badge-comprado      { background: #dbeafe; color: #1e40af; }
@@ -1511,6 +1515,75 @@ html, body {
   letter-spacing: .5px;
   color: var(--color-muted);
   margin-bottom: 8px;
+}
+
+/* ── Zebra rows ──────────────────────────────────── */
+.data-table tbody tr.row-alt td { background: #f0fdf8; }
+.data-table tbody tr.row-alt:hover td { background: #e6faf3; }
+
+/* ── Logística modal ─────────────────────────────── */
+.logistica-opts { display: flex; flex-direction: column; gap: 10px; }
+.logistica-opt-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s, background .15s;
+  font-family: var(--font);
+}
+.logistica-opt-btn:hover { border-color: var(--color-primary); background: #f0fdf8; }
+.logistica-opt-icon { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.logistica-opt-info { display: flex; flex-direction: column; gap: 2px; }
+.logistica-opt-info strong { font-size: 15px; color: var(--color-text); }
+.logistica-opt-info span   { font-size: 12px; color: var(--color-muted); }
+
+/* ── Roteiro modal ───────────────────────────────── */
+.roteiro-paradas { display: flex; flex-direction: column; gap: 16px; margin-bottom: 4px; }
+.roteiro-parada {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.roteiro-parada-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+.roteiro-parada-num {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--color-muted);
+}
+.roteiro-remove-btn { padding: 2px 8px; }
+.roteiro-section { padding: 12px 14px; }
+.roteiro-section + .roteiro-section { border-top: 1px solid var(--color-border); }
+.roteiro-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 10px;
+}
+.roteiro-retirada .roteiro-section-title { color: #ea580c; }
+.roteiro-entrega  .roteiro-section-title { color: var(--color-primary); }
+.roteiro-fields { display: flex; flex-direction: column; gap: 10px; }
+.roteiro-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
 }
 
 /* ── Action row buttons in pedidos list ──────────── */

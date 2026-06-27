@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, serverTimestamp, writeBatch,
+  onSnapshot, query, orderBy, serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -41,39 +41,20 @@ export async function deletePedido(id) {
   return deleteDoc(doc(db, COL, id))
 }
 
-export async function confirmarPagamento(pedido, { fornecedor, custo }) {
-  const batch  = writeBatch(db)
-  const prodStr = (pedido.produtos || []).map(p => p.nome).filter(Boolean).join(', ') || '—'
+export async function confirmarPagamento(id) {
+  return patchPedido(id, { status: 'pago' })
+}
 
-  batch.update(doc(db, 'pedidos', pedido.id), {
-    status:       'pago',
-    atualizadoEm: serverTimestamp(),
-  })
+export async function definirLogistica(id, tipo) {
+  return patchPedido(id, { status: tipo, 'logistica.tipo': tipo })
+}
 
-  const compraRef = doc(collection(db, 'compras'))
-  batch.set(compraRef, {
-    pedidoId:   pedido.id,
-    cliente:    pedido.cliente || '',
-    produto:    prodStr,
-    fornecedor: (fornecedor || '').trim(),
-    custo:      parseFloat(custo) || 0,
-    status:     'pendente',
-    criadoEm:   serverTimestamp(),
-  })
+export async function salvarRoteiro(id, roteiro) {
+  return patchPedido(id, { 'logistica.roteiro': roteiro })
+}
 
-  const vendaRef = doc(collection(db, 'vendas'))
-  batch.set(vendaRef, {
-    pedidoId:       pedido.id,
-    cliente:        pedido.cliente || '',
-    produto:        prodStr,
-    valorVenda:     pedido.valorNegociado || 0,
-    formaPagamento: pedido.formaPagamento || '',
-    statusEntrega:  'aguardando',
-    reciboEmitido:  false,
-    criadoEm:       serverTimestamp(),
-  })
-
-  return batch.commit()
+export async function marcarEntregue(id) {
+  return patchPedido(id, { status: 'entregue' })
 }
 
 function sanitize(d) {
