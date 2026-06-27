@@ -32,7 +32,8 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   let formaPagamento = pedido?.formaPagamento || ''
   let trocaAtiva     = !!pedido?.troca
 
-  const produtoNomes  = produtosCatalogo.map(p => p.nome)
+  const produtoNomes     = produtosCatalogo.map(p => p.nome)
+  const produtoNomesSN   = produtosCatalogo.map(p => p.nome).filter(n => n.trim().toUpperCase().endsWith('S/N'))
   let clientesList    = [...clientes]
 
   // ── Cliente com autocomplete + cadastro rápido ────────────────────────────
@@ -220,7 +221,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   // ── Troca ─────────────────────────────────────────────────────────────────
   const trocaAc = createAutocomplete({
     placeholder:  'ex: iPhone 16 Pro 128GB S/N',
-    items:        produtoNomes,
+    items:        produtoNomesSN,
     initialValue: pedido?.troca?.produto || '',
   })
   trocaAc.el.style.width = '100%'
