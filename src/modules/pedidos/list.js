@@ -74,20 +74,19 @@ function shiftMonth(ym, delta) {
 }
 
 // ── Roteiro WhatsApp ──────────────────────────────────────────────────────────
-function formatRoteiro(paradas, pedido) {
-  const lines = [`🏍️ *ROTEIRO — Baruk Technology*`, '']
-  paradas.forEach((p, i) => {
-    lines.push(`📦 *PARADA ${i + 1}*`)
-    lines.push('↑ *RETIRADA*')
-    if (p.retirada?.item) lines.push(`• Item: ${p.retirada.item}`)
-    if (p.retirada?.loja) lines.push(`• Loja: ${p.retirada.loja}`)
-    lines.push('')
-    lines.push('↓ *ENTREGA*')
-    if (p.entrega?.endereco) lines.push(`• Endereço: ${p.entrega.endereco}`)
-    if (p.entrega?.cliente)  lines.push(`• Cliente: ${p.entrega.cliente}`)
-    if (p.entrega?.item)     lines.push(`• Item: ${p.entrega.item}`)
+function formatRoteiro({ retiradas = [], entrega = {} }) {
+  const lines = ['🏍️ *ROTEIRO — Baruk*', '']
+  retiradas.forEach((r, i) => {
+    lines.push(`📦 ↑ *RETIRADA ${i + 1}*`)
+    if (r.item) lines.push(`• Item: ${r.item}`)
+    if (r.loja) lines.push(`• Loja: ${r.loja}`)
     lines.push('')
   })
+  lines.push('✅ ↓ *ENTREGA*')
+  if (entrega.endereco) lines.push(`• Endereço: ${entrega.endereco}`)
+  if (entrega.cliente)  lines.push(`• Cliente: ${entrega.cliente}`)
+  const itens = retiradas.map(r => r.item).filter(Boolean)
+  if (itens.length)     lines.push(`• Itens: ${itens.join(', ')}`)
   return lines.join('\n')
 }
 
@@ -249,6 +248,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         actionsCell.appendChild(actionBtn('checkOk', 'Entregue', 'btn-success', () => confirmarEntrega(p.id)))
       }
 
+      if (canEdit && p.status === 'cancelado') {
+        actionsCell.appendChild(actionBtn('arrow', 'Reabrir', 'btn-outline-blue', () => reabrirPedido(p.id)))
+      }
+
       if (canDelete && p.status === 'cancelado') {
         actionsCell.appendChild(actionBtn('trash', 'Excluir', 'btn-danger-outline', () => confirmDelete(p)))
       }
@@ -290,6 +293,11 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       danger: true,
       onConfirm: () => advanceStatus(p.id, 'cancelado'),
     })
+  }
+
+  async function reabrirPedido(id) {
+    try { await patchPedido(id, { status: 'negociando' }); toastSuccess('Pedido reaberto.') }
+    catch { toastError('Erro ao reabrir pedido.') }
   }
 
   function confirmDelete(p) {
@@ -351,56 +359,59 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       title: '🏍️ Roteiro de Entrega',
       size: 'lg',
       renderBody: (body, closeModal) => {
-        // Inicializa paradas
-        let paradas = pedido.logistica?.roteiro?.length
-          ? pedido.logistica.roteiro.map(p => ({
-              retirada: { ...p.retirada },
-              entrega:  { ...p.entrega  },
-            }))
-          : (pedido.produtos || [{}]).map(pr => ({
-              retirada: { item: [pr.nome, pr.cor].filter(Boolean).join(' '), loja: '' },
-              entrega:  { endereco: '', cliente: pedido.cliente || '', item: [pr.nome, pr.cor].filter(Boolean).join(' ') },
-            }))
+        // Suporta formato novo {retiradas, entrega} e legado (array de paradas)
+        const saved = pedido.logistica?.roteiro
+        let retiradas, entrega
 
-        const paradasWrap = el('div', { class: 'roteiro-paradas' })
+        if (saved && !Array.isArray(saved) && saved.retiradas) {
+          retiradas = saved.retiradas.map(r => ({ ...r }))
+          entrega   = { ...saved.entrega }
+        } else if (Array.isArray(saved) && saved.length) {
+          retiradas = saved.map(p => ({ item: p.retirada?.item || '', loja: p.retirada?.loja || '' }))
+          entrega   = { endereco: saved[0]?.entrega?.endereco || '', cliente: pedido.cliente || '' }
+        } else {
+          retiradas = (pedido.produtos || [{}]).map(pr => ({
+            item: [pr.nome, pr.cor].filter(Boolean).join(' '),
+            loja: '',
+          }))
+          entrega = { endereco: '', cliente: pedido.cliente || '' }
+        }
 
-        function renderParadas() {
-          paradasWrap.replaceChildren()
-          paradas.forEach((p, i) => {
-            function inp(val, onInput, placeholder) {
-              const el2 = el('input', { type: 'text', placeholder })
-              el2.value = val || ''
-              el2.addEventListener('input', () => onInput(el2.value))
-              return el2
-            }
+        const retiradasWrap = el('div', { class: 'roteiro-paradas' })
+        const previewEl = el('textarea', {
+          class: 'roteiro-preview', readonly: '', rows: '7', spellcheck: 'false',
+        })
 
+        function getRoteiro() { return { retiradas, entrega } }
+
+        function updatePreview() { previewEl.value = formatRoteiro(getRoteiro()) }
+
+        function inp(val, onInput, placeholder) {
+          const i = el('input', { type: 'text', placeholder })
+          i.value = val || ''
+          i.addEventListener('input', () => { onInput(i.value); updatePreview() })
+          return i
+        }
+
+        function renderRetiradas() {
+          retiradasWrap.replaceChildren()
+          retiradas.forEach((r, i) => {
             const removeBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline roteiro-remove-btn' }, '×')
-            removeBtn.addEventListener('click', () => { paradas.splice(i, 1); renderParadas() })
+            removeBtn.addEventListener('click', () => { retiradas.splice(i, 1); renderRetiradas(); updatePreview() })
 
-            paradasWrap.appendChild(
+            retiradasWrap.appendChild(
               el('div', { class: 'roteiro-parada' },
                 el('div', { class: 'roteiro-parada-header' },
-                  el('span', { class: 'roteiro-parada-num' }, `Parada ${i + 1}`),
-                  paradas.length > 1 ? removeBtn : el('span', {})
+                  el('span', { class: 'roteiro-parada-num' }, `Retirada ${i + 1}`),
+                  retiradas.length > 1 ? removeBtn : el('span', {})
                 ),
                 el('div', { class: 'roteiro-section roteiro-retirada' },
                   el('div', { class: 'roteiro-section-title' }, '↑ Retirada'),
                   el('div', { class: 'roteiro-fields' },
                     el('div', { class: 'field' }, el('label', {}, 'Item'),
-                      inp(p.retirada?.item, v => { paradas[i].retirada.item = v }, 'Item retirado')),
+                      inp(r.item, v => { retiradas[i].item = v }, 'Produto a retirar')),
                     el('div', { class: 'field' }, el('label', {}, 'Loja / Fornecedor'),
-                      inp(p.retirada?.loja, v => { paradas[i].retirada.loja = v }, 'ex: Mohamed Ln229')),
-                  )
-                ),
-                el('div', { class: 'roteiro-section roteiro-entrega' },
-                  el('div', { class: 'roteiro-section-title' }, '↓ Entrega'),
-                  el('div', { class: 'roteiro-fields' },
-                    el('div', { class: 'field' }, el('label', {}, 'Endereço'),
-                      inp(p.entrega?.endereco, v => { paradas[i].entrega.endereco = v }, 'Rua, número, bairro...')),
-                    el('div', { class: 'field' }, el('label', {}, 'Cliente'),
-                      inp(p.entrega?.cliente, v => { paradas[i].entrega.cliente = v }, 'Nome do cliente')),
-                    el('div', { class: 'field' }, el('label', {}, 'Item'),
-                      inp(p.entrega?.item, v => { paradas[i].entrega.item = v }, 'Item entregue')),
+                      inp(r.loja, v => { retiradas[i].loja = v }, 'ex: Mohamed Ln229')),
                   )
                 )
               )
@@ -408,25 +419,50 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           })
         }
 
-        renderParadas()
+        // Entrega única
+        const enderecoInp = el('input', { type: 'text', placeholder: 'Rua, número, bairro...' })
+        enderecoInp.value = entrega.endereco || ''
+        enderecoInp.addEventListener('input', () => { entrega.endereco = enderecoInp.value; updatePreview() })
 
-        const addBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Parada')
+        const clienteInp = el('input', { type: 'text', placeholder: 'Nome do cliente' })
+        clienteInp.value = entrega.cliente || ''
+        clienteInp.addEventListener('input', () => { entrega.cliente = clienteInp.value; updatePreview() })
+
+        const entregaSection = el('div', { class: 'roteiro-parada roteiro-entrega-unica' },
+          el('div', { class: 'roteiro-section roteiro-entrega' },
+            el('div', { class: 'roteiro-section-title' }, '↓ Entrega'),
+            el('div', { class: 'roteiro-fields' },
+              el('div', { class: 'field' }, el('label', {}, 'Endereço'), enderecoInp),
+              el('div', { class: 'field' }, el('label', {}, 'Cliente'), clienteInp),
+            )
+          )
+        )
+
+        const addBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Retirada')
         addBtn.addEventListener('click', () => {
-          paradas.push({ retirada: { item: '', loja: '' }, entrega: { endereco: '', cliente: pedido.cliente || '', item: '' } })
-          renderParadas()
+          retiradas.push({ item: '', loja: '' })
+          renderRetiradas()
+          updatePreview()
+        })
+
+        const copyBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '📋 Copiar')
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard.writeText(previewEl.value).then(() => {
+            copyBtn.textContent = '✓ Copiado!'
+            setTimeout(() => { copyBtn.textContent = '📋 Copiar' }, 2000)
+          })
         })
 
         const waBtn = el('button', { type: 'button', class: 'btn btn-success' }, '📱 WhatsApp')
         waBtn.addEventListener('click', () => {
-          const text = formatRoteiro(paradas, pedido)
-          window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank')
+          window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(previewEl.value)}`, '_blank')
         })
 
         const saveBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Salvar')
         saveBtn.addEventListener('click', async () => {
           saveBtn.disabled = true; saveBtn.textContent = 'Salvando...'
           try {
-            await salvarRoteiro(pedido.id, paradas)
+            await salvarRoteiro(pedido.id, getRoteiro())
             toastSuccess('Roteiro salvo.')
             closeModal()
           } catch (err) {
@@ -436,9 +472,20 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           }
         })
 
+        renderRetiradas()
+        updatePreview()
+
         mount(body,
-          paradasWrap,
-          el('div', { class: 'roteiro-footer' }, addBtn, el('div', { style: 'display:flex;gap:8px' }, waBtn, saveBtn))
+          retiradasWrap,
+          entregaSection,
+          el('div', { class: 'roteiro-preview-wrap' },
+            el('div', { class: 'roteiro-preview-label' }, 'Prévia da mensagem'),
+            previewEl,
+          ),
+          el('div', { class: 'roteiro-footer' },
+            el('div', { style: 'display:flex;gap:8px' }, addBtn, copyBtn),
+            el('div', { style: 'display:flex;gap:8px' }, waBtn, saveBtn),
+          )
         )
       },
     })
