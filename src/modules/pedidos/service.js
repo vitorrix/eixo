@@ -29,7 +29,8 @@ export async function createPedido(data) {
 export async function updatePedido(id, data) {
   return updateDoc(doc(db, COL, id), {
     ...sanitize(data),
-    atualizadoEm: serverTimestamp(),
+    formaPagamento: deleteField(),
+    atualizadoEm:   serverTimestamp(),
   })
 }
 
@@ -37,9 +38,10 @@ export async function updatePedido(id, data) {
 export async function editarPedido(id, data) {
   return updateDoc(doc(db, COL, id), {
     ...sanitize(data),
-    status:       'negociando',
-    logistica:    deleteField(),
-    atualizadoEm: serverTimestamp(),
+    formaPagamento: deleteField(),
+    status:         'negociando',
+    logistica:      deleteField(),
+    atualizadoEm:   serverTimestamp(),
   })
 }
 
@@ -79,13 +81,17 @@ function sanitize(d) {
 
   const valorNegociado = produtos.reduce((s, p) => s + p.valor, 0)
 
+  const formasPagamento = Array.isArray(d.formasPagamento)
+    ? d.formasPagamento
+    : (d.formaPagamento ? [d.formaPagamento] : [])
+
   return {
-    dataContato:    d.dataContato    || '',
-    cliente:        (d.cliente       || '').trim(),
+    dataContato:    d.dataContato || '',
+    cliente:        (d.cliente    || '').trim(),
     produtos,
     valorNegociado,
-    formaPagamento: d.formaPagamento || '',
-    troca:          d.troca          || null,
-    observacoes:    (d.observacoes   || '').trim(),
+    formasPagamento,
+    troca:          d.troca       || null,
+    observacoes:    (d.observacoes || '').trim(),
   }
 }
