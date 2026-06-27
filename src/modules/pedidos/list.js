@@ -307,41 +307,42 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       const valor = p.valorNegociado ?? p.totalVenda ?? 0
 
       // Ações
-      const actionsCell = el('td', { class: 'td-actions' })
+      const actionsInner = el('div', { class: 'td-actions-inner' })
+      const actionsCell  = el('td', { class: 'col-actions' }, actionsInner)
 
       if (canEdit) {
-        actionsCell.appendChild(actionBtn('edit', 'Editar', 'btn-outline', () => openPedidoModal(p)))
+        actionsInner.appendChild(actionBtn('edit', 'Editar', 'btn-outline', () => openPedidoModal(p)))
       }
 
       if (canEdit && p.status === 'negociando') {
-        actionsCell.appendChild(actionBtn('arrow', 'Aguardar Pgto', 'btn-outline-blue', () => advanceStatus(p.id, 'aguardando_pagamento')))
-        actionsCell.appendChild(actionBtn('x', 'Cancelar', 'btn-danger-outline', () => cancelarPedido(p)))
+        actionsInner.appendChild(actionBtn('arrow', 'Aguardar Pgto', 'btn-outline-blue', () => advanceStatus(p.id, 'aguardando_pagamento')))
+        actionsInner.appendChild(actionBtn('x', 'Cancelar', 'btn-danger-outline', () => cancelarPedido(p)))
       }
 
       if (canEdit && p.status === 'aguardando_pagamento') {
-        actionsCell.appendChild(actionBtn('check', 'Confirmar Pgto', 'btn-success', () => confirmarPgto(p.id)))
-        actionsCell.appendChild(actionBtn('x', 'Cancelar', 'btn-danger-outline', () => cancelarPedido(p)))
+        actionsInner.appendChild(actionBtn('check', 'Confirmar Pgto', 'btn-success', () => confirmarPgto(p.id)))
+        actionsInner.appendChild(actionBtn('x', 'Cancelar', 'btn-danger-outline', () => cancelarPedido(p)))
       }
 
       if (canEdit && p.status === 'pago') {
-        actionsCell.appendChild(actionBtn('truck', 'Definir Entrega', 'btn-outline-blue', () => abrirLogisticaModal(p)))
+        actionsInner.appendChild(actionBtn('truck', 'Definir Entrega', 'btn-outline-blue', () => abrirLogisticaModal(p)))
       }
 
       if (canEdit && p.status === 'motoboy') {
-        actionsCell.appendChild(actionBtn('map', 'Roteiro', 'btn-outline-blue', () => abrirRoteiroModal(p)))
-        actionsCell.appendChild(actionBtn('checkOk', 'Entregue', 'btn-success', () => confirmarEntrega(p.id)))
+        actionsInner.appendChild(actionBtn('map', 'Roteiro', 'btn-outline-blue', () => abrirRoteiroModal(p)))
+        actionsInner.appendChild(actionBtn('checkOk', 'Entregue', 'btn-success', () => confirmarEntrega(p.id)))
       }
 
       if (canEdit && (p.status === 'retirada' || p.status === 'correio')) {
-        actionsCell.appendChild(actionBtn('checkOk', 'Entregue', 'btn-success', () => confirmarEntrega(p.id)))
+        actionsInner.appendChild(actionBtn('checkOk', 'Entregue', 'btn-success', () => confirmarEntrega(p.id)))
       }
 
       if (canEdit && p.status === 'cancelado') {
-        actionsCell.appendChild(actionBtn('arrow', 'Reabrir', 'btn-outline-blue', () => reabrirPedido(p.id)))
+        actionsInner.appendChild(actionBtn('arrow', 'Reabrir', 'btn-outline-blue', () => reabrirPedido(p.id)))
       }
 
       if (canDelete && p.status === 'cancelado') {
-        actionsCell.appendChild(actionBtn('trash', 'Excluir', 'btn-danger-outline', () => confirmDelete(p)))
+        actionsInner.appendChild(actionBtn('trash', 'Excluir', 'btn-danger-outline', () => confirmDelete(p)))
       }
 
       const row = el('tr', {},
