@@ -7,7 +7,19 @@ import { renderPedidoList } from './list.js'
 
 export function render(container) {
   mount(container, el('div', { class: 'loading' }, 'Carregando pedidos...'))
-  _init(container)
+
+  let cancelled = false
+  let unsubPedidos = null
+
+  _init(container).then(unsub => {
+    if (cancelled) unsub?.()   // navegou antes do init terminar: cancela já
+    else unsubPedidos = unsub
+  })
+
+  return () => {
+    cancelled = true
+    unsubPedidos?.()
+  }
 }
 
 async function _init(container) {

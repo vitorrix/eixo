@@ -249,18 +249,20 @@ export function renderClienteForm(container, close, cliente = null) {
     } else clearError(nameInput, nameError)
 
     const docRaw = rawDigits(docInput.value)
-    const docOk  = currentType === 'pf' ? validateCPF(docRaw) : validateCNPJ(docRaw)
-    if (!docOk) {
-      setError(docInput, docError, currentType === 'pf' ? 'CPF inválido.' : 'CNPJ inválido.')
-      valid = false
+    if (docRaw) {
+      const docOk = currentType === 'pf' ? validateCPF(docRaw) : validateCNPJ(docRaw)
+      if (!docOk) {
+        setError(docInput, docError, currentType === 'pf' ? 'CPF inválido.' : 'CNPJ inválido.')
+        valid = false
+      } else clearError(docInput, docError)
     } else clearError(docInput, docError)
 
-    if (!validatePhone(phoneInput.value)) {
+    if (phoneInput.value && !validatePhone(phoneInput.value)) {
       setError(phoneInput, phoneError, 'Telefone inválido.')
       valid = false
     } else clearError(phoneInput, phoneError)
 
-    if (!validateEmail(emailInput.value)) {
+    if (emailInput.value && !validateEmail(emailInput.value)) {
       setError(emailInput, emailError, 'E-mail inválido.')
       valid = false
     } else clearError(emailInput, emailError)
