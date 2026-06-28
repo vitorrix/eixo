@@ -637,7 +637,7 @@ function buildParc(prodData) {
   )
 
   const sec = el('div', { class: 'orc-section active' }, el('div', { class: 'orc-cols' }, colL, refs.col))
-  return { sec, cliInp }
+  return { sec, cliInp, getItems: () => pItems, syncItems: (src) => { pItems.splice(0, pItems.length, ...src.map(i => ({ ...i }))); renderList() } }
 }
 
 // ── Troca section ─────────────────────────────────────────────────
@@ -789,7 +789,7 @@ function buildTroca(prodData) {
   )
 
   const sec = el('div', { class: 'orc-section' }, el('div', { class: 'orc-cols' }, colL, refs.col))
-  return { sec, cliInp }
+  return { sec, cliInp, getNovos: () => tNovos, syncNovos: (src) => { tNovos.splice(0, tNovos.length, ...src.map(i => ({ ...i }))); renderNovos() } }
 }
 
 // ── Main ──────────────────────────────────────────────────────────
@@ -802,19 +802,21 @@ export async function render(container) {
     console.error('Erro ao carregar produtos para orçamento:', e)
   }
 
-  const { sec: parcSec, cliInp: parcCli } = buildParc(prodData)
-  const { sec: trocaSec, cliInp: trocaCli } = buildTroca(prodData)
+  const { sec: parcSec, cliInp: parcCli, getItems: parcGetItems, syncItems: parcSyncItems } = buildParc(prodData)
+  const { sec: trocaSec, cliInp: trocaCli, getNovos: trocaGetNovos, syncNovos: trocaSyncNovos } = buildTroca(prodData)
 
   const tabParc = el('button', { type: 'button', class: 'orc-tab-btn active' }, '💳 Parcelamento')
   const tabTroc = el('button', { type: 'button', class: 'orc-tab-btn' }, '🔄 Troca')
 
   tabParc.addEventListener('click', () => {
     parcCli.value = trocaCli.value
+    parcSyncItems(trocaGetNovos())
     parcSec.classList.add('active');  trocaSec.classList.remove('active')
     tabParc.classList.add('active');  tabTroc.classList.remove('active')
   })
   tabTroc.addEventListener('click', () => {
     trocaCli.value = parcCli.value
+    trocaSyncNovos(parcGetItems())
     trocaSec.classList.add('active'); parcSec.classList.remove('active')
     tabTroc.classList.add('active');  tabParc.classList.remove('active')
   })
