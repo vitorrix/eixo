@@ -12,6 +12,7 @@ const PAGE_LABELS = {
   '/fornecedores':  'Fornecedores',
   '/produtos':      'Produtos',
   '/recibo':        'Notas de Venda',
+  '/orcamentos':    'Orçamentos',
   '/relatorios':    'Relatórios',
   '/financeiro':    'Financeiro',
   '/configuracoes': 'Configurações',
@@ -38,6 +39,11 @@ const NAV_ICONS = {
   vendas: [
     'M23 6l-9.5 9.5-5-5L1 18',
     'M17 6h6v6',
+  ],
+  orcamentos: [
+    'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2',
+    'M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+    'M12 11v6M9 14h6',
   ],
   recibo: [
     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2',
@@ -76,6 +82,7 @@ const NAV_ITEMS = [
   { path: '/clientes',      label: 'Clientes',      module: 'clientes',      iconKey: 'clientes'      },
   { path: '/fornecedores',  label: 'Fornecedores',  module: 'fornecedores',  iconKey: 'fornecedores'  },
   { path: '/produtos',      label: 'Produtos',      module: 'produtos',      iconKey: 'produtos'      },
+  { path: '/orcamentos',    label: 'Orçamentos',     module: null,             iconKey: 'orcamentos'    },
   { path: '/recibo',        label: 'Notas de Venda',module: 'recibo',        iconKey: 'recibo'        },
   { path: '/relatorios',    label: 'Relatórios',    module: 'relatorios',    iconKey: 'relatorios'    },
   { path: '/financeiro',    label: 'Financeiro',    module: 'financeiro',    iconKey: 'financeiro'    },
