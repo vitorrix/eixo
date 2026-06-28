@@ -75,19 +75,19 @@ const NAV_ICONS = {
 }
 
 const NAV_ITEMS = [
-  { path: '/',          label: 'Dashboard',   module: null,        iconKey: 'dashboard'  },
-  { path: '/pedidos',       label: 'Pedidos',       module: 'pedidos',       iconKey: 'pedidos'       },
-  { path: '/compras',       label: 'Compras',       module: 'compras',       iconKey: 'compras'       },
-  { path: '/vendas',        label: 'Vendas',        module: 'vendas',        iconKey: 'vendas'        },
-  { path: '/clientes',      label: 'Clientes',      module: 'clientes',      iconKey: 'clientes'      },
-  { path: '/fornecedores',  label: 'Fornecedores',  module: 'fornecedores',  iconKey: 'fornecedores'  },
-  { path: '/produtos',      label: 'Produtos',      module: 'produtos',      iconKey: 'produtos'      },
-  { path: '/orcamentos',    label: 'Orçamentos',     module: null,             iconKey: 'orcamentos'    },
-  { path: '/recibo',        label: 'Notas de Venda',module: 'recibo',        iconKey: 'recibo'        },
-  { path: '/relatorios',    label: 'Relatórios',    module: 'relatorios',    iconKey: 'relatorios'    },
-  { path: '/financeiro',    label: 'Financeiro',    module: 'financeiro',    iconKey: 'financeiro'    },
-  { path: '/configuracoes', label: 'Configurações', module: 'configuracoes', iconKey: 'configuracoes' },
-  { path: '/usuarios',      label: 'Usuários',      module: 'usuarios',      iconKey: 'usuarios'      },
+  { path: '/',              label: 'Dashboard',      module: null,            iconKey: 'dashboard'     },
+  { path: '/orcamentos',    label: 'Orçamentos',     module: null,            iconKey: 'orcamentos'    },
+  { path: '/pedidos',       label: 'Pedidos',        module: 'pedidos',       iconKey: 'pedidos'       },
+  { path: '/clientes',      label: 'Clientes',       module: 'clientes',      iconKey: 'clientes'      },
+  { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos'      },
+  { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores'  },
+  { path: '/compras',       label: 'Compras',        module: 'compras',       iconKey: 'compras'       },
+  { path: '/vendas',        label: 'Vendas',         module: 'vendas',        iconKey: 'vendas'        },
+  { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro'    },
+  { path: '/recibo',        label: 'Notas de Venda', module: 'recibo',        iconKey: 'recibo'        },
+  { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios'    },
+  { path: '/configuracoes', label: 'Configurações',  module: 'configuracoes', iconKey: 'configuracoes' },
+  { path: '/usuarios',      label: 'Usuários',       module: 'usuarios',      iconKey: 'usuarios'      },
 ]
 
 function buildIcon(key) {
