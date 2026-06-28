@@ -101,6 +101,10 @@ html, body {
 .nav-svg-icon { flex-shrink: 0; opacity: .85; }
 .nav-link.active .nav-svg-icon { opacity: 1; }
 
+.nav-link--wip { opacity: .38; cursor: default; pointer-events: none; }
+.nav-link--wip .nav-label { flex: 1; }
+.nav-wip-badge { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; background: rgba(255,255,255,.1); color: rgba(255,255,255,.45); border-radius: 4px; padding: 2px 5px; flex-shrink: 0; }
+
 .sidebar-footer {
   padding: 12px;
   border-top: 1px solid rgba(255,255,255,.08);

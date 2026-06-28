@@ -79,15 +79,15 @@ const NAV_ITEMS = [
   { path: '/orcamentos',    label: 'Orçamentos',     module: null,            iconKey: 'orcamentos'    },
   { path: '/pedidos',       label: 'Pedidos',        module: 'pedidos',       iconKey: 'pedidos'       },
   { path: '/clientes',      label: 'Clientes',       module: 'clientes',      iconKey: 'clientes'      },
-  { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos'      },
-  { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores'  },
-  { path: '/compras',       label: 'Compras',        module: 'compras',       iconKey: 'compras'       },
-  { path: '/vendas',        label: 'Vendas',         module: 'vendas',        iconKey: 'vendas'        },
-  { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro'    },
-  { path: '/recibo',        label: 'Notas de Venda', module: 'recibo',        iconKey: 'recibo'        },
-  { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios'    },
+  { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos',      wip: true },
+  { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores',  wip: true },
+  { path: '/compras',       label: 'Compras',        module: 'compras',       iconKey: 'compras',       wip: true },
+  { path: '/vendas',        label: 'Vendas',         module: 'vendas',        iconKey: 'vendas',        wip: true },
+  { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro',    wip: true },
+  { path: '/recibo',        label: 'Notas de Venda', module: 'recibo',        iconKey: 'recibo',        wip: true },
+  { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios',    wip: true },
   { path: '/configuracoes', label: 'Configurações',  module: 'configuracoes', iconKey: 'configuracoes' },
-  { path: '/usuarios',      label: 'Usuários',       module: 'usuarios',      iconKey: 'usuarios'      },
+  { path: '/usuarios',      label: 'Usuários',       module: 'usuarios',      iconKey: 'usuarios',      wip: true },
 ]
 
 function buildIcon(key) {
@@ -110,6 +110,14 @@ export function renderLayout(container, profile) {
   )
 
   const navLinks = visibleItems.map(item => {
+    if (item.wip) {
+      const link = el('div', { class: 'nav-link nav-link--wip' },
+        buildIcon(item.iconKey),
+        el('span', { class: 'nav-label' }, item.label),
+        el('span', { class: 'nav-wip-badge' }, 'Em breve'),
+      )
+      return link
+    }
     const link = el('a', { class: 'nav-link', href: `#${item.path}` },
       buildIcon(item.iconKey),
       el('span', { class: 'nav-label' }, item.label)
