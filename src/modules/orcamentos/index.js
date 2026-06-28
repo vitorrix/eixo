@@ -622,14 +622,16 @@ function buildParc(prodData) {
       listWrap, addBtn, totRow,
     ),
     el('div', { class: 'orc-card' },
-      el('div', { class: 'field' }, el('label', {}, '💵 Entrada — Pix / Dinheiro (opcional)'), makePfxWrap(entInp)),
-      el('div', { class: 'orc-sep' }),
-      el('div', { class: 'field' }, el('label', {}, '🏷️ Desconto (opcional)'), makePfxWrap(descInp)),
+      el('div', { class: 'orc-row-2' },
+        el('div', { class: 'field' }, el('label', {}, '💵 Entrada'), makePfxWrap(entInp)),
+        el('div', { class: 'field' }, el('label', {}, '🏷️ Desconto'), makePfxWrap(descInp)),
+      ),
     ),
     calcBtn,
   )
 
-  return el('div', { class: 'orc-section active' }, el('div', { class: 'orc-cols' }, colL, refs.col))
+  const sec = el('div', { class: 'orc-section active' }, el('div', { class: 'orc-cols' }, colL, refs.col))
+  return { sec, cliInp }
 }
 
 // ── Troca section ─────────────────────────────────────────────────
@@ -756,9 +758,10 @@ function buildTroca(prodData) {
       novoList, addNovoBtn, novoTot,
     ),
     el('div', { class: 'orc-card' },
-      el('div', { class: 'field' }, el('label', {}, '🏷️ Desconto extra (opcional)'), makePfxWrap(dcInp)),
-      el('div', { class: 'orc-sep' }),
-      el('div', { class: 'field' }, el('label', {}, '💵 Entrada — Pix / Dinheiro (opcional)'), makePfxWrap(entInp)),
+      el('div', { class: 'orc-row-2' },
+        el('div', { class: 'field' }, el('label', {}, '💵 Entrada'), makePfxWrap(entInp)),
+        el('div', { class: 'field' }, el('label', {}, '🏷️ Desconto'), makePfxWrap(dcInp)),
+      ),
     ),
     el('div', { class: 'orc-avc' },
       el('div', { class: 'orc-avlbl' }, '🔧 Análise Interna'),
@@ -773,7 +776,8 @@ function buildTroca(prodData) {
     calcBtn,
   )
 
-  return el('div', { class: 'orc-section' }, el('div', { class: 'orc-cols' }, colL, refs.col))
+  const sec = el('div', { class: 'orc-section' }, el('div', { class: 'orc-cols' }, colL, refs.col))
+  return { sec, cliInp }
 }
 
 // ── Main ──────────────────────────────────────────────────────────
@@ -786,17 +790,19 @@ export async function render(container) {
     console.error('Erro ao carregar produtos para orçamento:', e)
   }
 
-  const parcSec = buildParc(prodData)
-  const trocaSec = buildTroca(prodData)
+  const { sec: parcSec, cliInp: parcCli } = buildParc(prodData)
+  const { sec: trocaSec, cliInp: trocaCli } = buildTroca(prodData)
 
   const tabParc = el('button', { type: 'button', class: 'orc-tab-btn active' }, '💳 Parcelamento')
   const tabTroc = el('button', { type: 'button', class: 'orc-tab-btn' }, '🔄 Troca')
 
   tabParc.addEventListener('click', () => {
+    parcCli.value = trocaCli.value
     parcSec.classList.add('active');  trocaSec.classList.remove('active')
     tabParc.classList.add('active');  tabTroc.classList.remove('active')
   })
   tabTroc.addEventListener('click', () => {
+    trocaCli.value = parcCli.value
     trocaSec.classList.add('active'); parcSec.classList.remove('active')
     tabTroc.classList.add('active');  tabParc.classList.remove('active')
   })

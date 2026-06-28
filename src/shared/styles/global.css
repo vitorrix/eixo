@@ -1746,7 +1746,7 @@ html, body {
 .orc-tab-btn.active { background: var(--color-primary); color: #fff; }
 .orc-section { display: none; }
 .orc-section.active { display: block; }
-.orc-cols { display: grid; grid-template-columns: 370px 1fr; gap: 20px; align-items: start; }
+.orc-cols { display: flex; flex-direction: column; max-width: 680px; margin: 0 auto; gap: 0; }
 
 /* Cards */
 .orc-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
@@ -1783,7 +1783,11 @@ html, body {
 .orc-calc-btn:hover { opacity: .88; }
 
 /* Result column */
-.orc-col-l { position: sticky; top: 20px; }
+.orc-col-l { }
+.orc-row-2 { display: flex; gap: 12px; }
+.orc-row-2 .field { flex: 1; min-width: 0; }
+.orc-row-2 .orc-pfx-wrap { width: 100%; }
+.orc-row-2 .orc-inp-money { max-width: none; width: 100%; }
 .orc-result { display: none; margin-bottom: 10px; }
 .orc-result.visible { display: block; }
 .orc-disc { display: none; text-align: center; font-size: 11px; color: var(--color-muted); margin-bottom: 10px; }
@@ -1871,7 +1875,6 @@ html, body {
 .orc-avtotl { font-size: 10px; font-weight: 700; color: #b91c1c; text-transform: uppercase; letter-spacing: .8px; }
 .orc-avtotv { font-size: 17px; font-weight: 900; color: #dc2626; }
 
-@media (max-width: 900px) {
-  .orc-cols { grid-template-columns: 1fr; }
-  .orc-col-l { position: static; }
+@media (max-width: 720px) {
+  .orc-row-2 { flex-direction: column; gap: 0; }
 }
