@@ -1774,8 +1774,16 @@ html, body {
 .orc-prow-rm { width: 30px; height: 30px; flex-shrink: 0; border: none; background: #fef2f2; color: #dc2626; border-radius: 7px; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
 .orc-prow-rm:hover { background: #fecaca; }
 .orc-custom-inp { display: none; }
+.orc-card--trade { border-color: #f59e0b; }
+.orc-card--trade .orc-card-label { color: #92400e; }
+.orc-card--trade .orc-card-label::before { background: #f59e0b; }
+.orc-card--novo { border-color: #6ee7b7; }
+.orc-card--novo .orc-card-label { color: #065f46; }
+.orc-card--novo .orc-card-label::before { background: var(--color-primary); }
 .orc-add-btn { width: 100%; padding: 10px; background: transparent; border: 1.5px dashed #6ee7b7; color: var(--color-primary); border-radius: 10px; font-size: 13px; font-weight: 700; font-family: var(--font); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; }
 .orc-add-btn:hover { background: #d1fae5; }
+.orc-add-btn--trade { border-color: #fcd34d; color: #92400e; }
+.orc-add-btn--trade:hover { background: #fef3c7; }
 .orc-total-row { display: none; justify-content: space-between; align-items: center; padding: 8px 12px; background: #d1fae5; border-radius: 9px; border: 1px solid #6ee7b7; margin-top: 8px; }
 .orc-total-l { font-size: 10px; font-weight: 700; color: var(--color-primary); text-transform: uppercase; letter-spacing: .8px; }
 .orc-total-v { font-size: 15px; font-weight: 900; color: var(--color-primary); }

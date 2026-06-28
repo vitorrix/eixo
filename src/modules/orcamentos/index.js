@@ -251,11 +251,12 @@ const USADOS = [
 ]
 
 const AVARIA_DEFS = [
-  { key: 'bat',  label: '🔋 Bateria',           def: 490 },
-  { key: 'carc', label: '🛡️ Carcaça / Chassi',  def: 200 },
-  { key: 'face', label: '👁️ Face ID / Touch ID', def: 300 },
-  { key: 'cam',  label: '📷 Câmera',             def: 250 },
-  { key: 'out',  label: '⚠️ Outro defeito',       def: 0   },
+  { key: 'bat',  label: '🔋 Bateria',            def: 490 },
+  { key: 'tam',  label: '🔲 Tampa Traseira',      def: 450 },
+  { key: 'carc', label: '🛡️ Carcaça',             def: 200 },
+  { key: 'face', label: '👁️ Face ID / Touch ID',  def: 300 },
+  { key: 'cam',  label: '📷 Câmera',              def: 250 },
+  { key: 'out',  label: '⚠️ Outro defeito',        def: 0   },
 ]
 
 const TELA_MODELOS = [
@@ -537,11 +538,16 @@ function msgParc(items, desc, liq, entrada, rest, cli) {
   return m + `${NL}${L}${NL}_Válido por 24h  ·  Baruk Store_${NL}_barukstore.com.br_`
 }
 
-function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli) {
+function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avNames = []) {
   const nome = cli || 'Baruker'
   const NL = '\n', L = '───────────────────'
   let m = `Olá, ${nome}! 😊${NL}${NL}*Orçamento de Troca — Baruk Store*${NL}${L}${NL}${NL}`
-  for (const it of usados) m += `🔄  Aparelho na troca${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}${NL}`
+  for (const it of usados) m += `🔄  Aparelho do cliente${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}${NL}`
+  if (avNames.length > 0) {
+    m += `🔧  Problemas identificados${NL}`
+    for (const n of avNames) m += `     • ${n}${NL}`
+    m += NL
+  }
   for (const it of novos)  m += `📦  Aparelho desejado${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}`
   if (dc > 0) m += `🏷️  Desconto:  *− ${R(dc)}*${NL}`
   m += `${NL}${L}${NL}${NL}💳  Diferença a pagar:  *${R(dif)}*${NL}${NL}${L}${NL}${NL}`
@@ -652,7 +658,7 @@ function buildTroca(prodData) {
   const { listWrap: novoList,  totRow: novoTot,  renderList: renderNovos  } =
     makeItemList(tNovos,  prodData, 'Buscar produto...', 'Total desejado')
 
-  const addUsadoBtn = el('button', { type: 'button', class: 'orc-add-btn' }, '+ Adicionar aparelho')
+  const addUsadoBtn = el('button', { type: 'button', class: 'orc-add-btn orc-add-btn--trade' }, '+ Adicionar aparelho')
   addUsadoBtn.addEventListener('click', () => { tUsados.push({ nome: '', val: 0 }); renderUsados() })
   const addNovoBtn = el('button', { type: 'button', class: 'orc-add-btn' }, '+ Adicionar aparelho')
   addNovoBtn.addEventListener('click', () => { tNovos.push({ nome: '', val: 0 }); renderNovos() })
@@ -739,7 +745,12 @@ function buildTroca(prodData) {
     }
     updPills(refs.pillsWrap, base, tNparc, onPill)
     updTbl(refs.tbody, base, tNparc)
-    refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli)
+    const avNames = []
+    for (const a of AVARIA_DEFS) {
+      if (avState[a.key].checked) avNames.push(a.label.replace(/^\S+\s+/, ''))
+    }
+    if (avTela.checked) avNames.splice(1, 0, 'Tela')
+    refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli, avNames)
     refs.resultBlock.classList.add('visible')
     refs.disc.classList.add('visible')
     refs.msgc.classList.add('visible')
@@ -749,12 +760,12 @@ function buildTroca(prodData) {
     el('div', { class: 'orc-card' },
       el('div', { class: 'field' }, el('label', {}, 'Cliente'), cliInp),
     ),
-    el('div', { class: 'orc-card' },
-      el('div', { class: 'orc-card-label' }, 'Aparelho(s) na Troca (do cliente)'),
+    el('div', { class: 'orc-card orc-card--trade' },
+      el('div', { class: 'orc-card-label' }, '📤 Aparelho do Cliente'),
       usadoList, addUsadoBtn, usadoTot,
     ),
-    el('div', { class: 'orc-card' },
-      el('div', { class: 'orc-card-label' }, 'Aparelho(s) Desejado(s)'),
+    el('div', { class: 'orc-card orc-card--novo' },
+      el('div', { class: 'orc-card-label' }, '✨ Aparelho Desejado'),
       novoList, addNovoBtn, novoTot,
     ),
     el('div', { class: 'orc-card' },
@@ -765,9 +776,10 @@ function buildTroca(prodData) {
     ),
     el('div', { class: 'orc-avc' },
       el('div', { class: 'orc-avlbl' }, '🔧 Análise Interna'),
-      el('div', { class: 'orc-avnota' }, '⚠️ Uso interno — não aparece no orçamento do cliente. Subtraído do valor da troca.'),
-      ...avRows,
+      el('div', { class: 'orc-avnota' }, '⚠️ Uso interno — descontos subtraídos do valor da troca. Problemas marcados aparecem na mensagem ao cliente.'),
+      avRows[0],
       telaRow,
+      ...avRows.slice(1),
       el('div', { class: 'orc-avtot' },
         el('span', { class: 'orc-avtotl' }, 'Total descontos internos'),
         avTotEl,
