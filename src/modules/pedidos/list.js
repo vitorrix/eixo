@@ -83,8 +83,15 @@ function shiftMonth(ym, delta) {
 }
 
 // ── Roteiro WhatsApp ──────────────────────────────────────────────────────────
-function formatRoteiro({ retiradas = [], entrega = {} }) {
-  const lines = ['🏍️ *ROTEIRO — Baruk*', '']
+function fmtDateBR(iso) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  return `${d}/${m}/${y}`
+}
+
+function formatRoteiro({ retiradas = [], entrega = {} }, dataISO = '') {
+  const datePrefix = dataISO ? `📆 ${fmtDateBR(dataISO)} ` : ''
+  const lines = [`${datePrefix}🏍️ *ROTEIRO — Baruk*`, '']
   retiradas.forEach((r, i) => {
     lines.push(`📦 ↑ *RETIRADA ${i + 1}*`)
     if (r.item) lines.push(`• Item: ${r.item}`)
@@ -92,8 +99,8 @@ function formatRoteiro({ retiradas = [], entrega = {} }) {
     lines.push('')
   })
   lines.push('✅ ↓ *ENTREGA*')
-  if (entrega.endereco) lines.push(`• Endereço: ${entrega.endereco}`)
   if (entrega.cliente)  lines.push(`• Cliente: ${entrega.cliente}`)
+  if (entrega.endereco) lines.push(`• End: ${entrega.endereco}`)
   const itens = retiradas.map(r => r.item).filter(Boolean)
   if (itens.length)     lines.push(`• Itens: ${itens.join(', ')}`)
   return lines.join('\n')
@@ -499,7 +506,8 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
         function getRoteiro() { return { retiradas, entrega } }
 
-        function updatePreview() { previewEl.value = formatRoteiro(getRoteiro()) }
+        const pedidoData = pedido.dataContato || pedido.data || ''
+        function updatePreview() { previewEl.value = formatRoteiro(getRoteiro(), pedidoData) }
 
         function inp(val, onInput, placeholder) {
           const i = el('input', { type: 'text', placeholder })
