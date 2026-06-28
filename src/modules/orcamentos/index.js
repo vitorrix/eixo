@@ -252,6 +252,7 @@ const USADOS = [
 
 const AVARIA_DEFS = [
   { key: 'bat',  label: '🔋 Bateria',            def: 490 },
+  { key: 'tel',  label: '📱 Tela',               def: 0   },
   { key: 'tam',  label: '🔲 Tampa Traseira',      def: 450 },
   { key: 'carc', label: '🛡️ Carcaça',             def: 200 },
   { key: 'face', label: '👁️ Face ID / Touch ID',  def: 300 },
@@ -259,32 +260,6 @@ const AVARIA_DEFS = [
   { key: 'out',  label: '⚠️ Outro defeito',        def: 0   },
 ]
 
-const TELA_MODELOS = [
-  { label: 'Selecione modelo', val: 0 },
-  { label: 'iPhone X — R$ 650', val: 650 },
-  { label: 'iPhone XS — R$ 650', val: 650 },
-  { label: 'iPhone XS Max — R$ 700', val: 700 },
-  { label: 'iPhone XR — R$ 600', val: 600 },
-  { label: 'iPhone 11 — R$ 600', val: 600 },
-  { label: 'iPhone 11 Pro — R$ 690', val: 690 },
-  { label: 'iPhone 11 Pro Max — R$ 720', val: 720 },
-  { label: 'iPhone 12 / 12 Pro — R$ 730', val: 730 },
-  { label: 'iPhone 12 Pro Max — R$ 848', val: 848 },
-  { label: 'iPhone 12 Mini — R$ 785', val: 785 },
-  { label: 'iPhone 13 — R$ 815', val: 815 },
-  { label: 'iPhone 13 Pro — R$ 840', val: 840 },
-  { label: 'iPhone 13 Pro Max — R$ 915', val: 915 },
-  { label: 'iPhone 13 Mini — R$ 885', val: 885 },
-  { label: 'iPhone 14 — R$ 820', val: 820 },
-  { label: 'iPhone 14 Pro — R$ 1.150', val: 1150 },
-  { label: 'iPhone 14 Pro Max — R$ 1.220', val: 1220 },
-  { label: 'iPhone 15 — R$ 1.100', val: 1100 },
-  { label: 'iPhone 15 Pro — R$ 1.180', val: 1180 },
-  { label: 'iPhone 15 Pro Max — R$ 1.435', val: 1435 },
-  { label: 'iPhone 16 — R$ 1.390', val: 1390 },
-  { label: 'iPhone 16 Pro — R$ 1.600', val: 1600 },
-  { label: 'iPhone 16 Pro Max — R$ 1.600', val: 1600 },
-]
 
 // ── DOM helpers ───────────────────────────────────────────────────
 function makeSelect(groups, placeholder) {
@@ -647,7 +622,6 @@ function buildTroca(prodData) {
   let tNparc  = 12
 
   const avState = Object.fromEntries(AVARIA_DEFS.map(a => [a.key, { checked: false, val: a.def }]))
-  const avTela  = { checked: false, val: 0 }
 
   const cliInp = el('input', { type: 'text',   class: 'orc-input', placeholder: 'Nome do cliente' })
   const dcInp  = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
@@ -669,7 +643,6 @@ function buildTroca(prodData) {
   function calcAv() {
     let tot = 0
     for (const a of AVARIA_DEFS) { if (avState[a.key].checked) tot += avState[a.key].val }
-    if (avTela.checked) tot += avTela.val
     avTotEl.textContent = R(tot)
     return tot
   }
@@ -686,26 +659,6 @@ function buildTroca(prodData) {
       el('div', { class: 'orc-avvw' }, el('span', { class: 'orc-avvw-pfx' }, 'R$'), valInp),
     )
   })
-
-  // Tela row
-  const telaChk    = el('input', { type: 'checkbox', class: 'orc-avchk' })
-  const telaValInp = el('input', { type: 'number', value: '0', step: '10', class: 'orc-avval-inp' })
-  const telaSel    = el('select', { class: 'orc-avsel' })
-  for (const t of TELA_MODELOS) telaSel.appendChild(el('option', { value: String(t.val) }, t.label))
-  telaSel.addEventListener('change', () => {
-    const v = parseFloat(telaSel.value) || 0
-    telaValInp.value = v > 0 ? String(v) : '0'
-    avTela.val = v; calcAv()
-  })
-  telaChk.addEventListener('change',   () => { avTela.checked = telaChk.checked; calcAv() })
-  telaValInp.addEventListener('input', () => { avTela.val = parseFloat(telaValInp.value) || 0; calcAv() })
-  const telaLbl = el('label', { class: 'orc-avnm' }, '📱 Tela')
-  telaLbl.addEventListener('click', () => { telaChk.checked = !telaChk.checked; avTela.checked = telaChk.checked; calcAv() })
-
-  const telaRow = el('div', { class: 'orc-avrow orc-avrow-tela' },
-    telaChk, telaLbl, telaSel,
-    el('div', { class: 'orc-avvw' }, el('span', { class: 'orc-avvw-pfx' }, 'R$'), telaValInp),
-  )
 
   const refs = buildResultCol('Diferença a Pagar')
   refs.disc.textContent = 'Orçamento válido por 24h · Sujeito à análise do aparelho usado'
@@ -749,7 +702,6 @@ function buildTroca(prodData) {
     for (const a of AVARIA_DEFS) {
       if (avState[a.key].checked) avItems.push({ nome: a.label.replace(/^\S+\s+/, ''), val: avState[a.key].val })
     }
-    if (avTela.checked) avItems.splice(1, 0, { nome: 'Tela', val: avTela.val })
     refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli, avItems)
     refs.resultBlock.classList.add('visible')
     refs.disc.classList.add('visible')
@@ -777,9 +729,7 @@ function buildTroca(prodData) {
     el('div', { class: 'orc-avc' },
       el('div', { class: 'orc-avlbl' }, '🔧 Análise Interna'),
       el('div', { class: 'orc-avnota' }, '⚠️ Uso interno — descontos subtraídos do valor da troca. Problemas marcados aparecem na mensagem ao cliente.'),
-      avRows[0],
-      telaRow,
-      ...avRows.slice(1),
+      ...avRows,
       el('div', { class: 'orc-avtot' },
         el('span', { class: 'orc-avtotl' }, 'Total descontos internos'),
         avTotEl,
