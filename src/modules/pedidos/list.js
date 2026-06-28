@@ -90,8 +90,7 @@ function fmtDateBR(iso) {
 }
 
 function formatRoteiro({ retiradas = [], entrega = {} }, dataISO = '') {
-  const datePrefix = dataISO ? `📆 ${fmtDateBR(dataISO)} ` : ''
-  const lines = [`${datePrefix}🏍️ *ROTEIRO — Baruk*`, '']
+  const lines = dataISO ? [`📆 ${fmtDateBR(dataISO)}`, '🏍️ *ROTEIRO — Baruk*', ''] : ['🏍️ *ROTEIRO — Baruk*', '']
   retiradas.forEach((r, i) => {
     lines.push(`📦 ↑ *RETIRADA ${i + 1}*`)
     if (r.item) lines.push(`• Item: ${r.item}`)
