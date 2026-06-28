@@ -1,4 +1,7 @@
 import { el, mount } from '../../shared/utils/dom.js'
+import { db } from '../../firebase.js'
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 
 function R(v) {
   if (!v || isNaN(v)) return 'R$ 0,00'
@@ -448,7 +451,7 @@ function updTbl(tbody, liq, selN) {
 }
 
 // ── Product row builder (shared) ──────────────────────────────────
-function makeItemList(items, groups, placeholder, totLabel) {
+function makeItemList(items, prodData, placeholder, totLabel) {
   const listWrap = el('div', { class: 'orc-list' })
   const totValEl = el('span', { class: 'orc-total-v' }, 'R$ 0,00')
   const totRow   = el('div', { class: 'orc-total-row', style: 'display:none' },
@@ -463,30 +466,29 @@ function makeItemList(items, groups, placeholder, totLabel) {
 
   function renderList() {
     listWrap.replaceChildren()
+    const prodNomes = prodData.map(p => p.nome)
     items.forEach((item, i) => {
-      const sel     = makeSelect(groups, placeholder)
-      const custInp = el('input', { type: 'text', class: 'orc-input orc-custom-inp', placeholder: 'Digitar modelo...', style: 'display:none;margin-top:6px' })
-      const valInp  = el('input', { type: 'number', class: 'orc-input', placeholder: '0,00', step: '50' })
-      valInp.value  = item.val > 0 ? item.val : ''
+      const valInp = el('input', { type: 'number', class: 'orc-input', placeholder: '0,00', step: '50' })
+      valInp.value = item.val > 0 ? item.val : ''
 
-      sel.addEventListener('change', () => {
-        if (sel.value === '__custom__') {
-          custInp.style.display = 'block'; valInp.value = ''
-          items[i] = { nome: custInp.value, val: 0, isCustom: true }
-        } else if (sel.value) {
-          custInp.style.display = 'none'
-          const [nome, ps] = sel.value.split('|')
-          const p = parseInt(ps) || 0
-          valInp.value = p > 0 ? p : ''
-          items[i] = { nome, val: p, isCustom: false }
-        } else {
-          custInp.style.display = 'none'
-          items[i] = { nome: '', val: 0, isCustom: false }
-        }
-        updateTot()
+      const ac = createAutocomplete({
+        placeholder,
+        items:        prodNomes,
+        initialValue: item.nome || '',
+        onSelect: v => {
+          const match = prodData.find(p => p.nome === v)
+          items[i].nome = v
+          if (match?.precoVenda > 0) {
+            items[i].val  = match.precoVenda
+            valInp.value  = match.precoVenda
+            updateTot()
+          }
+        },
       })
-      custInp.addEventListener('input', () => { items[i].nome = custInp.value })
-      valInp.addEventListener('input',  () => { items[i].val  = parseFloat(valInp.value) || 0; updateTot() })
+      ac.el.classList.add('orc-input')
+      ac.el.style.width = '100%'
+      ac.el.addEventListener('input', () => { items[i].nome = ac.getValue() })
+      valInp.addEventListener('input', () => { items[i].val = parseFloat(valInp.value) || 0; updateTot() })
 
       const rmBtn = el('button', { type: 'button', class: 'orc-prow-rm' }, '×')
       rmBtn.addEventListener('click', () => {
@@ -495,7 +497,7 @@ function makeItemList(items, groups, placeholder, totLabel) {
       })
 
       listWrap.appendChild(el('div', { class: 'orc-prow' },
-        el('div', { class: 'orc-prow-s' }, sel, custInp),
+        el('div', { class: 'orc-prow-s' }, ac.el),
         el('div', { class: 'orc-prow-v' }, el('span', { class: 'orc-prow-pfx' }, 'R$'), valInp),
         rmBtn,
       ))
@@ -509,8 +511,9 @@ function makeItemList(items, groups, placeholder, totLabel) {
 
 // ── Message builders ──────────────────────────────────────────────
 function msgParc(items, desc, liq, entrada, rest, cli) {
-  const s = cli ? `, ${cli}` : '', NL = '\n', L = '───────────────────'
-  let m = `Olá${s}! 😊${NL}${NL}*Orçamento — Baruk Store*${NL}${L}${NL}${NL}`
+  const nome = cli || 'Baruker'
+  const NL = '\n', L = '───────────────────'
+  let m = `Olá, ${nome}! 😊${NL}${NL}*Orçamento — Baruk Store*${NL}${L}${NL}${NL}`
   if (items.length === 1) {
     m += `📦  ${items[0].nome}${NL}     Valor:  *${R(items[0].val)}*${NL}`
   } else {
@@ -521,11 +524,11 @@ function msgParc(items, desc, liq, entrada, rest, cli) {
   m += `💸  Pix / Dinheiro${NL}     *${R(liq)}*${NL}${NL}`
   if (entrada > 0) {
     m += `💵  Entrada${NL}     *${R(entrada)}*${NL}${NL}`
-    if (rest > 0) m += `💳  Restante no cartão${NL}     *${R(rest)}*${NL}${NL}`
+    if (rest > 0) m += `💳  Diferença${NL}     *${R(rest)}*${NL}${NL}`
   }
   const base = rest > 0 ? rest : liq
   if (base > 0) {
-    m += (entrada > 0 ? '*Parcelamento do restante:*' : '*Cartão de crédito:*') + `${NL}${NL}`
+    m += (entrada > 0 ? '*Parcelamento:*' : '*Cartão de crédito:*') + `${NL}${NL}`
     for (let n = 1; n <= 12; n++) {
       const c = cobrar(base, n), p = c / n
       m += (n === 1 ? `1x  *${R(c)}*  (à vista)` : `${n}x  *${R(p)}*  — total ${R(c)}`) + NL
@@ -535,8 +538,9 @@ function msgParc(items, desc, liq, entrada, rest, cli) {
 }
 
 function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli) {
-  const s = cli ? `, ${cli}` : '', NL = '\n', L = '───────────────────'
-  let m = `Olá${s}! 😊${NL}${NL}*Orçamento de Troca — Baruk Store*${NL}${L}${NL}${NL}`
+  const nome = cli || 'Baruker'
+  const NL = '\n', L = '───────────────────'
+  let m = `Olá, ${nome}! 😊${NL}${NL}*Orçamento de Troca — Baruk Store*${NL}${L}${NL}${NL}`
   for (const it of usados) m += `🔄  Aparelho na troca${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}${NL}`
   for (const it of novos)  m += `📦  Aparelho desejado${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}`
   if (dc > 0) m += `🏷️  Desconto:  *− ${R(dc)}*${NL}`
@@ -545,10 +549,10 @@ function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli) {
   m += `💸  Pix / Dinheiro${NL}     *${R(dif)}*${NL}${NL}`
   if (ent > 0) {
     m += `💵  Entrada${NL}     *${R(ent)}*${NL}${NL}`
-    if (rest > 0) m += `💳  Restante no cartão${NL}     *${R(rest)}*${NL}${NL}`
+    if (rest > 0) m += `💳  Diferença${NL}     *${R(rest)}*${NL}${NL}`
   }
   const base = rest > 0 ? rest : dif
-  m += (ent > 0 ? '*Parcelamento do restante:*' : '*Cartão de crédito:*') + `${NL}${NL}`
+  m += (ent > 0 ? '*Parcelamento:*' : '*Cartão de crédito:*') + `${NL}${NL}`
   for (let n = 1; n <= 12; n++) {
     const c = cobrar(base, n), p = c / n
     m += (n === 1 ? `1x  *${R(c)}*  (à vista)` : `${n}x  *${R(p)}*  — total ${R(c)}`) + NL
@@ -557,7 +561,7 @@ function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli) {
 }
 
 // ── Parcelamento section ──────────────────────────────────────────
-function buildParc() {
+function buildParc(prodData) {
   let pItems = [{ nome: '', val: 0 }]
   let pNparc = 12
 
@@ -565,7 +569,7 @@ function buildParc() {
   const descInp = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
   const entInp  = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
 
-  const { listWrap, totRow, renderList } = makeItemList(pItems, NOVOS, 'Selecione ou digite abaixo', 'Total líquido')
+  const { listWrap, totRow, renderList } = makeItemList(pItems, prodData, 'Buscar produto...', 'Total líquido')
   const refs = buildResultCol('Valor Líquido a Receber')
   refs.disc.textContent = 'Orçamento válido por 24h · Sujeito à disponibilidade de estoque'
 
@@ -629,7 +633,7 @@ function buildParc() {
 }
 
 // ── Troca section ─────────────────────────────────────────────────
-function buildTroca() {
+function buildTroca(prodData) {
   let tUsados = [{ nome: '', val: 0 }]
   let tNovos  = [{ nome: '', val: 0 }]
   let tNparc  = 12
@@ -642,9 +646,9 @@ function buildTroca() {
   const entInp = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
 
   const { listWrap: usadoList, totRow: usadoTot, renderList: renderUsados } =
-    makeItemList(tUsados, USADOS, 'Selecione o modelo', 'Total na troca')
+    makeItemList(tUsados, prodData, 'Buscar modelo...', 'Total na troca')
   const { listWrap: novoList,  totRow: novoTot,  renderList: renderNovos  } =
-    makeItemList(tNovos,  NOVOS,  'Selecione ou digite abaixo', 'Total desejado')
+    makeItemList(tNovos,  prodData, 'Buscar produto...', 'Total desejado')
 
   const addUsadoBtn = el('button', { type: 'button', class: 'orc-add-btn' }, '+ Adicionar aparelho')
   addUsadoBtn.addEventListener('click', () => { tUsados.push({ nome: '', val: 0 }); renderUsados() })
@@ -773,9 +777,17 @@ function buildTroca() {
 }
 
 // ── Main ──────────────────────────────────────────────────────────
-export function render(container) {
-  const parcSec = buildParc()
-  const trocaSec = buildTroca()
+export async function render(container) {
+  let prodData = []
+  try {
+    const snap = await getDocs(query(collection(db, 'produtos'), orderBy('nameLower')))
+    prodData = snap.docs.map(d => ({ nome: d.data().nome, precoVenda: d.data().precoVenda || 0 }))
+  } catch (e) {
+    console.error('Erro ao carregar produtos para orçamento:', e)
+  }
+
+  const parcSec = buildParc(prodData)
+  const trocaSec = buildTroca(prodData)
 
   const tabParc = el('button', { type: 'button', class: 'orc-tab-btn active' }, '💳 Parcelamento')
   const tabTroc = el('button', { type: 'button', class: 'orc-tab-btn' }, '🔄 Troca')
