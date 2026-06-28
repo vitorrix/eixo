@@ -2,6 +2,7 @@ import { logout, isMaster, can } from '../auth/session.js'
 import { navigate } from '../router/index.js'
 import { el, svgEl, mount } from '../shared/utils/dom.js'
 import { createCotacaoWidget } from '../shared/components/CotacaoDolar.js'
+import { openHelp } from '../shared/components/HelpPanel.js'
 
 const PAGE_LABELS = {
   '/':              'Painel Inicial',
@@ -17,6 +18,7 @@ const PAGE_LABELS = {
   '/financeiro':    'Financeiro',
   '/configuracoes': 'Configurações',
   '/usuarios':      'Usuários',
+  '/ajuda':         'Ajuda & Tutorial',
 }
 
 const NAV_ICONS = {
@@ -72,6 +74,10 @@ const NAV_ICONS = {
     'M12 15a3 3 0 100-6 3 3 0 000 6z',
     'M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z'
   ],
+  ajuda: [
+    'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z',
+    'M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01',
+  ],
 }
 
 const NAV_ITEMS = [
@@ -88,6 +94,7 @@ const NAV_ITEMS = [
   { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios',    wip: true },
   { path: '/configuracoes', label: 'Configurações',  module: 'configuracoes', iconKey: 'configuracoes' },
   { path: '/usuarios',      label: 'Usuários',       module: 'usuarios',      iconKey: 'usuarios',      wip: true },
+  { path: '/ajuda',         label: 'Ajuda',          module: null,            iconKey: 'ajuda' },
 ]
 
 function buildIcon(key) {
@@ -171,9 +178,14 @@ export function renderLayout(container, profile) {
   )
 
   const moduleContent = el('div', { id: 'module-content', class: 'module-content' })
+
+  const helpFab = el('button', { class: 'help-fab', title: 'Dicas rápidas' }, '?')
+  helpFab.addEventListener('click', openHelp)
+
   const main = el('main', { class: 'main-area' },
     topHeader,
-    el('div', { class: 'main-content' }, moduleContent)
+    el('div', { class: 'main-content' }, moduleContent),
+    helpFab,
   )
 
   mount(container, sidebar, main)

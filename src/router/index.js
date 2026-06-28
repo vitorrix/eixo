@@ -16,6 +16,7 @@ const routes = {
   '/financeiro':    { module: 'financeiro',    loader: () => import('../modules/financeiro/index.js') },
   '/configuracoes': { module: 'configuracoes', loader: () => import('../modules/configuracoes/index.js') },
   '/usuarios':      { module: 'usuarios',      loader: () => import('../modules/usuarios/index.js') },
+  '/ajuda':         { module: null,             loader: () => import('../modules/ajuda/index.js') },
 }
 
 const app = document.getElementById('app')

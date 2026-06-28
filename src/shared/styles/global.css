@@ -1890,3 +1890,51 @@ html, body {
 @media (max-width: 720px) {
   .orc-row-2 { flex-direction: column; gap: 0; }
 }
+
+/* ── Help FAB ───────────────────────────────────── */
+.help-fab { position: fixed; bottom: 28px; right: 28px; width: 44px; height: 44px; border-radius: 50%; background: var(--color-sidebar-bg); color: #fff; border: none; font-size: 20px; font-weight: 900; font-family: var(--font); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.25); display: flex; align-items: center; justify-content: center; transition: transform .15s, opacity .15s; z-index: 900; }
+.help-fab:hover { transform: scale(1.1); opacity: .9; }
+
+/* ── Help Panel (secretina) ─────────────────────── */
+.help-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 1000; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.help-overlay.open { opacity: 1; pointer-events: all; }
+.help-panel { position: fixed; top: 0; right: -380px; width: 360px; height: 100dvh; background: #fff; box-shadow: -4px 0 24px rgba(0,0,0,.15); z-index: 1001; display: flex; flex-direction: column; transition: right .25s cubic-bezier(.4,0,.2,1); overflow: hidden; }
+.help-panel.open { right: 0; }
+.help-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 14px; border-bottom: 1px solid var(--color-border); background: var(--color-sidebar-bg); }
+.help-panel-title { font-size: 15px; font-weight: 800; color: #fff; }
+.help-close-btn { background: rgba(255,255,255,.12); border: none; color: #fff; width: 30px; height: 30px; border-radius: 7px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.help-close-btn:hover { background: rgba(255,255,255,.22); }
+.help-tips-list { list-style: none; padding: 14px; margin: 0; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.help-tip { display: flex; gap: 12px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 10px; padding: 12px; align-items: flex-start; }
+.help-tip-ico { font-size: 20px; flex-shrink: 0; line-height: 1; }
+.help-tip-txt { font-size: 13px; color: var(--color-text); line-height: 1.6; }
+.help-panel-footer { padding: 14px 18px; border-top: 1px solid var(--color-border); }
+.help-tutorial-link { display: block; text-align: center; background: var(--color-primary); color: #fff; text-decoration: none; padding: 11px; border-radius: 9px; font-size: 13px; font-weight: 700; }
+.help-tutorial-link:hover { opacity: .88; }
+
+/* ── Ajuda page ─────────────────────────────────── */
+.ajuda-wrap { display: grid; grid-template-columns: 220px 1fr; gap: 24px; align-items: start; }
+.ajuda-sidebar { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; position: sticky; top: 20px; }
+.ajuda-sidebar-title { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--color-muted); padding: 14px 16px 10px; }
+.ajuda-nav { list-style: none; padding: 0 8px 8px; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.ajuda-nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--color-text); cursor: pointer; transition: background .12s; }
+.ajuda-nav-item:hover { background: var(--color-bg); }
+.ajuda-nav-item.active { background: #d1fae5; color: #065f46; font-weight: 700; }
+.ajuda-content { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 28px; min-height: 400px; }
+.ajuda-topic-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--color-border); }
+.ajuda-topic-ico { font-size: 36px; line-height: 1; flex-shrink: 0; }
+.ajuda-topic-title { font-size: 20px; font-weight: 800; color: var(--color-text); margin: 0 0 4px; }
+.ajuda-topic-intro { font-size: 14px; color: var(--color-muted); margin: 0; }
+.ajuda-steps { margin: 0 0 24px; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; }
+.ajuda-steps li { font-size: 14px; line-height: 1.7; color: var(--color-text); padding-left: 6px; }
+.ajuda-steps li strong { color: var(--color-text); font-weight: 700; }
+.ajuda-tips { background: #f0fdf4; border: 1px solid #6ee7b7; border-radius: 10px; padding: 16px; }
+.ajuda-tips-title { font-size: 12px; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
+.ajuda-tip { font-size: 13px; color: #065f46; line-height: 1.65; padding: 6px 0; border-bottom: 1px solid #d1fae5; }
+.ajuda-tip:last-child { border-bottom: none; padding-bottom: 0; }
+@media (max-width: 700px) { .ajuda-wrap { grid-template-columns: 1fr; } .ajuda-sidebar { position: static; } }
+
+/* ── Nav ajuda link destaque ────────────────────── */
+.nav-link[href='#/ajuda'] { color: #6ee7b7; }
+.nav-link[href='#/ajuda']:hover { color: #fff; }
+.nav-link[href='#/ajuda'].active { color: #10B981; }
