@@ -538,14 +538,14 @@ function msgParc(items, desc, liq, entrada, rest, cli) {
   return m + `${NL}${L}${NL}_Válido por 24h  ·  Baruk Store_${NL}_barukstore.com.br_`
 }
 
-function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avNames = []) {
+function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = []) {
   const nome = cli || 'Baruker'
   const NL = '\n', L = '───────────────────'
   let m = `Olá, ${nome}! 😊${NL}${NL}*Orçamento de Troca — Baruk Store*${NL}${L}${NL}${NL}`
   for (const it of usados) m += `🔄  Aparelho do cliente${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}${NL}`
-  if (avNames.length > 0) {
-    m += `🔧  Problemas identificados${NL}`
-    for (const n of avNames) m += `     • ${n}${NL}`
+  if (avItems.length > 0) {
+    m += `🔧  Manutenção identificada${NL}`
+    for (const it of avItems) m += `     • ${it.nome}  *− ${R(it.val)}*${NL}`
     m += NL
   }
   for (const it of novos)  m += `📦  Aparelho desejado${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}`
@@ -745,12 +745,12 @@ function buildTroca(prodData) {
     }
     updPills(refs.pillsWrap, base, tNparc, onPill)
     updTbl(refs.tbody, base, tNparc)
-    const avNames = []
+    const avItems = []
     for (const a of AVARIA_DEFS) {
-      if (avState[a.key].checked) avNames.push(a.label.replace(/^\S+\s+/, ''))
+      if (avState[a.key].checked) avItems.push({ nome: a.label.replace(/^\S+\s+/, ''), val: avState[a.key].val })
     }
-    if (avTela.checked) avNames.splice(1, 0, 'Tela')
-    refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli, avNames)
+    if (avTela.checked) avItems.splice(1, 0, { nome: 'Tela', val: avTela.val })
+    refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli, avItems)
     refs.resultBlock.classList.add('visible')
     refs.disc.classList.add('visible')
     refs.msgc.classList.add('visible')
