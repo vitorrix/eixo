@@ -153,7 +153,6 @@ export function renderLayout(container, profile) {
   const sidebar = el('aside', { class: 'sidebar' },
     el('div', { class: 'sidebar-header' },
       el('div', { class: 'sidebar-logo-wrap' }, logoImg),
-      el('div', { class: 'sidebar-build-time' }, `v ${buildTime}`)
     ),
     el('nav', { class: 'sidebar-nav' }, ...navLinks),
     el('div', { class: 'sidebar-footer' }, createCotacaoWidget())
