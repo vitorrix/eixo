@@ -2,7 +2,7 @@ import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { getCurrentProfile } from '../../auth/session.js'
 import { maskPhone } from '../../shared/utils/formatters.js'
 import { subscribeAniversariantes } from '../clientes/service.js'
-import { collection, getCountFromServer } from 'firebase/firestore'
+import { collection, query, where, getCountFromServer } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 
 const MODULE_CARDS = [
@@ -13,8 +13,8 @@ const MODULE_CARDS = [
 ]
 
 const STAT_CARDS = [
-  { label: 'Clientes', collection: 'clientes', color: '#10B981', path: '/clientes' },
-  { label: 'Pedidos',  collection: 'pedidos',  color: '#6366f1', path: '/pedidos'  },
+  { label: 'Clientes', collection: 'clientes', color: '#10B981', path: '/clientes', sub: 'registros'  },
+  { label: 'Pedidos',  collection: 'pedidos',  color: '#6366f1', path: '/pedidos',  sub: 'este mês'   },
 ]
 
 const ICON_PATHS = {
@@ -44,6 +44,12 @@ export function render(container) {
   const sub = el('p', { class: 'text-muted' }, 'Bem-vindo ao Eixo. Selecione um módulo para começar.')
 
   // Stat cards
+  const today = new Date()
+  const yy = today.getFullYear()
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const mesStart = `${yy}-${mm}-01`
+  const mesEnd   = `${yy}-${mm}-31`
+
   const statCards = STAT_CARDS.map(s => {
     const valueEl = el('div', { class: 'stat-card-value' }, '—')
     const card = el('div', { class: 'stat-card' },
@@ -51,14 +57,19 @@ export function render(container) {
       el('div', { class: 'stat-card-body' },
         el('div', { class: 'stat-card-label' }, s.label),
         valueEl,
-        el('div', { class: 'stat-card-sub' }, 'registros')
+        el('div', { class: 'stat-card-sub' }, s.sub)
       )
     )
     card.addEventListener('click', () => { window.location.hash = s.path })
 
-    getCountFromServer(collection(db, s.collection))
+    const col = collection(db, s.collection)
+    const q = s.collection === 'pedidos'
+      ? query(col, where('dataContato', '>=', mesStart), where('dataContato', '<=', mesEnd))
+      : col
+
+    getCountFromServer(q)
       .then(snap => { valueEl.textContent = snap.data().count })
-      .catch(() => { valueEl.textContent = '0' })
+      .catch(() => { valueEl.textContent = '?' })
 
     return card
   })
