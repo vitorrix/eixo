@@ -1728,6 +1728,78 @@ html, body {
 }
 .ac-opt-extra:hover, .ac-opt-extra.active { background: #ecfdf5; }
 
+/* ── EntityPeek ─────────────────────────────────── */
+.peek-field-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.peek-field-wrap > :first-child { flex: 1; min-width: 0; }
+
+.peek-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: white;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color .15s, border-color .15s;
+}
+.peek-btn:hover { color: var(--color-primary); border-color: var(--color-primary); }
+
+.peek-popover {
+  position: absolute;
+  z-index: 1100;
+  width: 280px;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.14);
+  overflow: hidden;
+}
+.peek-header {
+  background: #123C43;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 14px;
+  letter-spacing: .01em;
+}
+.peek-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.peek-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.peek-cod { font-size: 12px; color: var(--color-muted); }
+.peek-edit-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-primary);
+  padding: 0;
+  font-weight: 500;
+}
+.peek-edit-link:hover { text-decoration: underline; }
+.peek-name { font-size: 14px; margin-bottom: 2px; }
+.peek-section { margin-top: 8px; font-size: 12px; color: var(--color-muted); text-transform: uppercase; letter-spacing: .04em; }
+.peek-muted { color: var(--color-muted); }
+
 /* ── Cadastro rápido de cliente ──────────────────── */
 .cliente-cadastrar-hint { margin-top: 5px; }
 .btn-cadastrar-rapido {

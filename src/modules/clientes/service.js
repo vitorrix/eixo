@@ -1,7 +1,7 @@
 import {
   collection, addDoc, updateDoc, deleteDoc,
   doc, onSnapshot, query, orderBy, where,
-  serverTimestamp,
+  serverTimestamp, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -69,6 +69,67 @@ export async function updateCliente(id, data) {
 
 export async function deleteCliente(id) {
   return deleteDoc(doc(db, COL, id))
+}
+
+export async function deletarClientes(ids) {
+  const CHUNK = 500
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const batch = writeBatch(db)
+    ids.slice(i, i + CHUNK).forEach(id => batch.delete(doc(db, COL, id)))
+    await batch.commit()
+  }
+}
+
+export async function importarClientes(rows) {
+  const { uid } = getCurrentProfile()
+  const CHUNK = 500
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const batch = writeBatch(db)
+    rows.slice(i, i + CHUNK).forEach(row => {
+      const ref = doc(collection(db, COL))
+      const docDigits = String(row.cpfCnpj || '').replace(/\D/g, '')
+      const type = docDigits.length === 14 ? 'pj' : 'pf'
+      const name = String(row.nome || '').trim()
+      const bd = parseDateStr(row.dataNascimento)
+      const nomeFantasia = String(row.nomeFantasia || '').trim()
+      batch.set(ref, {
+        type,
+        name,
+        nameLower:  name.toLowerCase(),
+        document:   docDigits,
+        phone:      String(row.telefone || '').replace(/\D/g, ''),
+        email:      String(row.email || '').trim().toLowerCase(),
+        birthdate:  bd,
+        birthdayMD: birthdayMD(bd),
+        address: {
+          cep:         String(row.cep || '').replace(/\D/g, ''),
+          logradouro:  String(row.endereco || '').trim(),
+          numero:      String(row.numero || '').trim(),
+          complemento: String(row.complemento || '').trim(),
+          bairro:      String(row.bairro || '').trim(),
+          cidade:      String(row.cidade || '').trim(),
+          estado:      String(row.uf || '').trim().toUpperCase(),
+        },
+        notes:     nomeFantasia ? `Nome Fantasia: ${nomeFantasia}` : '',
+        codLegado: String(row.codAntigo || '').trim(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdBy: uid,
+      })
+    })
+    await batch.commit()
+  }
+}
+
+function parseDateStr(val) {
+  if (!val) return ''
+  if (val instanceof Date) {
+    const y = val.getFullYear()
+    const m = String(val.getMonth() + 1).padStart(2, '0')
+    const d = String(val.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  return String(val).trim()
 }
 
 function sanitize(data) {

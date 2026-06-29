@@ -3,7 +3,7 @@ import { can } from '../../auth/session.js'
 import { maskCPF, maskCNPJ, maskPhone } from '../../shared/utils/formatters.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastError, toastSuccess } from '../../shared/components/Toast.js'
-import { deleteCliente } from './service.js'
+import { deleteCliente, importarClientes, deletarClientes } from './service.js'
 import { renderClienteForm } from './form.js'
 
 export function renderClienteList(container, clientes) {
@@ -21,13 +21,101 @@ export function renderClienteList(container, clientes) {
   const countBadge = el('span', { class: 'count-badge' }, `${clientes.length}`)
   const title = el('h2', {}, 'Clientes ', countBadge)
 
-  const toolbar = el('div', { class: 'toolbar' }, title)
+  const addBtn = el('button', { class: 'btn btn-primary', type: 'button' }, '+ Novo Cliente')
+  addBtn.style.display = canCreate ? '' : 'none'
+  addBtn.addEventListener('click', () => openClienteModal(null))
 
-  if (canCreate) {
-    const addBtn = el('button', { class: 'btn btn-primary', type: 'button' }, '+ Novo Cliente')
-    addBtn.addEventListener('click', () => openClienteModal(null))
-    toolbar.appendChild(addBtn)
+  // ── Importar XLS ──────────────────────────────────────────────────────────
+  const xlsInput = el('input', { type: 'file', accept: '.xlsx,.xls,.csv', style: 'display:none' })
+  const importBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '↑ Importar XLS')
+  importBtn.style.display = canCreate ? '' : 'none'
+  importBtn.addEventListener('click', () => xlsInput.click())
+
+  async function executarImport(validos, substituir) {
+    importBtn.disabled = true
+    importBtn.textContent = substituir ? 'Apagando...' : 'Importando...'
+    try {
+      if (substituir && clientes.length) {
+        await deletarClientes(clientes.map(c => c.id))
+      }
+      importBtn.textContent = 'Importando...'
+      await importarClientes(validos)
+      toastSuccess(`${validos.length} cliente(s) importado(s) com sucesso.`)
+    } catch (err) {
+      console.error(err)
+      toastError('Erro ao importar arquivo.')
+    } finally {
+      importBtn.disabled = false
+      importBtn.textContent = '↑ Importar XLS'
+    }
   }
+
+  xlsInput.addEventListener('change', async () => {
+    const file = xlsInput.files?.[0]
+    if (!file) return
+    xlsInput.value = ''
+    try {
+      const { read, utils } = await import('xlsx')
+      const buffer = await file.arrayBuffer()
+      const wb = read(buffer)
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = utils.sheet_to_json(ws, { defval: '' })
+      const validos = rows.filter(r => String(r.nome || '').trim())
+      if (!validos.length) {
+        toastError('Nenhuma linha válida encontrada (coluna "nome" obrigatória).')
+        return
+      }
+
+      if (!clientes.length) {
+        await executarImport(validos, false)
+        return
+      }
+
+      openModal({
+        title: 'Importar clientes',
+        size: 'sm',
+        renderBody: (body, closeModal) => {
+          body.append(
+            el('p', { style: 'margin-bottom:8px;font-size:14px' },
+              `O arquivo contém ${validos.length} cliente(s).`),
+            el('p', { style: 'margin-bottom:20px;font-size:14px;color:var(--color-muted)' },
+              `Há ${clientes.length} cliente(s) já cadastrados.`),
+            el('div', { style: 'display:flex;flex-direction:column;gap:10px' },
+              (() => {
+                const btn = el('button', { type: 'button', class: 'btn btn-outline', style: 'text-align:left;padding:12px 16px' },
+                  el('strong', {}, 'Adicionar à lista'),
+                  el('br', {}),
+                  el('span', { style: 'font-size:12px;color:var(--color-muted)' },
+                    'Mantém os clientes existentes e insere os novos.')
+                )
+                btn.addEventListener('click', async () => { closeModal(); await executarImport(validos, false) })
+                return btn
+              })(),
+              (() => {
+                const btn = el('button', { type: 'button', class: 'btn btn-danger-outline', style: 'text-align:left;padding:12px 16px' },
+                  el('strong', {}, 'Substituir tudo'),
+                  el('br', {}),
+                  el('span', { style: 'font-size:12px' },
+                    `Apaga os ${clientes.length} cliente(s) e importa só o arquivo.`)
+                )
+                btn.addEventListener('click', async () => { closeModal(); await executarImport(validos, true) })
+                return btn
+              })()
+            )
+          )
+        },
+      })
+    } catch (err) {
+      console.error(err)
+      toastError('Erro ao ler o arquivo.')
+    }
+  })
+
+  const toolbar = el('div', { class: 'toolbar' },
+    el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' },
+      title, addBtn, importBtn, xlsInput),
+    searchInput
+  )
 
   // ── Tabela ───────────────────────────────────────────────────────────────
   const tbody = document.createElement('tbody')
@@ -50,7 +138,7 @@ export function renderClienteList(container, clientes) {
     el('p', {}, '😕 Nenhum cliente encontrado.')
   )
 
-  mount(container, toolbar, searchInput, tableWrapper, emptyState)
+  mount(container, toolbar, tableWrapper, emptyState)
 
   // ── Renderizar linhas ─────────────────────────────────────────────────
   function renderRows(list) {
@@ -121,8 +209,8 @@ export function renderClienteList(container, clientes) {
   // ── Expor atualização de dados (chamada pelo subscribeClientes) ────────
   return {
     update(newList) {
+      clientes = newList
       allClientes = newList
-      // Reaplicar filtro atual ao receber novos dados
       searchInput.dispatchEvent(new Event('input'))
     },
   }

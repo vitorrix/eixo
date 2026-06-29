@@ -3,6 +3,8 @@ import { brl } from '../../shared/utils/formatters.js'
 import { createPedido, editarPedido } from './service.js'
 import { createClienteRapido } from '../clientes/service.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
+import { createEntityPeek } from '../../shared/components/EntityPeek.js'
+import { renderClienteForm } from '../clientes/form.js'
 import { openModal } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
@@ -95,7 +97,15 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       action:   q => abrirCadastroRapido(q),
     },
   })
-  clienteAc.el.style.width = '100%'
+
+  const clientePeek = createEntityPeek({
+    getEntity: () => clientesList.find(c => c.name === clienteAc.getValue()),
+    onEdit: entity => openModal({
+      title: 'Editar Cliente',
+      size:  'lg',
+      renderBody: (body, close) => renderClienteForm(body, close, entity),
+    }),
+  })
 
   // ── Identificação ─────────────────────────────────────────────────────────
   const dataInp = el('input', { type: 'date' })
@@ -299,7 +309,8 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       el('div', { class: 'form-section' },
         el('p', { class: 'form-section-title' }, 'Identificação'),
         el('div', { class: 'form-row-ident' },
-          el('div', { class: 'field' }, el('label', {}, 'Cliente'), clienteAc.el),
+          el('div', { class: 'field' }, el('label', {}, 'Cliente'),
+            el('div', { class: 'peek-field-wrap' }, clienteAc.el, clientePeek.el)),
           el('div', { class: 'field field-data' }, el('label', {}, 'Data'), dataInp),
         )
       ),
