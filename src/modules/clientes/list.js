@@ -195,13 +195,13 @@ export function renderClienteList(container, clientes) {
   renderRows(allClientes)
 
   searchInput.addEventListener('input', () => {
-    const q = searchInput.value.toLowerCase().replace(/\D/g, '')
-    const qText = searchInput.value.toLowerCase()
+    const qText   = searchInput.value.toLowerCase().trim()
+    const qDigits = qText.replace(/\D/g, '')
+    if (!qText) { renderRows(allClientes); return }
     const filtered = allClientes.filter(c =>
       c.name.toLowerCase().includes(qText) ||
       c.email.toLowerCase().includes(qText) ||
-      c.document.includes(q) ||
-      c.phone.includes(q)
+      (qDigits && (c.document.includes(qDigits) || c.phone.includes(qDigits)))
     )
     renderRows(filtered)
   })
