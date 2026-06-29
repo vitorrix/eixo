@@ -93,7 +93,7 @@ const NAV_ITEMS = [
   { path: '/recibo',        label: 'Notas de Venda', module: 'recibo',        iconKey: 'recibo',        wip: true },
   { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios',    wip: true },
   { path: '/configuracoes', label: 'Configurações',  module: 'configuracoes', iconKey: 'configuracoes' },
-  { path: '/usuarios',      label: 'Usuários',       module: 'usuarios',      iconKey: 'usuarios',      wip: true },
+  { path: '/usuarios',      label: 'Usuários',       module: 'usuarios',      iconKey: 'usuarios' },
   { path: '/ajuda',         label: 'Ajuda',          module: null,            iconKey: 'ajuda' },
 ]
 
@@ -170,7 +170,7 @@ export function renderLayout(container, profile) {
     el('h1', { class: 'top-header-title' }, pageTitle),
     el('div', { class: 'top-header-user' },
       el('div', { class: 'top-header-user-info' },
-        el('span', { class: 'top-header-name' }, profile.name || profile.email),
+        el('span', { class: 'top-header-name' }, `Olá, ${(profile.name || profile.email).split(' ')[0]}!`),
         el('span', { class: 'top-header-company' }, 'Baruk Technology & Consulting')
       ),
       logoutBtn

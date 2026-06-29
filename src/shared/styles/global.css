@@ -1938,3 +1938,46 @@ html, body {
 .nav-link[href='#/ajuda'] { color: #6ee7b7; }
 .nav-link[href='#/ajuda']:hover { color: #fff; }
 .nav-link[href='#/ajuda'].active { color: #10B981; }
+
+/* ── Módulo Usuários — grid de permissões ─────── */
+.perms-grid {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.perms-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+.perms-row:last-child { border-bottom: none; }
+.perms-module-label { font-size: 13px; font-weight: 600; min-width: 100px; }
+.perms-divider { color: var(--color-border); font-size: 16px; }
+.perms-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.perm-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.perm-label input[type="checkbox"] { cursor: pointer; width: 14px; height: 14px; }
+.perm-label--all { font-weight: 600; color: var(--color-primary); }
+
+/* ── Input padrão fora do .field ─────────────── */
+.field-input {
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.field-input:focus { border-color: var(--color-primary); }
