@@ -37,15 +37,26 @@ export async function deleteFornecedor(id) {
   return deleteDoc(doc(db, COL, id))
 }
 
+export async function validarFornecedor(id) {
+  const { uid } = getCurrentProfile()
+  return updateDoc(doc(db, COL, id), {
+    lastValidatedAt: serverTimestamp(),
+    lastValidatedBy: uid,
+    updatedAt: serverTimestamp(),
+  })
+}
+
 function sanitize(data) {
   return {
-    type:      data.type,
-    name:      data.name.trim(),
-    nameLower: data.name.trim().toLowerCase(),
-    document:  (data.document || '').replace(/\D/g, ''),
-    phone:     (data.phone || '').replace(/\D/g, ''),
-    email:     (data.email || '').trim().toLowerCase(),
-    box:       (data.box || '').trim(),
+    type:       data.type,
+    name:       data.name.trim(),
+    nameLower:  data.name.trim().toLowerCase(),
+    document:   (data.document || '').replace(/\D/g, ''),
+    phone:      (data.phone || '').replace(/\D/g, ''),
+    email:      (data.email || '').trim().toLowerCase(),
+    box:        (data.box || '').trim(),
+    vendedor:   (data.vendedor || '').trim(),
+    categorias: Array.isArray(data.categorias) ? data.categorias : [],
     address: {
       cep:         (data.address?.cep || '').replace(/\D/g, ''),
       logradouro:  (data.address?.logradouro || '').trim(),

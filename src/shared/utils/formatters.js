@@ -55,3 +55,8 @@ export function birthdayMD(dateStr) {
   if (!dateStr || dateStr.length < 10) return ''
   return dateStr.slice(5, 10) // "YYYY-MM-DD" → "MM-DD"
 }
+
+export function fullDate(iso) {
+  if (!iso || iso.length < 10) return iso || '—'
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+}

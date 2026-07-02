@@ -1,10 +1,20 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { can } from '../../auth/session.js'
-import { maskCPF, maskCNPJ, maskPhone } from '../../shared/utils/formatters.js'
+import { maskCPF, maskCNPJ, maskPhone, rawDigits } from '../../shared/utils/formatters.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastError, toastSuccess } from '../../shared/components/Toast.js'
 import { deleteFornecedor } from './service.js'
 import { renderFornecedorForm } from './form.js'
+import { validationStatus, VALIDATION_LABELS } from './validation.js'
+
+const CATEGORIA_LABELS = { apple: 'Apple', android: 'Android', seminovo: 'Semi-Novo' }
+
+function whatsappLink(phone) {
+  const digits = rawDigits(phone || '')
+  if (!digits) return null
+  const msg = encodeURIComponent('Olá! Aqui é da Baruk Technology.')
+  return `https://wa.me/55${digits}?text=${msg}`
+}
 
 export function renderFornecedorList(container, fornecedores) {
   const canCreate = can('fornecedores', 'create')
@@ -35,6 +45,8 @@ export function renderFornecedorList(container, fornecedores) {
         el('th', {}, 'Tipo'),
         el('th', {}, 'Documento'),
         el('th', {}, 'Telefone'),
+        el('th', {}, 'Categorias'),
+        el('th', {}, 'Validação'),
         el('th', {}, 'Box / Galeria'),
         ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, 'Ações')] : [])
       )
@@ -70,11 +82,25 @@ export function renderFornecedorList(container, fornecedores) {
       const typeBadge = el('span', { class: `badge badge-${f.type}` },
         f.type === 'pf' ? 'PF' : 'PJ')
 
+      const phoneCell = el('td', {}, maskPhone(f.phone))
+      const waLink = whatsappLink(f.phone)
+      if (waLink) {
+        const waAnchor = el('a', { href: waLink, target: '_blank', rel: 'noopener', class: 'whatsapp-link', title: 'Abrir WhatsApp' }, ' WhatsApp')
+        phoneCell.appendChild(waAnchor)
+      }
+
+      const categoriasText = (f.categorias || []).map(c => CATEGORIA_LABELS[c] || c).join(', ')
+
+      const { status } = validationStatus(f.lastValidatedAt)
+      const validationBadge = el('span', { class: `badge badge-validation-${status}` }, VALIDATION_LABELS[status])
+
       const cells = [
         el('td', { class: 'td-name' }, f.name),
         el('td', {}, typeBadge),
         el('td', {}, docFormatted),
-        el('td', {}, maskPhone(f.phone)),
+        phoneCell,
+        el('td', {}, categoriasText || '—'),
+        el('td', {}, validationBadge),
         el('td', {}, f.box || '—'),
       ]
 
@@ -107,6 +133,7 @@ export function renderFornecedorList(container, fornecedores) {
       f.name.toLowerCase().includes(q) ||
       (f.box || '').toLowerCase().includes(q) ||
       (f.email || '').toLowerCase().includes(q) ||
+      (f.vendedor || '').toLowerCase().includes(q) ||
       (f.document || '').includes(qDigits) ||
       (f.phone || '').includes(qDigits)
     )

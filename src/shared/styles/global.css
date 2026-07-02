@@ -737,14 +737,153 @@ html, body {
 
 .field-error { font-size: 12px; color: var(--color-danger); min-height: 16px; }
 .input-error { border-color: var(--color-danger) !important; }
+.field-hint  { font-size: 13px; color: var(--color-muted); }
+
+/* Checkboxes em pílula (categorias de fornecedor) */
+.checkbox-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.checkbox-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+.checkbox-pill input { cursor: pointer; }
+
+/* Validação de fornecedor */
+.validation-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.badge-validation-ok      { background: #d1fae5; color: #065f46; }
+.badge-validation-warn    { background: #fef3c7; color: #92400e; }
+.badge-validation-expired { background: #fee2e2; color: #991b1b; }
+.badge-validation-never   { background: #f3f4f6; color: #6b7280; }
+
+.whatsapp-link {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #10B981;
+  text-decoration: none;
+}
+.whatsapp-link:hover { text-decoration: underline; }
 
 /* ── Aniversariantes (dashboard) ─────────────── */
+.dashboard-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: start;
+}
+
 .birthday-section {
   background: #fff8e7;
   border: 1px solid #f5d97a;
   border-radius: var(--radius);
   padding: 14px 18px;
   margin-bottom: 20px;
+}
+
+.dashboard-row .birthday-section { margin-bottom: 0; }
+
+.birthday-item { flex-wrap: wrap; row-gap: 2px; }
+
+/* ── Dashboard — gráfico de faturamento (mock) ─── */
+.chart-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.chart-title { font-size: 14px; font-weight: 600; color: var(--color-text); }
+
+.chart-badge-mock {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--color-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 99px;
+  padding: 2px 8px;
+}
+
+.chart-headline { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 16px; }
+.chart-headline-value { font-size: 28px; font-weight: 700; color: var(--color-text); }
+.chart-headline-delta { font-size: 12px; font-weight: 600; }
+.chart-headline-delta.up   { color: #059669; }
+.chart-headline-delta.down { color: #dc2626; }
+.chart-headline-label { font-size: 12px; color: var(--color-muted); }
+
+.chart-plot {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 120px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0;
+}
+
+.chart-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  cursor: default;
+}
+
+.chart-bar {
+  width: 100%;
+  max-width: 24px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.chart-bar-fill {
+  width: 100%;
+  background: #10B981;
+  border-radius: 4px 4px 0 0;
+  transition: background .15s;
+}
+
+.chart-bar-col:hover .chart-bar-fill { background: #0d9268; }
+
+.chart-axis-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+.chart-axis-label {
+  flex: 1;
+  max-width: 34px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.chart-note {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-top: 12px;
+  font-style: italic;
 }
 
 .birthday-title {

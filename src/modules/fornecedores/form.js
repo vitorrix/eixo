@@ -1,9 +1,16 @@
 import { el } from '../../shared/utils/dom.js'
-import { maskCPF, maskCNPJ, maskPhone, maskCEP, rawDigits } from '../../shared/utils/formatters.js'
+import { maskCPF, maskCNPJ, maskPhone, maskCEP, rawDigits, fullDate } from '../../shared/utils/formatters.js'
 import { validateCPF, validateCNPJ, validateEmail, validatePhone } from '../../shared/utils/validators.js'
 import { buscarCEP } from '../../shared/utils/cep.js'
-import { createFornecedor, updateFornecedor } from './service.js'
+import { createFornecedor, updateFornecedor, validarFornecedor } from './service.js'
+import { validationStatus, VALIDATION_LABELS } from './validation.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
+
+const CATEGORIAS = [
+  { value: 'apple',    label: 'Apple' },
+  { value: 'android',  label: 'Android' },
+  { value: 'seminovo', label: 'Semi-Novo' },
+]
 
 const UFs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
              'PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
@@ -33,6 +40,10 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   const phoneError = el('span', { class: 'field-error' })
   const phoneField = el('div', { class: 'field' },
     el('label', { for: 'ff-phone' }, 'Telefone / WhatsApp'), phoneInput, phoneError)
+
+  const vendedorInput = makeInput('text', 'ff-vendedor', { placeholder: 'Quem atende nesse número' })
+  const vendedorField = el('div', { class: 'field' },
+    el('label', { for: 'ff-vendedor' }, 'Nome do vendedor (opcional)'), vendedorInput)
 
   const emailInput = makeInput('email', 'ff-email', { autocomplete: 'email' })
   const emailError = el('span', { class: 'field-error' })
@@ -79,6 +90,26 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   const compField   = el('div', { class: 'field field-full' },
     el('label', { for: 'ff-comp' }, 'Complemento (opcional)'), compInput)
 
+  // ── Categorias de produtos ───────────────────────────────────────────────
+  const categoriaChecks = CATEGORIAS.map(c => {
+    const checkbox = el('input', { type: 'checkbox', id: `ff-cat-${c.value}`, value: c.value })
+    const label = el('label', { for: `ff-cat-${c.value}`, class: 'checkbox-pill' }, checkbox, c.label)
+    return { value: c.value, checkbox, label }
+  })
+  const categoriasField = el('div', { class: 'field field-full' },
+    el('label', {}, 'Trabalha com'),
+    el('div', { class: 'checkbox-row' }, ...categoriaChecks.map(c => c.label))
+  )
+
+  // ── Validação (anti-golpe de clone) ──────────────────────────────────────
+  const validationBadge = el('span', { class: 'badge' })
+  const validationDetail = el('span', { class: 'field-hint' })
+  const validarBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, 'Validar agora (chamada de vídeo)')
+  const validationField = el('div', { class: 'field field-full validation-field' },
+    el('label', {}, 'Validação do fornecedor'),
+    el('div', { class: 'validation-row' }, validationBadge, validationDetail, validarBtn)
+  )
+
   // ── Observações ──────────────────────────────────────────────────────────
   const notesInput  = el('textarea', { id: 'ff-notes', rows: '2', class: 'field-textarea' })
   const notesField  = el('div', { class: 'field field-full' },
@@ -88,9 +119,11 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   const sectionDados = el('div', { class: 'form-section' },
     el('p', { class: 'form-section-title' }, 'Dados'),
     el('div', { class: 'form-grid' },
-      nameField, docField, phoneField, emailField, boxField
+      nameField, docField, phoneField, vendedorField, emailField, boxField, categoriasField
     )
   )
+
+  const sectionValidacao = el('div', { class: 'form-section' }, validationField)
 
   const sectionEndereco = el('div', { class: 'form-section' },
     el('p', { class: 'form-section-title' }, 'Endereço'),
@@ -106,7 +139,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   const sectionNotes = el('div', { class: 'form-section' }, notesField)
 
   const form = el('form', { class: 'cliente-form', novalidate: '' },
-    typeToggle, sectionDados, sectionEndereco, sectionNotes
+    typeToggle, sectionDados, sectionValidacao, sectionEndereco, sectionNotes
   )
 
   // ── Botões rodapé ────────────────────────────────────────────────────────
@@ -119,9 +152,48 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
 
   container.append(form, el('div', { class: 'modal-footer' }, cancelBtn, submitBtn))
 
+  // ── Validação (anti-golpe de clone) ──────────────────────────────────────
+  let currentFornecedor = fornecedor
+
+  function renderValidation() {
+    if (!isEdit) {
+      validationBadge.textContent = 'Novo cadastro'
+      validationBadge.className = 'badge'
+      validationDetail.textContent = 'Salve o fornecedor e depois valide por chamada de vídeo.'
+      validarBtn.classList.add('hidden')
+      return
+    }
+    const { status, dueDate } = validationStatus(currentFornecedor?.lastValidatedAt)
+    validationBadge.textContent = VALIDATION_LABELS[status]
+    validationBadge.className = `badge badge-validation-${status}`
+    validationDetail.textContent = dueDate
+      ? `Válido até ${fullDate(dueDate.toISOString().slice(0, 10))}`
+      : 'Este fornecedor ainda não foi validado por chamada de vídeo.'
+    validarBtn.classList.remove('hidden')
+  }
+
+  validarBtn.addEventListener('click', async () => {
+    if (!currentFornecedor?.id) return
+    validarBtn.disabled = true
+    validarBtn.textContent = 'Validando...'
+    try {
+      await validarFornecedor(currentFornecedor.id)
+      currentFornecedor = { ...currentFornecedor, lastValidatedAt: { toDate: () => new Date() } }
+      renderValidation()
+      toastSuccess('Fornecedor validado.')
+    } catch (err) {
+      console.error(err)
+      toastError('Erro ao validar. Tente novamente.')
+    } finally {
+      validarBtn.disabled = false
+      validarBtn.textContent = 'Validar agora (chamada de vídeo)'
+    }
+  })
+
   // ── Estado inicial ───────────────────────────────────────────────────────
   setType(currentType)
   if (isEdit) prefill(fornecedor)
+  renderValidation()
 
   // ── Máscaras ─────────────────────────────────────────────────────────────
   docInput.addEventListener('input', () => {
@@ -178,12 +250,15 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
 
   // ── Pré-preencher (edição) ───────────────────────────────────────────────
   function prefill(f) {
-    nameInput.value   = f.name  || ''
-    phoneInput.value  = maskPhone(f.phone || '')
-    emailInput.value  = f.email || ''
-    boxInput.value    = f.box   || ''
-    notesInput.value  = f.notes || ''
-    docInput.value    = f.type === 'pf' ? maskCPF(f.document || '') : maskCNPJ(f.document || '')
+    nameInput.value     = f.name     || ''
+    phoneInput.value    = maskPhone(f.phone || '')
+    vendedorInput.value = f.vendedor || ''
+    emailInput.value    = f.email    || ''
+    boxInput.value      = f.box      || ''
+    notesInput.value    = f.notes    || ''
+    docInput.value       = f.type === 'pf' ? maskCPF(f.document || '') : maskCNPJ(f.document || '')
+    const categoriasSet  = new Set(f.categorias || [])
+    categoriaChecks.forEach(c => { c.checkbox.checked = categoriasSet.has(c.value) })
     const a = f.address || {}
     cepInput.value    = maskCEP(a.cep || '')
     logradInput.value = a.logradouro  || ''
@@ -204,13 +279,15 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
 
     try {
       const data = {
-        type:     currentType,
-        name:     nameInput.value,
-        document: rawDigits(docInput.value),
-        phone:    rawDigits(phoneInput.value),
-        email:    emailInput.value,
-        box:      boxInput.value,
-        notes:    notesInput.value,
+        type:       currentType,
+        name:       nameInput.value,
+        document:   rawDigits(docInput.value),
+        phone:      rawDigits(phoneInput.value),
+        vendedor:   vendedorInput.value,
+        email:      emailInput.value,
+        box:        boxInput.value,
+        categorias: categoriaChecks.filter(c => c.checkbox.checked).map(c => c.value),
+        notes:      notesInput.value,
         address: {
           cep:         cepInput.value,
           logradouro:  logradInput.value,
