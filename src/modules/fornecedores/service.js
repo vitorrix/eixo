@@ -57,6 +57,7 @@ function sanitize(data) {
     box:        (data.box || '').trim(),
     vendedor:   (data.vendedor || '').trim(),
     categorias: Array.isArray(data.categorias) ? data.categorias : [],
+    comunidade: data.comunidade === true,
     address: {
       cep:         (data.address?.cep || '').replace(/\D/g, ''),
       logradouro:  (data.address?.logradouro || '').trim(),

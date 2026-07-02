@@ -664,6 +664,9 @@ html, body {
 .type-btn.active { background: var(--color-primary); color: #fff; }
 .type-btn:not(.active):hover { background: var(--color-bg); }
 
+.type-toggle-sm { margin-bottom: 0; }
+.type-btn-sm { padding: 5px 16px; font-size: 12px; }
+
 /* Seções do form */
 .form-section { margin-bottom: 20px; }
 .form-section-title {
@@ -760,6 +763,12 @@ html, body {
 .badge-validation-warn    { background: #fef3c7; color: #92400e; }
 .badge-validation-expired { background: #fee2e2; color: #991b1b; }
 .badge-validation-never   { background: #f3f4f6; color: #6b7280; }
+
+.badge-comunidade {
+  margin-left: 6px;
+  background: #ede9fe;
+  color: #5b21b6;
+}
 
 .whatsapp-link {
   display: inline-block;

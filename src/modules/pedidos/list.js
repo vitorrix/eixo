@@ -8,6 +8,7 @@ import {
   definirLogistica, salvarRoteiro, marcarEntregue,
 } from './service.js'
 import { renderPedidoForm } from './form.js'
+import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 
 // ── Status ────────────────────────────────────────────────────────────────────
 const STATUS_META = {
@@ -498,6 +499,8 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           }
         }
 
+        const fornecedorNomes = fornecedores.map(f => f.name)
+
         const retiradasWrap = el('div', { class: 'roteiro-paradas' })
         const previewEl = el('textarea', {
           class: 'roteiro-preview', readonly: '', rows: '7', spellcheck: 'false',
@@ -513,6 +516,17 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           i.value = val || ''
           i.addEventListener('input', () => { onInput(i.value); updatePreview() })
           return i
+        }
+
+        function lojaField(val, onInput) {
+          const ac = createAutocomplete({
+            placeholder:  'ex: Mohamed Ln229',
+            items:        fornecedorNomes,
+            initialValue: val || '',
+            onSelect:     v => { onInput(v); updatePreview() },
+          })
+          ac.el.style.width = '100%'
+          return ac.el
         }
 
         function renderRetiradas() {
@@ -533,7 +547,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
                     el('div', { class: 'field' }, el('label', {}, 'Item'),
                       inp(r.item, v => { retiradas[i].item = v }, 'Produto a retirar')),
                     el('div', { class: 'field' }, el('label', {}, 'Loja / Fornecedor'),
-                      inp(r.loja, v => { retiradas[i].loja = v }, 'ex: Mohamed Ln229')),
+                      lojaField(r.loja, v => { retiradas[i].loja = v })),
                   )
                 )
               )

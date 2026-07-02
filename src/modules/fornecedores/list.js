@@ -90,6 +90,10 @@ export function renderFornecedorList(container, fornecedores) {
       }
 
       const categoriasText = (f.categorias || []).map(c => CATEGORIA_LABELS[c] || c).join(', ')
+      const categoriasCell = el('td', {}, categoriasText || '—')
+      if (f.comunidade) {
+        categoriasCell.appendChild(el('span', { class: 'badge badge-comunidade', title: 'Está na comunidade que envia lista diária de aparelhos' }, ' 💬 Comunidade'))
+      }
 
       const { status } = validationStatus(f.lastValidatedAt)
       const validationBadge = el('span', { class: `badge badge-validation-${status}` }, VALIDATION_LABELS[status])
@@ -99,7 +103,7 @@ export function renderFornecedorList(container, fornecedores) {
         el('td', {}, typeBadge),
         el('td', {}, docFormatted),
         phoneCell,
-        el('td', {}, categoriasText || '—'),
+        categoriasCell,
         el('td', {}, validationBadge),
         el('td', {}, f.box || '—'),
       ]

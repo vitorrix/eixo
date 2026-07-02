@@ -101,6 +101,26 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
     el('div', { class: 'checkbox-row' }, ...categoriaChecks.map(c => c.label))
   )
 
+  // ── Comunidade (grupo que envia lista diária de aparelhos/preços) ────────
+  const comunidadeBtnSim = el('button', { type: 'button', class: 'type-btn type-btn-sm' }, 'Sim')
+  const comunidadeBtnNao = el('button', { type: 'button', class: 'type-btn type-btn-sm' }, 'Não')
+  const comunidadeToggle = el('div', { class: 'type-toggle type-toggle-sm' }, comunidadeBtnSim, comunidadeBtnNao)
+  let comunidade = false
+
+  function setComunidade(val) {
+    comunidade = val
+    comunidadeBtnSim.classList.toggle('active', val === true)
+    comunidadeBtnNao.classList.toggle('active', val === false)
+  }
+  comunidadeBtnSim.addEventListener('click', () => setComunidade(true))
+  comunidadeBtnNao.addEventListener('click', () => setComunidade(false))
+
+  const comunidadeField = el('div', { class: 'field field-full' },
+    el('label', {}, 'Comunidade'),
+    comunidadeToggle,
+    el('span', { class: 'field-hint' }, 'Fornecedor está no grupo que envia a lista diária de aparelhos e preços.')
+  )
+
   // ── Validação (anti-golpe de clone) ──────────────────────────────────────
   const validationBadge = el('span', { class: 'badge' })
   const validationDetail = el('span', { class: 'field-hint' })
@@ -119,7 +139,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   const sectionDados = el('div', { class: 'form-section' },
     el('p', { class: 'form-section-title' }, 'Dados'),
     el('div', { class: 'form-grid' },
-      nameField, docField, phoneField, vendedorField, emailField, boxField, categoriasField
+      nameField, docField, phoneField, vendedorField, emailField, boxField, categoriasField, comunidadeField
     )
   )
 
@@ -192,6 +212,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
 
   // ── Estado inicial ───────────────────────────────────────────────────────
   setType(currentType)
+  setComunidade(fornecedor?.comunidade === true)
   if (isEdit) prefill(fornecedor)
   renderValidation()
 
@@ -287,6 +308,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
         email:      emailInput.value,
         box:        boxInput.value,
         categorias: categoriaChecks.filter(c => c.checkbox.checked).map(c => c.value),
+        comunidade,
         notes:      notesInput.value,
         address: {
           cep:         cepInput.value,
