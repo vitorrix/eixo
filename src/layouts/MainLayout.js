@@ -86,7 +86,7 @@ const NAV_ITEMS = [
   { path: '/pedidos',       label: 'Pedidos',        module: 'pedidos',       iconKey: 'pedidos'       },
   { path: '/clientes',      label: 'Clientes',       module: 'clientes',      iconKey: 'clientes'      },
   { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos',      wip: true },
-  { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores',  wip: true },
+  { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores' },
   { path: '/compras',       label: 'Compras',        module: 'compras',       iconKey: 'compras',       wip: true },
   { path: '/vendas',        label: 'Vendas',         module: 'vendas',        iconKey: 'vendas',        wip: true },
   { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro',    wip: true },
