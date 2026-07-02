@@ -499,7 +499,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           }
         }
 
-        const fornecedorNomes = fornecedores.map(f => f.name)
+        const fornecedorNomes = fornecedores.map(f => f.box ? `${f.box} — ${f.name}` : f.name)
 
         const retiradasWrap = el('div', { class: 'roteiro-paradas' })
         const previewEl = el('textarea', {
