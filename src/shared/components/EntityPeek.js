@@ -1,5 +1,6 @@
 import { el, svgEl } from '../utils/dom.js'
-import { maskCPF, maskCNPJ, maskPhone } from '../utils/formatters.js'
+import { maskCPF, maskCNPJ } from '../utils/formatters.js'
+import { findCountryByDial, maskPhoneForCountry } from '../utils/countries.js'
 
 function eyeIcon() {
   return svgEl('svg',
@@ -59,7 +60,9 @@ export function createEntityPeek({ getEntity, onEdit }) {
 
     // Telefone
     if (entity.phone) {
-      body.appendChild(el('span', {}, `Fone: ${maskPhone(entity.phone)}`))
+      const country = findCountryByDial(entity.phoneCountry || '55')
+      const prefix = country.dial !== '55' ? `+${country.dial} ` : ''
+      body.appendChild(el('span', {}, `Fone: ${prefix}${maskPhoneForCountry(entity.phone, country)}`))
     }
 
     // E-mail

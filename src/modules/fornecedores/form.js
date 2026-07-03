@@ -1,7 +1,8 @@
 import { el } from '../../shared/utils/dom.js'
-import { maskCPF, maskCNPJ, maskPhone, maskCEP, rawDigits, fullDate } from '../../shared/utils/formatters.js'
-import { validateCPF, validateCNPJ, validateEmail, validatePhone } from '../../shared/utils/validators.js'
+import { maskCPF, maskCNPJ, maskCEP, rawDigits, fullDate } from '../../shared/utils/formatters.js'
+import { validateCPF, validateCNPJ, validateEmail } from '../../shared/utils/validators.js'
 import { buscarCEP } from '../../shared/utils/cep.js'
+import { COUNTRIES, findCountryByDial, maskPhoneForCountry, validatePhoneForCountry, phonePlaceholderForCountry } from '../../shared/utils/countries.js'
 import { createFornecedor, updateFornecedor, validarFornecedor } from './service.js'
 import { validationStatus, VALIDATION_LABELS } from './validation.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
@@ -37,10 +38,19 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   const docError   = el('span', { class: 'field-error' })
   const docField   = el('div', { class: 'field' }, docLabel, docInput, docError)
 
+  const countrySel = el('select', { id: 'ff-phone-country', class: 'field-select phone-country-select' })
+  COUNTRIES.forEach(c => countrySel.appendChild(
+    el('option', { value: c.dial }, `${c.flag} +${c.dial} ${c.name}`)
+  ))
+  let currentCountry = findCountryByDial(fornecedor?.phoneCountry || '55')
+  countrySel.value = currentCountry.dial
+
   const phoneInput = makeInput('tel',   'ff-phone', { inputmode: 'numeric' })
   const phoneError = el('span', { class: 'field-error' })
   const phoneField = el('div', { class: 'field' },
-    el('label', { for: 'ff-phone' }, 'Telefone / WhatsApp'), phoneInput, phoneError)
+    el('label', { for: 'ff-phone' }, 'Telefone / WhatsApp'),
+    el('div', { class: 'phone-row' }, countrySel, phoneInput),
+    phoneError)
 
   const vendedorInput = makeInput('text', 'ff-vendedor', { placeholder: 'Quem atende nesse número' })
   const vendedorField = el('div', { class: 'field' },
@@ -211,9 +221,21 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
     }
   })
 
+  // ── Telefone / país ──────────────────────────────────────────────────────
+  function setCountry(dial) {
+    currentCountry = findCountryByDial(dial)
+    countrySel.value = currentCountry.dial
+    phoneInput.placeholder = phonePlaceholderForCountry(currentCountry)
+    phoneInput.value = maskPhoneForCountry(phoneInput.value, currentCountry)
+    clearError(phoneInput, phoneError)
+  }
+
+  countrySel.addEventListener('change', () => setCountry(countrySel.value))
+
   // ── Estado inicial ───────────────────────────────────────────────────────
   setType(currentType)
   setComunidade(fornecedor?.comunidade === true)
+  setCountry(currentCountry.dial)
   if (isEdit) prefill(fornecedor)
   renderValidation()
 
@@ -221,7 +243,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   docInput.addEventListener('input', () => {
     docInput.value = currentType === 'pf' ? maskCPF(docInput.value) : maskCNPJ(docInput.value)
   })
-  phoneInput.addEventListener('input', () => { phoneInput.value = maskPhone(phoneInput.value) })
+  phoneInput.addEventListener('input', () => { phoneInput.value = maskPhoneForCountry(phoneInput.value, currentCountry) })
   cepInput.addEventListener('input', () => { cepInput.value = maskCEP(cepInput.value) })
 
   // ── Busca de CEP ─────────────────────────────────────────────────────────
@@ -273,7 +295,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   // ── Pré-preencher (edição) ───────────────────────────────────────────────
   function prefill(f) {
     nameInput.value     = f.name     || ''
-    phoneInput.value    = maskPhone(f.phone || '')
+    phoneInput.value    = maskPhoneForCountry(f.phone || '', currentCountry)
     vendedorInput.value = f.vendedor || ''
     emailInput.value    = f.email    || ''
     boxInput.value      = f.box      || ''
@@ -305,6 +327,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
         name:       nameInput.value,
         document:   rawDigits(docInput.value),
         phone:      rawDigits(phoneInput.value),
+        phoneCountry: currentCountry.dial,
         vendedor:   vendedorInput.value,
         email:      emailInput.value,
         box:        boxInput.value,
@@ -355,7 +378,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
       } else clearError(docInput, docError)
     } else clearError(docInput, docError)
 
-    if (phoneInput.value && !validatePhone(phoneInput.value)) {
+    if (phoneInput.value && !validatePhoneForCountry(phoneInput.value, currentCountry)) {
       setError(phoneInput, phoneError, 'Telefone inválido.')
       valid = false
     } else clearError(phoneInput, phoneError)

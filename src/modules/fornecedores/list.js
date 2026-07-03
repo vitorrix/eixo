@@ -1,6 +1,7 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { can } from '../../auth/session.js'
-import { maskCPF, maskCNPJ, maskPhone, rawDigits } from '../../shared/utils/formatters.js'
+import { maskCPF, maskCNPJ, rawDigits } from '../../shared/utils/formatters.js'
+import { findCountryByDial, maskPhoneForCountry } from '../../shared/utils/countries.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastError, toastSuccess } from '../../shared/components/Toast.js'
 import { deleteFornecedor } from './service.js'
@@ -9,11 +10,12 @@ import { validationStatus, VALIDATION_LABELS } from './validation.js'
 
 const CATEGORIA_LABELS = { apple: 'Apple', android: 'Android', seminovo: 'Semi-Novo', acessorios: 'Acessórios' }
 
-function whatsappLink(phone) {
+function whatsappLink(phone, phoneCountry) {
   const digits = rawDigits(phone || '')
   if (!digits) return null
+  const dial = phoneCountry || '55'
   const msg = encodeURIComponent('Olá! Aqui é da Baruk Technology.')
-  return `https://wa.me/55${digits}?text=${msg}`
+  return `https://wa.me/${dial}${digits}?text=${msg}`
 }
 
 export function renderFornecedorList(container, fornecedores) {
@@ -82,8 +84,12 @@ export function renderFornecedorList(container, fornecedores) {
       const typeBadge = el('span', { class: `badge badge-${f.type}` },
         f.type === 'pf' ? 'PF' : 'PJ')
 
-      const phoneCell = el('td', {}, maskPhone(f.phone))
-      const waLink = whatsappLink(f.phone)
+      const country = findCountryByDial(f.phoneCountry || '55')
+      const phoneText = f.phone
+        ? `${country.dial !== '55' ? `+${country.dial} ` : ''}${maskPhoneForCountry(f.phone, country)}`
+        : ''
+      const phoneCell = el('td', {}, phoneText)
+      const waLink = whatsappLink(f.phone, f.phoneCountry)
       if (waLink) {
         const waAnchor = el('a', { href: waLink, target: '_blank', rel: 'noopener', class: 'whatsapp-link', title: 'Abrir WhatsApp' }, ' WhatsApp')
         phoneCell.appendChild(waAnchor)

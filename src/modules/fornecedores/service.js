@@ -53,6 +53,7 @@ function sanitize(data) {
     nameLower:  data.name.trim().toLowerCase(),
     document:   (data.document || '').replace(/\D/g, ''),
     phone:      (data.phone || '').replace(/\D/g, ''),
+    phoneCountry: data.phoneCountry || '55',
     email:      (data.email || '').trim().toLowerCase(),
     box:        (data.box || '').trim(),
     vendedor:   (data.vendedor || '').trim(),

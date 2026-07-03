@@ -709,6 +709,15 @@ html, body {
 .cep-row input { flex: 1; }
 .cep-btn { white-space: nowrap; align-self: stretch; }
 
+/* Telefone com seletor de país */
+.phone-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.phone-row .phone-country-select { flex: 0 0 130px; width: 130px; }
+.phone-row input { flex: 1; min-width: 0; }
+
 /* Select */
 .field-select {
   width: 100%;
