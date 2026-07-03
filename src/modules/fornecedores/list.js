@@ -7,7 +7,7 @@ import { deleteFornecedor } from './service.js'
 import { renderFornecedorForm } from './form.js'
 import { validationStatus, VALIDATION_LABELS } from './validation.js'
 
-const CATEGORIA_LABELS = { apple: 'Apple', android: 'Android', seminovo: 'Semi-Novo' }
+const CATEGORIA_LABELS = { apple: 'Apple', android: 'Android', seminovo: 'Semi-Novo', acessorios: 'Acessórios' }
 
 function whatsappLink(phone) {
   const digits = rawDigits(phone || '')

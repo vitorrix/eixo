@@ -7,9 +7,10 @@ import { validationStatus, VALIDATION_LABELS } from './validation.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
 const CATEGORIAS = [
-  { value: 'apple',    label: 'Apple' },
-  { value: 'android',  label: 'Android' },
-  { value: 'seminovo', label: 'Semi-Novo' },
+  { value: 'apple',      label: 'Apple' },
+  { value: 'android',    label: 'Android' },
+  { value: 'seminovo',   label: 'Semi-Novo' },
+  { value: 'acessorios', label: 'Acessórios' },
 ]
 
 const UFs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
