@@ -2,6 +2,7 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { can } from '../../auth/session.js'
 import { maskCPF, maskCNPJ, maskPhone } from '../../shared/utils/formatters.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
+import { renderRowActions } from '../../shared/components/RowActions.js'
 import { toastError, toastSuccess } from '../../shared/components/Toast.js'
 import { deleteCliente, importarClientes, deletarClientes } from './service.js'
 import { renderClienteForm } from './form.js'
@@ -172,18 +173,11 @@ export function renderClienteList(container, clientes) {
       ]
 
       if (canEdit || canDelete) {
-        const actions = el('td', { class: 'td-actions' })
-        if (canEdit) {
-          const editBtn = el('button', { class: 'btn btn-sm btn-outline', type: 'button' }, 'Editar')
-          editBtn.addEventListener('click', () => openClienteModal(c))
-          actions.appendChild(editBtn)
-        }
-        if (canDelete) {
-          const delBtn = el('button', { class: 'btn btn-sm btn-danger-outline', type: 'button' }, 'Excluir')
-          delBtn.addEventListener('click', () => confirmDelete(c))
-          actions.appendChild(delBtn)
-        }
-        cells.push(actions)
+        cells.push(el('td', { class: 'col-actions' }, renderRowActions({
+          canEdit, canDelete,
+          onEdit: () => openClienteModal(c),
+          onDelete: () => confirmDelete(c),
+        })))
       }
 
       tbody.appendChild(el('tr', {}, ...cells))

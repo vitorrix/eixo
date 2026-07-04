@@ -3,6 +3,7 @@ import { can } from '../../auth/session.js'
 import { rawDigits } from '../../shared/utils/formatters.js'
 import { findCountryByDial, maskPhoneForCountry } from '../../shared/utils/countries.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
+import { renderRowActions } from '../../shared/components/RowActions.js'
 import { toastError, toastSuccess } from '../../shared/components/Toast.js'
 import { deleteFornecedor } from './service.js'
 import { renderFornecedorForm } from './form.js'
@@ -112,18 +113,11 @@ export function renderFornecedorList(container, fornecedores) {
       ]
 
       if (canEdit || canDelete) {
-        const actions = el('td', { class: 'td-actions' })
-        if (canEdit) {
-          const editBtn = el('button', { class: 'btn btn-sm btn-outline', type: 'button' }, 'Editar')
-          editBtn.addEventListener('click', () => openFornecedorModal(f))
-          actions.appendChild(editBtn)
-        }
-        if (canDelete) {
-          const delBtn = el('button', { class: 'btn btn-sm btn-danger-outline', type: 'button' }, 'Excluir')
-          delBtn.addEventListener('click', () => confirmDelete(f))
-          actions.appendChild(delBtn)
-        }
-        cells.push(actions)
+        cells.push(el('td', { class: 'col-actions' }, renderRowActions({
+          canEdit, canDelete,
+          onEdit: () => openFornecedorModal(f),
+          onDelete: () => confirmDelete(f),
+        })))
       }
 
       tbody.appendChild(el('tr', {}, ...cells))

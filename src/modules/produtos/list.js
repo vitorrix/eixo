@@ -2,6 +2,7 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
+import { renderRowActions } from '../../shared/components/RowActions.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { deleteProduto, importarProdutos, deletarProdutos } from './service.js'
 import { renderProdutoForm } from './form.js'
@@ -195,18 +196,11 @@ export function renderProdutoList(container, produtos) {
       )
 
       if (canEdit || canDelete) {
-        const actions = el('td', { class: 'td-actions' })
-        if (canEdit) {
-          const editBtn = el('button', { class: 'btn btn-sm btn-outline', type: 'button' }, 'Editar')
-          editBtn.addEventListener('click', () => openProdutoModal(p))
-          actions.appendChild(editBtn)
-        }
-        if (canDelete) {
-          const delBtn = el('button', { class: 'btn btn-sm btn-danger-outline', type: 'button' }, 'Excluir')
-          delBtn.addEventListener('click', () => confirmDelete(p))
-          actions.appendChild(delBtn)
-        }
-        row.appendChild(actions)
+        row.appendChild(el('td', { class: 'col-actions' }, renderRowActions({
+          canEdit, canDelete,
+          onEdit: () => openProdutoModal(p),
+          onDelete: () => confirmDelete(p),
+        })))
       }
 
       tbody.appendChild(row)

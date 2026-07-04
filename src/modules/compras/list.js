@@ -2,6 +2,7 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
+import { renderRowActions } from '../../shared/components/RowActions.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { patchCompra, updateCompra, deleteCompra } from './service.js'
 
@@ -162,17 +163,11 @@ export function renderComprasList(container, compras, { fornecedores }) {
       })
 
       // Ações
-      const actionsCell = el('td', { class: 'td-actions' })
-      if (canEdit) {
-        const editBtn = el('button', { class: 'btn btn-sm btn-outline', type: 'button' }, 'Editar')
-        editBtn.addEventListener('click', () => openEditModal(c))
-        actionsCell.appendChild(editBtn)
-      }
-      if (canDelete) {
-        const delBtn = el('button', { class: 'btn btn-sm btn-danger-outline', type: 'button' }, 'Excluir')
-        delBtn.addEventListener('click', () => confirmDelete(c))
-        actionsCell.appendChild(delBtn)
-      }
+      const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
+        canEdit, canDelete,
+        onEdit: () => openEditModal(c),
+        onDelete: () => confirmDelete(c),
+      }))
 
       const dateStr = c.criadoEm?.toDate ? shortDate(c.criadoEm.toDate().toISOString().slice(0,10)) : '—'
 
