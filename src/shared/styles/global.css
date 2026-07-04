@@ -516,6 +516,7 @@ html, body {
 
 .td-name { font-weight: 500; }
 .col-actions { text-align: right; white-space: nowrap; vertical-align: middle; }
+.col-center { text-align: center; }
 .td-actions-inner { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
 
 /* ── Badges ──────────────────────────────────── */

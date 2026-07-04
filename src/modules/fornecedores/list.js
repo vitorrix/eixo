@@ -47,7 +47,7 @@ export function renderFornecedorList(container, fornecedores) {
         el('th', {}, 'Tipo'),
         el('th', {}, 'Telefone'),
         el('th', {}, 'Categorias'),
-        el('th', {}, 'Comunidade'),
+        el('th', { class: 'col-center' }, 'Comunidade'),
         el('th', {}, 'Validação'),
         el('th', {}, 'Box / Galeria'),
         ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, 'Ações')] : [])
@@ -95,8 +95,8 @@ export function renderFornecedorList(container, fornecedores) {
       const categoriasCell = el('td', {}, categoriasText || '—')
 
       const comunidadeCell = f.comunidade
-        ? el('td', {}, el('span', { class: 'badge badge-comunidade', title: 'Está na comunidade que envia lista diária de aparelhos' }, 'Sim'))
-        : el('td', {}, el('span', { class: 'badge badge-validation-never' }, 'Não'))
+        ? el('td', { class: 'col-center' }, el('span', { class: 'badge badge-comunidade', title: 'Está na comunidade que envia lista diária de aparelhos' }, 'Sim'))
+        : el('td', { class: 'col-center' }, el('span', { class: 'badge badge-validation-never' }, 'Não'))
 
       const { status } = validationStatus(f.lastValidatedAt)
       const validationBadge = el('span', { class: `badge badge-validation-${status}` }, VALIDATION_LABELS[status])
