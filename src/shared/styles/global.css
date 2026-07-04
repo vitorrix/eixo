@@ -800,14 +800,21 @@ html, body {
 }
 
 .whatsapp-link {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #10B981;
-  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  color: #86d9ab;
+  vertical-align: middle;
+  transition: color .15s;
 }
-.whatsapp-link:hover { text-decoration: underline; }
+.whatsapp-link:hover { color: #10B981; }
+
+.verified-badge {
+  width: 14px;
+  height: 14px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
 
 /* ── Aniversariantes (dashboard) ─────────────── */
 .dashboard-row {
