@@ -96,7 +96,7 @@ export function renderFornecedorList(container, fornecedores) {
 
       const comunidadeCell = f.comunidade
         ? el('td', { class: 'col-center' }, el('span', { class: 'badge badge-comunidade', title: 'Está na comunidade que envia lista diária de aparelhos' }, 'Sim'))
-        : el('td', { class: 'col-center' }, el('span', { class: 'badge badge-validation-never' }, 'Não'))
+        : el('td', { class: 'col-center' }, el('span', { class: 'badge badge-validation-expired' }, 'Não'))
 
       const { status } = validationStatus(f.lastValidatedAt)
       const validationBadge = el('span', { class: `badge badge-validation-${status}` }, VALIDATION_LABELS[status])
