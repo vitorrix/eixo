@@ -1,6 +1,6 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { can } from '../../auth/session.js'
-import { maskCPF, maskCNPJ, rawDigits } from '../../shared/utils/formatters.js'
+import { rawDigits } from '../../shared/utils/formatters.js'
 import { findCountryByDial, maskPhoneForCountry } from '../../shared/utils/countries.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastError, toastSuccess } from '../../shared/components/Toast.js'
@@ -8,7 +8,7 @@ import { deleteFornecedor } from './service.js'
 import { renderFornecedorForm } from './form.js'
 import { validationStatus, VALIDATION_LABELS } from './validation.js'
 
-const CATEGORIA_LABELS = { apple: 'Apple', android: 'Android', seminovo: 'Semi-Novo', acessorios: 'Acessórios' }
+const CATEGORIA_LABELS = { apple: 'Apple', android: 'Android', seminovo: 'S/N', acessorios: 'Acessórios' }
 
 function whatsappLink(phone, phoneCountry) {
   const digits = rawDigits(phone || '')
@@ -45,9 +45,9 @@ export function renderFornecedorList(container, fornecedores) {
       el('tr', {},
         el('th', {}, 'Nome'),
         el('th', {}, 'Tipo'),
-        el('th', {}, 'Documento'),
         el('th', {}, 'Telefone'),
         el('th', {}, 'Categorias'),
+        el('th', {}, 'Comunidade'),
         el('th', {}, 'Validação'),
         el('th', {}, 'Box / Galeria'),
         ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, 'Ações')] : [])
@@ -77,10 +77,6 @@ export function renderFornecedorList(container, fornecedores) {
     emptyState.classList.add('hidden')
 
     for (const f of list) {
-      const docFormatted = f.type === 'pf'
-        ? maskCPF(f.document)
-        : maskCNPJ(f.document)
-
       const typeBadge = el('span', { class: `badge badge-${f.type}` },
         f.type === 'pf' ? 'PF' : 'PJ')
 
@@ -97,9 +93,10 @@ export function renderFornecedorList(container, fornecedores) {
 
       const categoriasText = (f.categorias || []).map(c => CATEGORIA_LABELS[c] || c).join(', ')
       const categoriasCell = el('td', {}, categoriasText || '—')
-      if (f.comunidade) {
-        categoriasCell.appendChild(el('span', { class: 'badge badge-comunidade', title: 'Está na comunidade que envia lista diária de aparelhos' }, ' 💬 Comunidade'))
-      }
+
+      const comunidadeCell = f.comunidade
+        ? el('td', {}, el('span', { class: 'badge badge-comunidade', title: 'Está na comunidade que envia lista diária de aparelhos' }, 'Sim'))
+        : el('td', {}, 'Não')
 
       const { status } = validationStatus(f.lastValidatedAt)
       const validationBadge = el('span', { class: `badge badge-validation-${status}` }, VALIDATION_LABELS[status])
@@ -107,9 +104,9 @@ export function renderFornecedorList(container, fornecedores) {
       const cells = [
         el('td', { class: 'td-name' }, f.name),
         el('td', {}, typeBadge),
-        el('td', {}, docFormatted),
         phoneCell,
         categoriasCell,
+        comunidadeCell,
         el('td', {}, validationBadge),
         el('td', {}, f.box || '—'),
       ]
