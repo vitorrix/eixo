@@ -12,6 +12,7 @@ const PAGE_LABELS = {
   '/clientes':      'Clientes',
   '/fornecedores':  'Fornecedores',
   '/produtos':      'Produtos',
+  '/busca':         'Busca',
   '/recibo':        'Notas de Venda',
   '/orcamentos':    'Orçamentos',
   '/relatorios':    'Relatórios',
@@ -66,6 +67,10 @@ const NAV_ICONS = {
     'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z',
     'M7 7h.01'
   ],
+  busca: [
+    'M19 11a8 8 0 11-16 0 8 8 0 0116 0z',
+    'M21 21l-4.35-4.35'
+  ],
   configuracoes: [
     'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3',
     'M1 14h6M9 8h6M17 16h6'
@@ -86,6 +91,7 @@ const NAV_ITEMS = [
   { path: '/pedidos',       label: 'Pedidos',        module: 'pedidos',       iconKey: 'pedidos'       },
   { path: '/clientes',      label: 'Clientes',       module: 'clientes',      iconKey: 'clientes'      },
   { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos' },
+  { path: '/busca',         label: 'Busca',          module: 'busca',         iconKey: 'busca' },
   { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores' },
   { path: '/compras',       label: 'Compras',        module: 'compras',       iconKey: 'compras',       wip: true },
   { path: '/vendas',        label: 'Vendas',         module: 'vendas',        iconKey: 'vendas',        wip: true },

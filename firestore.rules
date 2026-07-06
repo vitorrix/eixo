@@ -121,6 +121,12 @@ service cloud.firestore {
       allow delete: if hasPermission('financeiro', 'delete');
     }
 
+    // ── /ofertas (gerada pelo robô de leitura do WhatsApp — somente leitura) ──
+    match /ofertas/{id} {
+      allow read:  if hasPermission('busca', 'view');
+      allow write: if false; // escrita só via Admin SDK do robô, nunca pelo app
+    }
+
     // Bloqueia todo o resto por padrão
     match /{document=**} {
       allow read, write: if false;

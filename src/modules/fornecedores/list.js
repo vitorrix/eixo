@@ -1,7 +1,7 @@
-import { el, svgEl, mount } from '../../shared/utils/dom.js'
+import { el, mount } from '../../shared/utils/dom.js'
 import { can } from '../../auth/session.js'
-import { rawDigits } from '../../shared/utils/formatters.js'
 import { findCountryByDial, maskPhoneForCountry } from '../../shared/utils/countries.js'
+import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
 import { toastError, toastSuccess } from '../../shared/components/Toast.js'
@@ -10,21 +10,6 @@ import { renderFornecedorForm } from './form.js'
 import { validationStatus, VALIDATION_LABELS } from './validation.js'
 
 const CATEGORIA_LABELS = { apple: 'Apple', android: 'Android', seminovo: 'S/N', acessorios: 'Acessórios' }
-
-function whatsappLink(phone, phoneCountry) {
-  const digits = rawDigits(phone || '')
-  if (!digits) return null
-  const dial = phoneCountry || '55'
-  const msg = encodeURIComponent('Olá! Aqui é da Baruk Technology.')
-  return `https://wa.me/${dial}${digits}?text=${msg}`
-}
-
-function whatsappIcon() {
-  return svgEl('svg', { viewBox: '0 0 24 24', width: 15, height: 15, fill: 'currentColor' },
-    svgEl('path', { d: 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.35-.174-1.499-.552-2.849-1.751-1.053-.938-1.762-2.098-1.968-2.443-.207-.297-.023-.457.207-.658.208-.18.463-.457.694-.686.231-.229.312-.404.446-.673.132-.271.021-.516-.098-.686-.121-.171-.687-1.653-.937-2.256-.219-.549-.446-.472-.694-.472-.198 0-.522-.036-.795.26s-1.04 1.016-1.04 2.479c0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z' }),
-    svgEl('path', { d: 'M12.05 22c-1.958 0-3.876-.593-5.492-1.7l-.393-.234-4.08 1.062 1.09-3.977-.257-.408A9.937 9.937 0 012.05 12C2.05 6.486 6.539 2 12.05 2c2.649 0 5.14 1.03 7.014 2.905A9.87 9.87 0 0122 12c0 5.514-4.487 10-9.95 10zm0-18.5c-4.687 0-8.5 3.813-8.5 8.5 0 1.688.494 3.316 1.428 4.71l.222.333-.634 2.315 2.373-.618.322.192A8.44 8.44 0 0012.05 20.5c4.687 0 8.5-3.813 8.5-8.5s-3.813-8.5-8.5-8.5z' })
-  )
-}
 
 export function renderFornecedorList(container, fornecedores) {
   const canCreate = can('fornecedores', 'create')

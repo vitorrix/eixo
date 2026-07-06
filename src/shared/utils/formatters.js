@@ -60,3 +60,16 @@ export function fullDate(iso) {
   if (!iso || iso.length < 10) return iso || '—'
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 }
+
+// Aceita Firestore Timestamp, Date ou string/number — retorna "há X min/h/dias"
+export function relativeTime(timestamp) {
+  if (!timestamp) return '—'
+  const date = typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp)
+  const diffMin = Math.floor((Date.now() - date.getTime()) / 60000)
+  if (diffMin < 1) return 'agora'
+  if (diffMin < 60) return `há ${diffMin} min`
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return `há ${diffH}h`
+  const diffD = Math.floor(diffH / 24)
+  return `há ${diffD}d`
+}

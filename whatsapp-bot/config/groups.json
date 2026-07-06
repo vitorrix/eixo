@@ -1,0 +1,12 @@
+{
+  "_comment": "Preencha após rodar 'npm run list-groups'. Chave = JID do grupo. fornecedorId é o doc ID em /fornecedores no Eixo, quando o fornecedor já está cadastrado; caso contrário deixe null e preencha phone/fornecedorNome direto.",
+  "_exemplo": {
+    "jid": "1203630xxxxx@g.us",
+    "fornecedorId": null,
+    "fornecedorNome": "Talla Cell 6603",
+    "phone": "5511940886603",
+    "phoneCountry": "55",
+    "categoria": "apple",
+    "verified": false
+  }
+}

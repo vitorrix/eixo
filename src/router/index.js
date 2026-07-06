@@ -10,6 +10,7 @@ const routes = {
   '/clientes':     { module: 'clientes',     loader: () => import('../modules/clientes/index.js') },
   '/fornecedores':  { module: 'fornecedores',  loader: () => import('../modules/fornecedores/index.js') },
   '/produtos':      { module: 'produtos',      loader: () => import('../modules/produtos/index.js') },
+  '/busca':         { module: 'busca',         loader: () => import('../modules/busca/index.js') },
   '/orcamentos':    { module: null,             loader: () => import('../modules/orcamentos/index.js') },
   '/recibo':        { module: 'recibo',        loader: () => import('../modules/recibo/index.js') },
   '/relatorios':    { module: 'relatorios',    loader: () => import('../modules/relatorios/index.js') },
