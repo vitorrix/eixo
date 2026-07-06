@@ -32,11 +32,24 @@ export function renderFornecedorList(container, fornecedores) {
     toolbar.appendChild(addBtn)
   }
 
+  let sortDir = 'asc'
+  const nameTh = el('th', { class: 'th-sortable' }, 'Nome', el('span', { class: 'sort-ind' }, ''))
+  function updateSortHeader() {
+    nameTh.classList.add('sort-active')
+    nameTh.querySelector('.sort-ind').textContent = sortDir === 'asc' ? ' ▲' : ' ▼'
+  }
+  nameTh.addEventListener('click', () => {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc'
+    updateSortHeader()
+    searchInput.dispatchEvent(new Event('input'))
+  })
+  updateSortHeader()
+
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {},
       el('tr', {},
-        el('th', {}, 'Nome'),
+        nameTh,
         el('th', {}, 'Tipo'),
         el('th', {}, 'Telefone'),
         el('th', {}, 'Categorias'),
@@ -127,9 +140,8 @@ export function renderFornecedorList(container, fornecedores) {
   }
 
   let allFornecedores = fornecedores
-  renderRows(allFornecedores)
 
-  searchInput.addEventListener('input', () => {
+  function applyFilterAndSort() {
     const q = searchInput.value.toLowerCase()
     const qDigits = q.replace(/\D/g, '')
     const filtered = allFornecedores.filter(f =>
@@ -140,8 +152,16 @@ export function renderFornecedorList(container, fornecedores) {
       (f.document || '').includes(qDigits) ||
       (f.phone || '').includes(qDigits)
     )
+    filtered.sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+      return sortDir === 'asc' ? cmp : -cmp
+    })
     renderRows(filtered)
-  })
+  }
+
+  applyFilterAndSort()
+
+  searchInput.addEventListener('input', applyFilterAndSort)
 
   return {
     update(newList) {
