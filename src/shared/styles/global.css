@@ -2310,6 +2310,30 @@ html, body {
 .busca-preco-cell { display: flex; flex-direction: column; gap: 2px; }
 .busca-preco-cotado { font-size: 11px; color: var(--color-muted); font-weight: 400; }
 
+.busca-produto-cell { display: flex; align-items: center; gap: 8px; }
+.busca-produto-icon { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+
+.busca-fornecedor-cell { display: flex; align-items: center; gap: 10px; }
+.busca-fornecedor-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--color-bg);
+}
+.busca-fornecedor-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+.busca-fornecedor-nome { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.busca-fornecedor-box { font-size: 12px; color: var(--color-muted); margin-top: 2px; }
+
 /* ── MultiSelect (filtro com checkboxes) ──────── */
 .multiselect { position: relative; min-width: 180px; }
 .multiselect-trigger { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

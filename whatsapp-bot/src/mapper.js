@@ -44,6 +44,8 @@ export function mapMessageToOfertas(text, quotedAt, groupMeta) {
         fornecedorNome: groupMeta.fornecedorNome || '',
         fornecedorPhone: groupMeta.phone || '',
         fornecedorPhoneCountry: groupMeta.phoneCountry || '55',
+        fornecedorFotoUrl: groupMeta.fotoUrl || '',
+        box: groupMeta.box || '',
         produtoNome,
         produtoNomeLower: produtoNome.toLowerCase(),
         variante,

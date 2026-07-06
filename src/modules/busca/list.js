@@ -33,6 +33,28 @@ function splitVariante(variante) {
   return { capacidade: '', cor: variante.trim() }
 }
 
+function produtoIconFile(produtoNome) {
+  const n = (produtoNome || '').toLowerCase()
+  if (n.includes('watch')) return 'icon-watch.png'
+  if (n.includes('ipad') || n.includes('tablet')) return 'icon-tablet.png'
+  if (n.includes('iphone') || n.includes('galaxy') || n.includes('phone') || n.includes('celular')) return 'icon-phone.png'
+  return 'icon-acessorio.png'
+}
+
+function fornecedorAvatar(nome, fotoUrl) {
+  if (fotoUrl) {
+    const img = el('img', { src: fotoUrl, class: 'busca-fornecedor-avatar', alt: '' })
+    img.addEventListener('error', () => img.replaceWith(fallbackAvatar(nome)), { once: true })
+    return img
+  }
+  return fallbackAvatar(nome)
+}
+
+function fallbackAvatar(nome) {
+  const letter = (nome || '?').trim().charAt(0).toUpperCase() || '?'
+  return el('div', { class: 'busca-fornecedor-avatar busca-fornecedor-avatar-fallback' }, letter)
+}
+
 function filterGroup(labelText, iconKey, widgetEl) {
   return el('div', { class: 'busca-filter-group' },
     el('span', { class: 'busca-filter-label' }, filterIcon(iconKey), labelText),
@@ -115,11 +137,20 @@ export function renderBuscaList(container, ofertas) {
 
     for (const o of list) {
       const { capacidade, cor } = splitVariante(o.variante)
-      const produtoCell = el('td', { class: 'td-name' }, o.produtoNome || '—')
+      const produtoCell = el('td', { class: 'td-name' },
+        el('div', { class: 'busca-produto-cell' },
+          el('img', {
+            src: `${import.meta.env.BASE_URL}${produtoIconFile(o.produtoNome)}`,
+            class: 'busca-produto-icon',
+            alt: '',
+          }),
+          el('span', {}, o.produtoNome || '—'),
+        )
+      )
 
-      const fornecedorCell = el('td', {}, o.fornecedorNome || '—')
+      const nomeRow = el('div', { class: 'busca-fornecedor-nome' }, o.fornecedorNome || '—')
       if (o.verified) {
-        fornecedorCell.appendChild(el('img', {
+        nomeRow.appendChild(el('img', {
           src: `${import.meta.env.BASE_URL}verified-badge.png`,
           class: 'verified-badge',
           title: 'Fornecedor validado',
@@ -132,10 +163,20 @@ export function renderBuscaList(container, ofertas) {
         `Olá! Vi que você tem ${o.produtoNome}${o.variante ? ' ' + o.variante : ''} por ${brl(o.preco)}, ainda tem disponível?`
       )
       if (waLink) {
-        fornecedorCell.appendChild(
+        nomeRow.appendChild(
           el('a', { href: waLink, target: '_blank', rel: 'noopener', class: 'whatsapp-link', title: 'Perguntar no WhatsApp' }, whatsappIcon())
         )
       }
+
+      const fornecedorInfo = el('div', {}, nomeRow)
+      if (o.box) fornecedorInfo.appendChild(el('div', { class: 'busca-fornecedor-box' }, o.box))
+
+      const fornecedorCell = el('td', {},
+        el('div', { class: 'busca-fornecedor-cell' },
+          fornecedorAvatar(o.fornecedorNome, o.fornecedorFotoUrl),
+          fornecedorInfo,
+        )
+      )
 
       const precoCell = el('td', {},
         el('div', { class: 'busca-preco-cell' },

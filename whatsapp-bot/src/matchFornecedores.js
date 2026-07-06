@@ -48,6 +48,13 @@ await connect(null, async (sock) => {
       continue
     }
 
+    let fotoUrl = ''
+    try {
+      fotoUrl = await sock.profilePictureUrl(`${alvo}@s.whatsapp.net`, 'image')
+    } catch {
+      // fornecedor sem foto de perfil pública — fica sem avatar (fallback no front)
+    }
+
     groupsJson[grupo.id] = {
       fornecedorId: f.id,
       fornecedorNome: f.name,
@@ -55,9 +62,11 @@ await connect(null, async (sock) => {
       phoneCountry: f.phoneCountry || '55',
       categoria: (f.categorias || [])[0] || '',
       verified: isValidado(f.lastValidatedAt),
+      box: f.box || '',
+      fotoUrl,
     }
     atualizados++
-    console.log(`✅ ${f.name}  →  ${grupo.id}  (${grupo.subject})`)
+    console.log(`✅ ${f.name}  →  ${grupo.id}  (${grupo.subject})${fotoUrl ? ' [com foto]' : ''}`)
   }
 
   writeFileSync(GROUPS_PATH, JSON.stringify(groupsJson, null, 2) + '\n')
