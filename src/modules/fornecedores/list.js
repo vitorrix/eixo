@@ -32,30 +32,58 @@ export function renderFornecedorList(container, fornecedores) {
     toolbar.appendChild(addBtn)
   }
 
+  let sortCol = 'name'
   let sortDir = 'asc'
-  const nameTh = el('th', { class: 'th-sortable' }, 'Nome', el('span', { class: 'sort-ind' }, ''))
-  function updateSortHeader() {
-    nameTh.classList.add('sort-active')
-    nameTh.querySelector('.sort-ind').textContent = sortDir === 'asc' ? ' ▲' : ' ▼'
+
+  const SORT_DEFS = [
+    { key: 'name',       label: 'Nome',          cls: '' },
+    { key: 'type',       label: 'Tipo',          cls: '' },
+    { key: 'phone',      label: 'Telefone',      cls: '' },
+    { key: 'categorias', label: 'Categorias',    cls: '' },
+    { key: 'comunidade', label: 'Comunidade',    cls: 'col-center' },
+    { key: 'validacao',  label: 'Validação',     cls: '' },
+    { key: 'box',        label: 'Box / Galeria', cls: '' },
+  ]
+
+  function sortValue(f, key) {
+    switch (key) {
+      case 'name':       return (f.name || '').toLowerCase()
+      case 'type':       return f.type === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica'
+      case 'phone':       return (f.phone || '').replace(/\D/g, '').padStart(15, '0')
+      case 'categorias': return (f.categorias || []).map(c => CATEGORIA_LABELS[c] || c).sort().join(', ')
+      case 'comunidade': return f.comunidade ? 1 : 0
+      case 'validacao':  return validationStatus(f.lastValidatedAt).daysLeft ?? -Infinity
+      case 'box':        return (f.box || '').toLowerCase()
+      default:           return ''
+    }
   }
-  nameTh.addEventListener('click', () => {
-    sortDir = sortDir === 'asc' ? 'desc' : 'asc'
-    updateSortHeader()
-    searchInput.dispatchEvent(new Event('input'))
+
+  const sortThs = SORT_DEFS.map(({ key, label, cls }) => {
+    const clsList = [cls, 'th-sortable'].filter(Boolean).join(' ')
+    const ind = el('span', { class: 'sort-ind' }, '')
+    const th = el('th', { class: clsList }, label, ind)
+    th.addEventListener('click', () => {
+      if (sortCol === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc'
+      else { sortCol = key; sortDir = 'asc' }
+      updateSortHeaders()
+      applyFilterAndSort()
+    })
+    return th
   })
-  updateSortHeader()
+
+  function updateSortHeaders() {
+    SORT_DEFS.forEach(({ key }, i) => {
+      const th = sortThs[i]
+      th.classList.toggle('sort-active', sortCol === key)
+      th.querySelector('.sort-ind').textContent = sortCol === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ''
+    })
+  }
+  updateSortHeaders()
 
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {},
-      el('tr', {},
-        nameTh,
-        el('th', {}, 'Tipo'),
-        el('th', {}, 'Telefone'),
-        el('th', {}, 'Categorias'),
-        el('th', { class: 'col-center' }, 'Comunidade'),
-        el('th', {}, 'Validação'),
-        el('th', {}, 'Box / Galeria'),
+      el('tr', {}, ...sortThs,
         ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, 'Ações')] : [])
       )
     ),
@@ -153,7 +181,11 @@ export function renderFornecedorList(container, fornecedores) {
       (f.phone || '').includes(qDigits)
     )
     filtered.sort((a, b) => {
-      const cmp = a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+      const va = sortValue(a, sortCol)
+      const vb = sortValue(b, sortCol)
+      let cmp
+      if (typeof va === 'number' && typeof vb === 'number') cmp = va - vb
+      else cmp = String(va).localeCompare(String(vb), 'pt-BR', { sensitivity: 'base' })
       return sortDir === 'asc' ? cmp : -cmp
     })
     renderRows(filtered)
