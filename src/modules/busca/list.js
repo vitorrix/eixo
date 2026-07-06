@@ -1,6 +1,7 @@
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { brl, relativeTime } from '../../shared/utils/formatters.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
+import { createMultiSelect } from '../../shared/components/MultiSelect.js'
 
 const CATEGORIA_PILLS = [
   { key: 'apple', label: 'Apple', emoji: '🍎' },
@@ -32,10 +33,10 @@ function splitVariante(variante) {
   return { capacidade: '', cor: variante.trim() }
 }
 
-function filterGroup(labelText, iconKey, selectEl) {
+function filterGroup(labelText, iconKey, widgetEl) {
   return el('div', { class: 'busca-filter-group' },
     el('span', { class: 'busca-filter-label' }, filterIcon(iconKey), labelText),
-    selectEl
+    widgetEl
   )
 }
 
@@ -65,13 +66,13 @@ export function renderBuscaList(container, ofertas) {
     }
   }
 
-  const capacidadeSel = el('select', { class: 'field-select' })
-  const corSel        = el('select', { class: 'field-select' })
-  const fornecedorSel = el('select', { class: 'field-select' })
+  const capacidadeMs = createMultiSelect({ label: 'Capacidade', allLabel: 'Todas as capacidades', onChange: applyFilters })
+  const corMs        = createMultiSelect({ label: 'Cor', allLabel: 'Todas as cores', onChange: applyFilters })
+  const fornecedorMs = createMultiSelect({ label: 'Fornecedor', allLabel: 'Todos os fornecedores', onChange: applyFilters })
   const filtersRow = el('div', { class: 'busca-filters-row' },
-    filterGroup('Capacidade', 'capacidade', capacidadeSel),
-    filterGroup('Cor', 'cor', corSel),
-    filterGroup('Fornecedor', 'fornecedor', fornecedorSel),
+    filterGroup('Capacidade', 'capacidade', capacidadeMs.el),
+    filterGroup('Cor', 'cor', corMs.el),
+    filterGroup('Fornecedor', 'fornecedor', fornecedorMs.el),
   )
 
   const countBadge = el('span', { class: 'count-badge' }, `${ofertas.length}`)
@@ -83,11 +84,10 @@ export function renderBuscaList(container, ofertas) {
     el('thead', {},
       el('tr', {},
         el('th', {}, 'Produto'),
-        el('th', {}, 'Variante'),
+        el('th', {}, 'Capacidade'),
+        el('th', {}, 'Cor'),
         el('th', {}, 'Fornecedor'),
         el('th', {}, 'Preço'),
-        el('th', {}, 'Cotado'),
-        el('th', { class: 'col-actions' }, 'Ação'),
       )
     ),
     tbody
@@ -114,6 +114,7 @@ export function renderBuscaList(container, ofertas) {
     emptyState.classList.add('hidden')
 
     for (const o of list) {
+      const { capacidade, cor } = splitVariante(o.variante)
       const produtoCell = el('td', { class: 'td-name' }, o.produtoNome || '—')
 
       const fornecedorCell = el('td', {}, o.fornecedorNome || '—')
@@ -125,27 +126,31 @@ export function renderBuscaList(container, ofertas) {
           alt: 'Validado',
         }))
       }
-
-      const cells = [
-        produtoCell,
-        el('td', {}, o.variante || '—'),
-        fornecedorCell,
-        el('td', {}, brl(o.preco)),
-        el('td', {}, relativeTime(o.quotedAt)),
-      ]
-
       const waLink = whatsappLink(
         o.fornecedorPhone,
         o.fornecedorPhoneCountry,
         `Olá! Vi que você tem ${o.produtoNome}${o.variante ? ' ' + o.variante : ''} por ${brl(o.preco)}, ainda tem disponível?`
       )
-      const actionCell = el('td', { class: 'col-actions' })
       if (waLink) {
-        actionCell.appendChild(
-          el('a', { href: waLink, target: '_blank', rel: 'noopener', class: 'icon-btn', title: 'Perguntar no WhatsApp' }, whatsappIcon())
+        fornecedorCell.appendChild(
+          el('a', { href: waLink, target: '_blank', rel: 'noopener', class: 'whatsapp-link', title: 'Perguntar no WhatsApp' }, whatsappIcon())
         )
       }
-      cells.push(actionCell)
+
+      const precoCell = el('td', {},
+        el('div', { class: 'busca-preco-cell' },
+          el('span', {}, brl(o.preco)),
+          el('span', { class: 'busca-preco-cotado' }, relativeTime(o.quotedAt)),
+        )
+      )
+
+      const cells = [
+        produtoCell,
+        el('td', {}, capacidade || '—'),
+        el('td', {}, cor || '—'),
+        fornecedorCell,
+        precoCell,
+      ]
 
       tbody.appendChild(el('tr', {}, ...cells))
     }
@@ -158,42 +163,27 @@ export function renderBuscaList(container, ofertas) {
 
     const capacidades = [...new Set(variantes.map(v => v.capacidade).filter(Boolean))]
       .sort((a, b) => parseInt(a) - parseInt(b))
-    const prevCapacidade = capacidadeSel.value
-    capacidadeSel.replaceChildren(
-      el('option', { value: ALL }, 'Todas as capacidades'),
-      ...capacidades.map(c => el('option', { value: c }, c))
-    )
-    capacidadeSel.value = capacidades.includes(prevCapacidade) ? prevCapacidade : ALL
+    capacidadeMs.setOptions(capacidades)
 
     const cores = [...new Set(variantes.map(v => v.cor).filter(Boolean))].sort()
-    const prevCor = corSel.value
-    corSel.replaceChildren(
-      el('option', { value: ALL }, 'Todas as cores'),
-      ...cores.map(c => el('option', { value: c }, c))
-    )
-    corSel.value = cores.includes(prevCor) ? prevCor : ALL
+    corMs.setOptions(cores)
 
     const fornecedores = [...new Set(allOfertas.map(o => o.fornecedorNome).filter(Boolean))].sort()
-    const prevFornecedor = fornecedorSel.value
-    fornecedorSel.replaceChildren(
-      el('option', { value: ALL }, 'Todos os fornecedores'),
-      ...fornecedores.map(f => el('option', { value: f }, f))
-    )
-    fornecedorSel.value = fornecedores.includes(prevFornecedor) ? prevFornecedor : ALL
+    fornecedorMs.setOptions(fornecedores)
   }
 
   function applyFilters() {
     const q = searchInput.value.toLowerCase()
-    const capacidade = capacidadeSel.value
-    const cor        = corSel.value
-    const fornecedor = fornecedorSel.value
+    const capacidades = capacidadeMs.getSelected()
+    const cores       = corMs.getSelected()
+    const fornecedores = fornecedorMs.getSelected()
 
     const filtered = allOfertas.filter(o => {
       if (categoriaAtiva !== ALL && o.categoria !== categoriaAtiva) return false
       const v = splitVariante(o.variante)
-      if (capacidade !== ALL && v.capacidade !== capacidade) return false
-      if (cor !== ALL && v.cor !== cor) return false
-      if (fornecedor !== ALL && o.fornecedorNome !== fornecedor) return false
+      if (capacidades.length && !capacidades.includes(v.capacidade)) return false
+      if (cores.length && !cores.includes(v.cor)) return false
+      if (fornecedores.length && !fornecedores.includes(o.fornecedorNome)) return false
       if (!q) return true
       return (
         (o.produtoNomeLower || (o.produtoNome || '').toLowerCase()).includes(q) ||
@@ -208,9 +198,6 @@ export function renderBuscaList(container, ofertas) {
   applyFilters()
 
   searchInput.addEventListener('input', applyFilters)
-  capacidadeSel.addEventListener('change', applyFilters)
-  corSel.addEventListener('change', applyFilters)
-  fornecedorSel.addEventListener('change', applyFilters)
 
   return {
     update(newList) {
