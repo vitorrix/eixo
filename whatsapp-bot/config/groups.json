@@ -8,5 +8,45 @@
     "phoneCountry": "55",
     "categoria": "apple",
     "verified": false
+  },
+  "120363407576723105@g.us": {
+    "fornecedorId": "psTTJDCxD8HLHUHuDrRG",
+    "fornecedorNome": "America Mobile 5173",
+    "phone": "982215173",
+    "phoneCountry": "595",
+    "categoria": "apple",
+    "verified": true
+  },
+  "120363402740386311@g.us": {
+    "fornecedorId": "8nc4nWWRNjDB0VecOKRz",
+    "fornecedorNome": "Mohamed Nasser 0333",
+    "phone": "11994430333",
+    "phoneCountry": "55",
+    "categoria": "apple",
+    "verified": true
+  },
+  "120363407105514332@g.us": {
+    "fornecedorId": "HUQuaonFJJMj0FLY6Laa",
+    "fornecedorNome": "Phoenix Technology (PXT) 7167",
+    "phone": "2724447167",
+    "phoneCountry": "1",
+    "categoria": "apple",
+    "verified": true
+  },
+  "120363424670823352@g.us": {
+    "fornecedorId": "RDIE6WbvCQAsRXbJWt6D",
+    "fornecedorNome": "Joyce 1664",
+    "phone": "11982431664",
+    "phoneCountry": "55",
+    "categoria": "apple",
+    "verified": true
+  },
+  "120363399284825613@g.us": {
+    "fornecedorId": "Ua0z1yxcMaG4U2UxX95N",
+    "fornecedorNome": "Trend Shop 1039",
+    "phone": "11958105593",
+    "phoneCountry": "55",
+    "categoria": "apple",
+    "verified": true
   }
 }

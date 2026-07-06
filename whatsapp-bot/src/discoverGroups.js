@@ -2,11 +2,7 @@
 // participa, com JID e nome — usado para preencher config/groups.json manualmente.
 import { connect } from './connection.js'
 
-const sock = await connect()
-
-sock.ev.on('connection.update', async ({ connection }) => {
-  if (connection !== 'open') return
-
+await connect(null, async (sock) => {
   const groups = await sock.groupFetchAllParticipating()
   console.log('\nComunidades/grupos encontrados:\n')
   for (const g of Object.values(groups)) {
