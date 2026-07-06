@@ -10,6 +10,7 @@ export const COUNTRIES = [
   { iso: 'CN', name: 'China',                   flag: '🇨🇳', dial: '86',  length: 11 },
   { iso: 'HK', name: 'Hong Kong',                flag: '🇭🇰', dial: '852', length: 8  },
   { iso: 'AE', name: 'Emirados Árabes Unidos',  flag: '🇦🇪', dial: '971', length: 9  },
+  { iso: 'LB', name: 'Líbano',                  flag: '🇱🇧', dial: '961', length: 8  },
   { iso: 'PT', name: 'Portugal',                flag: '🇵🇹', dial: '351', length: 9  },
   { iso: 'MX', name: 'México',                  flag: '🇲🇽', dial: '52',  length: 10 },
   { iso: 'CO', name: 'Colômbia',                flag: '🇨🇴', dial: '57',  length: 10 },
