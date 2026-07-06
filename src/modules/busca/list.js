@@ -180,7 +180,7 @@ export function renderBuscaList(container, ofertas) {
 
       const precoCell = el('td', {},
         el('div', { class: 'busca-preco-cell' },
-          el('span', {}, brl(o.preco)),
+          el('span', { class: 'busca-preco-valor' }, brl(o.preco)),
           el('span', { class: 'busca-preco-cotado' }, relativeTime(o.quotedAt)),
         )
       )
