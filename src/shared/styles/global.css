@@ -2325,6 +2325,18 @@ html, body {
   outline: none;
 }
 
+.busca-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 14px;
+}
+.busca-pagination.hidden { display: none; }
+.busca-page-size { width: auto; padding: 7px 10px; font-size: 13px; }
+.busca-page-info { font-size: 13px; color: var(--color-muted); }
+.busca-pagination .btn-link:disabled { opacity: .4; cursor: not-allowed; text-decoration: none; }
+
 .busca-preco-cell { display: flex; flex-direction: column; gap: 2px; }
 .busca-preco-valor { color: var(--color-primary); font-weight: 700; font-size: 15px; }
 .busca-preco-cotado { font-size: 11px; color: var(--color-muted); font-weight: 400; }

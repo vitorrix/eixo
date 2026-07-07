@@ -4,14 +4,18 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "list-groups": "node src/discoverGroups.js"
+    "start": "node --env-file=.env index.js",
+    "list-groups": "node src/discoverGroups.js",
+    "match-fornecedores": "node src/matchFornecedores.js",
+    "ingest": "node --env-file=.env src/ingestManual.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "^6.7.9",
     "firebase-admin": "^12.6.0",
     "pino": "^9.4.0",
+    "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0"
   }
 }

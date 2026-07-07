@@ -21,7 +21,13 @@ async function handleMessages(sock, messages) {
     if (!text) continue
 
     const quotedAt = new Date((Number(msg.messageTimestamp) || Date.now() / 1000) * 1000)
-    const ofertas = mapMessageToOfertas(text, quotedAt, groupMeta)
+    let ofertas
+    try {
+      ofertas = await mapMessageToOfertas(text, quotedAt, groupMeta)
+    } catch (err) {
+      console.error('Erro ao interpretar mensagem via IA:', err)
+      continue
+    }
 
     for (const { docId, data } of ofertas) {
       try {

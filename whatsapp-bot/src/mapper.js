@@ -1,4 +1,4 @@
-import { parseMessage } from './parser.js'
+import { parseMessageWithAI } from './aiParser.js'
 
 const STORAGE_REGEX = /(\d+)\s?(GB|TB)\b/i
 
@@ -23,8 +23,8 @@ function extractProdutoEStorage(produtoBruto) {
 }
 
 // groupMeta vem de config/groups.json (fornecedorId, fornecedorNome, phone, phoneCountry, categoria, verified)
-export function mapMessageToOfertas(text, quotedAt, groupMeta) {
-  const candidatos = parseMessage(text)
+export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
+  const candidatos = await parseMessageWithAI(text)
 
   return candidatos.map(c => {
     const { produtoNome, storage } = extractProdutoEStorage(c.produtoBruto)

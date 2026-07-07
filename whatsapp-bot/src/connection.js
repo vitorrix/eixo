@@ -2,6 +2,8 @@ import { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaile
 import { Boom } from '@hapi/boom'
 import pino from 'pino'
 import qrcode from 'qrcode-terminal'
+import QRCode from 'qrcode'
+import { fileURLToPath } from 'url'
 
 const AUTH_DIR = new URL('../auth', import.meta.url).pathname
 const logger = pino({ level: 'silent' })
@@ -28,6 +30,8 @@ export async function connect(onMessages, onOpen) {
     if (qr) {
       console.log('\nEscaneie este QR code em WhatsApp > Aparelhos conectados > Conectar aparelho:\n')
       qrcode.generate(qr, { small: true })
+      const qrPngPath = fileURLToPath(new URL('../qr.png', import.meta.url))
+      QRCode.toFile(qrPngPath, qr, { width: 400 }).catch(() => {})
     }
     if (connection === 'close') {
       const statusCode = lastDisconnect?.error instanceof Boom

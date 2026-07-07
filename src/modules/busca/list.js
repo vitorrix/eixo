@@ -101,7 +101,7 @@ export function renderBuscaList(container, ofertas) {
     btn.addEventListener('click', () => {
       categoriaAtiva = categoriaAtiva === key ? ALL : key
       updatePillStates()
-      applyFilters()
+      resetPageAndApply()
     })
     pillButtons[key] = btn
     pillsRow.appendChild(btn)
@@ -112,12 +112,17 @@ export function renderBuscaList(container, ofertas) {
     }
   }
 
-  const capacidadeMs = createMultiSelect({ label: 'Capacidade', allLabel: 'Todas as capacidades', onChange: applyFilters })
-  const corMs        = createMultiSelect({ label: 'Cor', allLabel: 'Todas as cores', onChange: applyFilters })
-  const fornecedorMs = createMultiSelect({ label: 'Fornecedor', allLabel: 'Todos os fornecedores', onChange: applyFilters })
+  const capacidadeMs = createMultiSelect({ label: 'Capacidade', allLabel: 'Todas as capacidades', onChange: () => resetPageAndApply() })
+  const corMs        = createMultiSelect({ label: 'Cor', allLabel: 'Todas as cores', onChange: () => resetPageAndApply() })
+  const fornecedorMs = createMultiSelect({ label: 'Fornecedor', allLabel: 'Todos os fornecedores', onChange: () => resetPageAndApply() })
 
   const dataInput = el('input', { type: 'date', class: 'field-select', value: mostRecentDateValue(ofertas) })
-  dataInput.addEventListener('change', applyFilters)
+  dataInput.addEventListener('change', resetPageAndApply)
+
+  function resetPageAndApply() {
+    currentPage = 1
+    applyFilters()
+  }
 
   const filtersRow = el('div', { class: 'busca-filters-row' },
     filterGroup('Data', 'data', dataInput),
@@ -129,6 +134,30 @@ export function renderBuscaList(container, ofertas) {
   const countBadge = el('span', { class: 'count-badge' }, `${ofertas.length}`)
   const title = el('h2', {}, 'Busca ', countBadge)
   const toolbar = el('div', { class: 'toolbar' }, title)
+
+  const PAGE_SIZE_OPTIONS = [20, 50, 75, 100]
+  let pageSize = PAGE_SIZE_OPTIONS[0]
+  let currentPage = 1
+
+  const pageSizeSelect = el('select', { class: 'field-select busca-page-size' },
+    ...PAGE_SIZE_OPTIONS.map(n => el('option', { value: n }, `${n} por página`))
+  )
+  pageSizeSelect.addEventListener('change', () => {
+    pageSize = Number(pageSizeSelect.value)
+    currentPage = 1
+    applyFilters()
+  })
+
+  const pageInfo = el('span', { class: 'busca-page-info' })
+  const prevBtn = el('button', { type: 'button', class: 'btn-link' }, '‹ Anterior')
+  const nextBtn = el('button', { type: 'button', class: 'btn-link' }, 'Próxima ›')
+  prevBtn.addEventListener('click', () => {
+    if (currentPage > 1) { currentPage--; applyFilters() }
+  })
+  nextBtn.addEventListener('click', () => {
+    currentPage++; applyFilters()
+  })
+  const paginationRow = el('div', { class: 'busca-pagination' }, pageSizeSelect, pageInfo, prevBtn, nextBtn)
 
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
@@ -149,10 +178,21 @@ export function renderBuscaList(container, ofertas) {
     el('p', {}, '😕 Nenhuma oferta encontrada.')
   )
 
-  mount(container, toolbar, searchInput, pillsRow, filtersRow, tableWrapper, emptyState)
+  mount(container, toolbar, searchInput, pillsRow, filtersRow, tableWrapper, emptyState, paginationRow)
 
   function renderRows(list) {
     countBadge.textContent = list.length
+
+    const totalPages = Math.max(1, Math.ceil(list.length / pageSize))
+    if (currentPage > totalPages) currentPage = totalPages
+    if (currentPage < 1) currentPage = 1
+    const pageSlice = list.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+    pageInfo.textContent = list.length ? `Página ${currentPage} de ${totalPages}` : ''
+    prevBtn.disabled = currentPage <= 1
+    nextBtn.disabled = currentPage >= totalPages
+    paginationRow.classList.toggle('hidden', list.length === 0)
+
     tbody.replaceChildren()
 
     if (!list.length) {
@@ -164,7 +204,7 @@ export function renderBuscaList(container, ofertas) {
     tableWrapper.classList.remove('hidden')
     emptyState.classList.add('hidden')
 
-    for (const o of list) {
+    for (const o of pageSlice) {
       const { capacidade, cor } = splitVariante(o.variante)
       const produtoCell = el('td', { class: 'td-name' },
         el('div', { class: 'busca-produto-cell' },
@@ -272,7 +312,7 @@ export function renderBuscaList(container, ofertas) {
   refreshFilterOptions()
   applyFilters()
 
-  searchInput.addEventListener('input', applyFilters)
+  searchInput.addEventListener('input', resetPageAndApply)
 
   return {
     update(newList) {
