@@ -280,7 +280,11 @@ export function renderBuscaList(container, ofertas) {
     const dataMinima = dataInput.value ? new Date(`${dataInput.value}T00:00:00`) : null
 
     return allOfertas.filter(o => {
-      if (categoriaAtiva !== ALL && !(o.categorias || []).includes(categoriaAtiva)) return false
+      if (categoriaAtiva === 'seminovo') {
+        if (!o.seminovo) return false
+      } else if (categoriaAtiva !== ALL && !(o.categorias || []).includes(categoriaAtiva)) {
+        return false
+      }
       const v = splitVariante(o.variante)
       if (capacidades.length && !capacidades.includes(v.capacidade)) return false
       if (cores.length && !cores.includes(v.cor)) return false

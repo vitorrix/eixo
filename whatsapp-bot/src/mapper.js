@@ -27,6 +27,11 @@ function extractProdutoEStorage(produtoBruto) {
 export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
   const candidatos = await parseMessageWithAI(text)
 
+  // categorias do fornecedor = marca/tipo (apple/android/acessorios), fixo no cadastro.
+  // "seminovo" NÃO entra aqui — é uma condição por produto, decidida pela IA a partir
+  // do texto de cada item (um mesmo fornecedor pode vender lacrado e seminovo juntos).
+  const categorias = (groupMeta.categorias || []).filter(c => c !== 'seminovo')
+
   return candidatos.map(c => {
     const { produtoNome, storage } = extractProdutoEStorage(c.produtoBruto)
     const cor = normalizeColor(c.cor)
@@ -37,6 +42,7 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
       slugify(fornecedorKey),
       slugify(produtoNome),
       slugify(variante) || 'SEM-VARIANTE',
+      c.seminovo ? 'SEMINOVO' : 'NOVO',
     ].join('__')
 
     return {
@@ -51,7 +57,8 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
         produtoNome,
         produtoNomeLower: produtoNome.toLowerCase(),
         variante,
-        categorias: groupMeta.categorias || [],
+        categorias,
+        seminovo: c.seminovo === true,
         preco: c.preco,
         quotedAt,
         sourceText: c.textoOriginal,
