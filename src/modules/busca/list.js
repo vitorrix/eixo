@@ -11,11 +11,35 @@ const CATEGORIA_PILLS = [
 ]
 const ALL = '__all__'
 
+function toDate(timestamp) {
+  if (!timestamp) return null
+  return typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp)
+}
+
+function toDateInputValue(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+// Retorna a data (YYYY-MM-DD) da oferta mais recente — usada como valor padrão do filtro,
+// pra já abrir mostrando a última lista recebida (hoje, ou ontem se ainda não veio nada hoje).
+function mostRecentDateValue(list) {
+  let maisRecente = null
+  for (const o of list) {
+    const d = toDate(o.quotedAt)
+    if (d && (!maisRecente || d > maisRecente)) maisRecente = d
+  }
+  return maisRecente ? toDateInputValue(maisRecente) : ''
+}
+
 function filterIcon(key) {
   const paths = {
     capacidade: ['M4 7l8-4 8 4-8 4-8-4z', 'M4 7v10l8 4 8-4V7', 'M12 11v10'],
     cor: ['M12 2a10 10 0 000 20c1.5 0 2-1 2-2s-.5-1.5-.5-2.5S14 16 15 16h2a4 4 0 004-4c0-5.5-4.5-10-9-10z', 'M7 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'M11 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'M16 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3z'],
     fornecedor: ['M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z', 'M9 22V12h6v10'],
+    data: ['M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z', 'M16 3v4', 'M8 3v4', 'M4 10h16'],
   }
   const svg = svgEl('svg', {
     viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
@@ -91,7 +115,12 @@ export function renderBuscaList(container, ofertas) {
   const capacidadeMs = createMultiSelect({ label: 'Capacidade', allLabel: 'Todas as capacidades', onChange: applyFilters })
   const corMs        = createMultiSelect({ label: 'Cor', allLabel: 'Todas as cores', onChange: applyFilters })
   const fornecedorMs = createMultiSelect({ label: 'Fornecedor', allLabel: 'Todos os fornecedores', onChange: applyFilters })
+
+  const dataInput = el('input', { type: 'date', class: 'field-select', value: mostRecentDateValue(ofertas) })
+  dataInput.addEventListener('change', applyFilters)
+
   const filtersRow = el('div', { class: 'busca-filters-row' },
+    filterGroup('Data', 'data', dataInput),
     filterGroup('Capacidade', 'capacidade', capacidadeMs.el),
     filterGroup('Cor', 'cor', corMs.el),
     filterGroup('Fornecedor', 'fornecedor', fornecedorMs.el),
@@ -218,6 +247,7 @@ export function renderBuscaList(container, ofertas) {
     const capacidades = capacidadeMs.getSelected()
     const cores       = corMs.getSelected()
     const fornecedores = fornecedorMs.getSelected()
+    const dataMinima = dataInput.value ? new Date(`${dataInput.value}T00:00:00`) : null
 
     const filtered = allOfertas.filter(o => {
       if (categoriaAtiva !== ALL && o.categoria !== categoriaAtiva) return false
@@ -225,6 +255,10 @@ export function renderBuscaList(container, ofertas) {
       if (capacidades.length && !capacidades.includes(v.capacidade)) return false
       if (cores.length && !cores.includes(v.cor)) return false
       if (fornecedores.length && !fornecedores.includes(o.fornecedorNome)) return false
+      if (dataMinima) {
+        const data = toDate(o.quotedAt)
+        if (!data || data < dataMinima) return false
+      }
       if (!q) return true
       return (
         (o.produtoNomeLower || (o.produtoNome || '').toLowerCase()).includes(q) ||
