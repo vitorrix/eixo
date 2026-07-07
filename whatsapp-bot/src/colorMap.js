@@ -15,25 +15,33 @@ const COLOR_TABLE = {
   'laranja': 'Laranja', 'orange': 'Laranja',
   'dourado': 'Dourado', 'gold': 'Dourado',
   'prata': 'Prata', 'silver': 'Prata',
+  // Branco e Prata/Silver são a mesma cor real na prática (iPhone, iPad e Mac nunca
+  // vendem os dois como opções distintas do mesmo modelo — fornecedores só escrevem
+  // "Branco" ou "Prata"/"Silver" pra descrever o mesmo acabamento claro).
+  'branco': 'Prata', 'white': 'Prata',
   'cinza': 'Cinza', 'gray': 'Cinza', 'grey': 'Cinza',
   'grafite': 'Grafite', 'graphite': 'Grafite',
 
-  // Acabamentos iPhone
+  // Acabamentos iPhone — nomes de marketing da Apple que são, na prática, uma
+  // variação/tom da cor básica. Unificados na cor básica pra não duplicar no filtro
+  // (ex: "Cosmic Orange" e "Laranja" são a mesma cor pro comprador).
   'space gray': 'Cinza-espacial', 'space grey': 'Cinza-espacial', 'cinza espacial': 'Cinza-espacial', 'cinza-espacial': 'Cinza-espacial',
   'space black': 'Preto-espacial', 'preto espacial': 'Preto-espacial',
   'jet black': 'Preto Brilhante',
   'midnight': 'Meia-noite', 'meia noite': 'Meia-noite', 'meia-noite': 'Meia-noite',
   'starlight': 'Estelar', 'estelar': 'Estelar',
-  'sierra blue': 'Azul-serra',
-  'pacific blue': 'Azul-pacífico',
-  'alpine green': 'Verde-alpino',
-  'deep purple': 'Roxo-profundo',
-  'deep blue': 'Azul-profundo',
-  'mist blue': 'Azul-névoa',
-  'cosmic orange': 'Laranja-cósmico',
-  'ultramarine': 'Ultramarino', 'ultramarina': 'Ultramarino',
-  'teal': 'Verde-azulado',
-  'sage': 'Sálvia',
+  'sierra blue': 'Azul', 'pacific blue': 'Azul', 'deep blue': 'Azul', 'mist blue': 'Azul',
+  'ultramarine': 'Azul', 'ultramarina': 'Azul', 'teal': 'Azul',
+  'alpine green': 'Verde', 'sage': 'Verde',
+  'deep purple': 'Roxo',
+  'cosmic orange': 'Laranja',
+  // Nomes intermediários (já traduzidos numa versão anterior desta tabela) —
+  // mantidos aqui pra migração continuar unificando corretamente.
+  'azul-profundo': 'Azul', 'azul-serra': 'Azul', 'azul-pacifico': 'Azul', 'azul-pacífico': 'Azul',
+  'azul-nevoa': 'Azul', 'azul-névoa': 'Azul', 'ultramarino': 'Azul', 'verde-azulado': 'Azul',
+  'verde-alpino': 'Verde', 'salvia': 'Verde', 'sálvia': 'Verde',
+  'roxo-profundo': 'Roxo',
+  'laranja-cosmico': 'Laranja', 'laranja-cósmico': 'Laranja',
 
   // Titânio (iPhone Pro)
   'natural titanium': 'Titânio Natural', 'titanio natural': 'Titânio Natural', 'titânio natural': 'Titânio Natural', 'natural': 'Titânio Natural',
