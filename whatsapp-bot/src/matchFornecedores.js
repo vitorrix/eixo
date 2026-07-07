@@ -60,7 +60,7 @@ await connect(null, async (sock) => {
       fornecedorNome: f.name,
       phone: (f.phone || '').replace(/\D/g, ''),
       phoneCountry: f.phoneCountry || '55',
-      categoria: (f.categorias || [])[0] || '',
+      categorias: f.categorias || [],
       verified: isValidado(f.lastValidatedAt),
       box: f.box || '',
       fotoUrl,

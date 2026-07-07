@@ -14,17 +14,22 @@
     "fornecedorNome": "America Mobile 5173",
     "phone": "982215173",
     "phoneCountry": "595",
-    "categoria": "apple",
+    "categorias": [
+      "apple",
+      "seminovo"
+    ],
     "verified": true,
     "box": "Mooca",
-    "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/685311573_1570571097733084_6344471348855515297_n.jpg?ccb=11-4&oh=01_Q5Aa5AG-zzbXmL16XIrITo_lZNqU_pCUSUpSA7CoksQRGqj9_g&oe=6A5A53FD&_nc_sid=5e03e0&_nc_cat=103"
+    "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/685311573_1570571097733084_6344471348855515297_n.jpg?ccb=11-4&oh=01_Q5Aa5AGmGRkiO-m9yC4txr24Cc58wM_pp8Tklm5gHfLTQi6wGg&oe=6A5A8C3D&_nc_sid=5e03e0&_nc_cat=103"
   },
   "120363402740386311@g.us": {
     "fornecedorId": "8nc4nWWRNjDB0VecOKRz",
     "fornecedorNome": "Mohamed Nasser 0333",
     "phone": "11994430333",
     "phoneCountry": "55",
-    "categoria": "apple",
+    "categorias": [
+      "apple"
+    ],
     "verified": true,
     "box": "Shopping Oriental (LN 229)",
     "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/340088805_1718403448579237_476647418133962274_n.jpg?ccb=11-4&oh=01_Q5Aa5AFoaREeWcVIx44D3AD_FwpLVOaw0ENPTt339difNF26xQ&oe=6A5A7037&_nc_sid=5e03e0&_nc_cat=105"
@@ -34,7 +39,10 @@
     "fornecedorNome": "Phoenix Tech (PXT) 7167",
     "phone": "2724447167",
     "phoneCountry": "1",
-    "categoria": "apple",
+    "categorias": [
+      "apple",
+      "seminovo"
+    ],
     "verified": true,
     "box": "Shopping Oriental (LN 765)",
     "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/696858170_4284529911801610_7067077558870496342_n.jpg?ccb=11-4&oh=01_Q5Aa5AHTxRpSFX9WRh7MCvAKnpn7zBloqK8hTo3iWP9g4uJImQ&oe=6A5A5C70&_nc_sid=5e03e0&_nc_cat=104"
@@ -44,7 +52,9 @@
     "fornecedorNome": "Joyce 1664",
     "phone": "11982431664",
     "phoneCountry": "55",
-    "categoria": "apple",
+    "categorias": [
+      "apple"
+    ],
     "verified": true,
     "box": "Shopping Oriental (LN 230)",
     "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/403931707_1005299150573450_743899206195637347_n.jpg?ccb=11-4&oh=01_Q5Aa5AGLlg6X0B7w5W5_MxU8JaOHzAMTdNhN00HjtcnZiQEshg&oe=6A5A6965&_nc_sid=5e03e0&_nc_cat=101"
@@ -54,18 +64,23 @@
     "fornecedorNome": "Trend Shop 1039",
     "phone": "11958105593",
     "phoneCountry": "55",
-    "categoria": "apple",
+    "categorias": [
+      "apple",
+      "seminovo"
+    ],
     "verified": true,
     "box": "Shopping Oriental (LN 232)",
-    "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/491876803_3215438571946114_8054634656942549328_n.jpg?ccb=11-4&oh=01_Q5Aa5AF6DkN-PblD5JDtkEOUf_Y1c7-x8smXhIsdHpbsRyResA&oe=6A5A51E2&_nc_sid=5e03e0&_nc_cat=101"
+    "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/491876803_3215438571946114_8054634656942549328_n.jpg?ccb=11-4&oh=01_Q5Aa5AF5FQaU7h_LVwpksoGocvc_VdRZ9FlbH5P-KT_n963tqQ&oe=6A5A8A22&_nc_sid=5e03e0&_nc_cat=101"
   },
   "120363420415519479@g.us": {
     "fornecedorId": "WpHarl2iXo8R8f0TTJ3b",
     "fornecedorNome": "ABE Cell 2233",
     "phone": "11915632233",
     "phoneCountry": "55",
-    "categoria": "apple",
-    "verified": false,
+    "categorias": [
+      "apple"
+    ],
+    "verified": true,
     "box": "Shopping Oriental (LN 227)",
     "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/416098001_392063566974049_7858439709385880720_n.jpg?ccb=11-4&oh=01_Q5Aa5AGEWUDxHZ99ujmMjUN5qLsWfINRA70twvCejlhwsoCITg&oe=6A5A58A6&_nc_sid=5e03e0&_nc_cat=111"
   },
@@ -74,28 +89,34 @@
     "fornecedorNome": "Bob Cell 2809",
     "phone": "71212809",
     "phoneCountry": "961",
-    "categoria": "apple",
-    "verified": false,
+    "categorias": [
+      "apple"
+    ],
+    "verified": true,
     "box": "Shopping Oriental (Lj 202C)",
-    "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/724320415_1541805537385409_8742305162520598436_n.jpg?ccb=11-4&oh=01_Q5Aa5AG_gbJUBA96ZG6qHVv5UZFx9oPHGROuQeFu8yTpSbHStw&oe=6A5A446B&_nc_sid=5e03e0&_nc_cat=107"
+    "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/724320415_1541805537385409_8742305162520598436_n.jpg?ccb=11-4&oh=01_Q5Aa5AGEZghODbtsES8JtXAcabMwbKdF8U45GLoS4U8cPfGPRg&oe=6A5A7CAB&_nc_sid=5e03e0&_nc_cat=107"
   },
   "120363405740898494@g.us": {
     "fornecedorId": "yYTdVAHU3dPPImJtRh3t",
     "fornecedorNome": "H2 Imports 0383",
     "phone": "975810383",
     "phoneCountry": "595",
-    "categoria": "apple",
-    "verified": false,
+    "categorias": [
+      "apple"
+    ],
+    "verified": true,
     "box": "Shopping Oriental (LN 506)",
-    "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/328782461_941128993567822_8510585549500341768_n.jpg?ccb=11-4&oh=01_Q5Aa5AHO_ExQiBY84xCldjOGY2m7OWI-jiniA3Thlt7192u4Qg&oe=6A5A4695&_nc_sid=5e03e0&_nc_cat=105"
+    "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/328782461_941128993567822_8510585549500341768_n.jpg?ccb=11-4&oh=01_Q5Aa5AGFMO7DilB65al28BDUdcBRTCeA6pxzvO4gA00drY1inw&oe=6A5A7ED5&_nc_sid=5e03e0&_nc_cat=105"
   },
   "120363426410490964@g.us": {
     "fornecedorId": "5u97iNAqebSeU1L09WD8",
     "fornecedorNome": "Vpa 6267",
     "phone": "994126267",
     "phoneCountry": "595",
-    "categoria": "apple",
-    "verified": false,
+    "categorias": [
+      "apple"
+    ],
+    "verified": true,
     "box": "Shopping Oriental (LN 207)",
     "fotoUrl": "https://pps.whatsapp.net/v/t61.24694-24/533791998_1314079067099684_6764331724683976013_n.jpg?ccb=11-4&oh=01_Q5Aa5AHvU0u8LhfdWfTW3QDSIvS-f3Mdhwykm6Biw7VzlXtyLg&oe=6A5A57B6&_nc_sid=5e03e0&_nc_cat=110"
   }

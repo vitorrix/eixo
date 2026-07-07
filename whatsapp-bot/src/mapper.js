@@ -1,4 +1,5 @@
 import { parseMessageWithAI } from './aiParser.js'
+import { normalizeColor } from './colorMap.js'
 
 const STORAGE_REGEX = /(\d+)\s?(GB|TB)\b/i
 
@@ -22,13 +23,14 @@ function extractProdutoEStorage(produtoBruto) {
   return { produtoNome, storage }
 }
 
-// groupMeta vem de config/groups.json (fornecedorId, fornecedorNome, phone, phoneCountry, categoria, verified)
+// groupMeta vem de config/groups.json (fornecedorId, fornecedorNome, phone, phoneCountry, categorias, verified)
 export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
   const candidatos = await parseMessageWithAI(text)
 
   return candidatos.map(c => {
     const { produtoNome, storage } = extractProdutoEStorage(c.produtoBruto)
-    const variante = [storage, c.cor].filter(Boolean).join(' ')
+    const cor = normalizeColor(c.cor)
+    const variante = [storage, cor].filter(Boolean).join(' ')
 
     const fornecedorKey = groupMeta.fornecedorId || `raw:${groupMeta.phone || 'desconhecido'}`
     const docId = [
@@ -49,7 +51,7 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
         produtoNome,
         produtoNomeLower: produtoNome.toLowerCase(),
         variante,
-        categoria: groupMeta.categoria || '',
+        categorias: groupMeta.categorias || [],
         preco: c.preco,
         quotedAt,
         sourceText: c.textoOriginal,

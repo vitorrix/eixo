@@ -2325,6 +2325,14 @@ html, body {
   outline: none;
 }
 
+.busca-table { table-layout: fixed; }
+.busca-table .busca-col-produto     { width: 26%; }
+.busca-table .busca-col-capacidade  { width: 11%; }
+.busca-table .busca-col-cor         { width: 13%; }
+.busca-table .busca-col-fornecedor  { width: 32%; }
+.busca-table .busca-col-preco       { width: 18%; }
+.busca-table td { overflow: hidden; text-overflow: ellipsis; }
+
 .busca-pagination {
   display: flex;
   align-items: center;

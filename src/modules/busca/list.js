@@ -160,14 +160,14 @@ export function renderBuscaList(container, ofertas) {
   const paginationRow = el('div', { class: 'busca-pagination' }, pageSizeSelect, pageInfo, prevBtn, nextBtn)
 
   const tbody = document.createElement('tbody')
-  const table = el('table', { class: 'data-table' },
+  const table = el('table', { class: 'data-table busca-table' },
     el('thead', {},
       el('tr', {},
-        el('th', {}, 'Produto'),
-        el('th', {}, 'Capacidade'),
-        el('th', {}, 'Cor'),
-        el('th', {}, 'Fornecedor'),
-        el('th', {}, 'Preço'),
+        el('th', { class: 'busca-col-produto' }, 'Produto'),
+        el('th', { class: 'busca-col-capacidade' }, 'Capacidade'),
+        el('th', { class: 'busca-col-cor' }, 'Cor'),
+        el('th', { class: 'busca-col-fornecedor' }, 'Fornecedor'),
+        el('th', { class: 'busca-col-preco' }, 'Preço'),
       )
     ),
     tbody
@@ -268,29 +268,19 @@ export function renderBuscaList(container, ofertas) {
 
   let allOfertas = ofertas
 
-  function refreshFilterOptions() {
-    const variantes = allOfertas.map(o => splitVariante(o.variante))
-
-    const capacidades = [...new Set(variantes.map(v => v.capacidade).filter(Boolean))]
-      .sort((a, b) => parseInt(a) - parseInt(b))
-    capacidadeMs.setOptions(capacidades)
-
-    const cores = [...new Set(variantes.map(v => v.cor).filter(Boolean))].sort()
-    corMs.setOptions(cores)
-
-    const fornecedores = [...new Set(allOfertas.map(o => o.fornecedorNome).filter(Boolean))].sort()
-    fornecedorMs.setOptions(fornecedores)
-  }
-
-  function applyFilters() {
+  // Filtra allOfertas aplicando todos os critérios ativos, exceto o "facet"
+  // indicado — usado tanto pra montar a lista final quanto pra calcular quais
+  // opções cada multi-select deve oferecer (ex: buscando "iPhone 17 Pro Max",
+  // o filtro de Cor só mostra as cores que esse produto realmente tem).
+  function baseFilter(excludeFacet) {
     const q = searchInput.value.toLowerCase()
-    const capacidades = capacidadeMs.getSelected()
-    const cores       = corMs.getSelected()
-    const fornecedores = fornecedorMs.getSelected()
+    const capacidades   = excludeFacet === 'capacidade' ? [] : capacidadeMs.getSelected()
+    const cores         = excludeFacet === 'cor' ? [] : corMs.getSelected()
+    const fornecedores  = excludeFacet === 'fornecedor' ? [] : fornecedorMs.getSelected()
     const dataMinima = dataInput.value ? new Date(`${dataInput.value}T00:00:00`) : null
 
-    const filtered = allOfertas.filter(o => {
-      if (categoriaAtiva !== ALL && o.categoria !== categoriaAtiva) return false
+    return allOfertas.filter(o => {
+      if (categoriaAtiva !== ALL && !(o.categorias || []).includes(categoriaAtiva)) return false
       const v = splitVariante(o.variante)
       if (capacidades.length && !capacidades.includes(v.capacidade)) return false
       if (cores.length && !cores.includes(v.cor)) return false
@@ -306,10 +296,28 @@ export function renderBuscaList(container, ofertas) {
         (o.fornecedorNome || '').toLowerCase().includes(q)
       )
     })
-    renderRows(filtered)
   }
 
-  refreshFilterOptions()
+  function refreshFilterOptions() {
+    const variantesCapacidade = baseFilter('capacidade').map(o => splitVariante(o.variante))
+    const capacidades = [...new Set(variantesCapacidade.map(v => v.capacidade).filter(Boolean))]
+      .sort((a, b) => parseInt(a) - parseInt(b))
+    capacidadeMs.setOptions(capacidades)
+
+    const variantesCor = baseFilter('cor').map(o => splitVariante(o.variante))
+    const cores = [...new Set(variantesCor.map(v => v.cor).filter(Boolean))].sort()
+    corMs.setOptions(cores)
+
+    const ofertasFornecedor = baseFilter('fornecedor')
+    const fornecedores = [...new Set(ofertasFornecedor.map(o => o.fornecedorNome).filter(Boolean))].sort()
+    fornecedorMs.setOptions(fornecedores)
+  }
+
+  function applyFilters() {
+    refreshFilterOptions()
+    renderRows(baseFilter(null))
+  }
+
   applyFilters()
 
   searchInput.addEventListener('input', resetPageAndApply)
@@ -317,7 +325,6 @@ export function renderBuscaList(container, ofertas) {
   return {
     update(newList) {
       allOfertas = newList
-      refreshFilterOptions()
       applyFilters()
     },
   }
