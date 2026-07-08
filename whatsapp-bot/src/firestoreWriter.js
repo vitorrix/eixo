@@ -7,7 +7,7 @@ const serviceAccount = JSON.parse(
 )
 
 initializeApp({ credential: cert(serviceAccount) })
-const db = getFirestore()
+export const db = getFirestore()
 
 export async function upsertOferta(docId, data) {
   await db.collection('ofertas').doc(docId).set({

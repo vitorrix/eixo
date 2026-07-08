@@ -1,18 +1,41 @@
 import { readFileSync } from 'fs'
+import { proto } from '@whiskeysockets/baileys'
 import { connect } from './src/connection.js'
 import { mapMessageToOfertas } from './src/mapper.js'
-import { upsertOferta } from './src/firestoreWriter.js'
+import { upsertOferta, db } from './src/firestoreWriter.js'
+import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
 
-const groups = JSON.parse(
-  readFileSync(new URL('./config/groups.json', import.meta.url))
-)
+const GROUPS_PATH = new URL('./config/groups.json', import.meta.url)
+const SYNC_INTERVAL_MS = 60 * 60 * 1000 // 1h — cobre "cadastrou fornecedor novo" sem precisar de deploy/restart
+
+let groups = JSON.parse(readFileSync(GROUPS_PATH))
+function reloadGroups() {
+  groups = JSON.parse(readFileSync(GROUPS_PATH))
+}
+
+async function syncAndReload(sock) {
+  try {
+    const atualizados = await syncGroupsWithFornecedores(sock, db)
+    if (atualizados > 0) reloadGroups()
+  } catch (err) {
+    console.error('Erro ao sincronizar fornecedores com grupos do WhatsApp:', err)
+  }
+}
 
 async function handleMessages(sock, messages) {
   for (const msg of messages) {
-    if (!msg.message) continue
-
     const jid = msg.key.remoteJid
     const groupMeta = groups[jid]
+
+    if (!msg.message) {
+      // Falha de decriptação (ex: Bad MAC) — o Baileys já tenta reenvio automático
+      // com o remetente; isso só loga o caso de perda definitiva pra rastrear no bot.error.log.
+      if (groupMeta && msg.messageStubType === proto.WebMessageInfo.StubType.CIPHERTEXT) {
+        console.error(`[decrypt-fail] Mensagem descartada (falha de decriptação) do grupo ${groupMeta.fornecedorNome} (${jid}), id ${msg.key.id}`)
+      }
+      continue
+    }
+
     if (!groupMeta) continue // ignora grupos não mapeados em config/groups.json
 
     const text = msg.message.conversation
@@ -40,4 +63,21 @@ async function handleMessages(sock, messages) {
   }
 }
 
-connect(handleMessages)
+let currentSock = null
+let intervalStarted = false
+
+// onOpen dispara a cada (re)conexão — inclusive após restarts forçados pelo
+// WhatsApp — então guardamos o sock mais recente e só armamos o setInterval
+// uma vez, pra não empilhar sincronizações duplicadas a cada reconexão.
+async function onOpen(sock) {
+  currentSock = sock
+  await syncAndReload(sock)
+  if (!intervalStarted) {
+    intervalStarted = true
+    setInterval(() => {
+      if (currentSock) syncAndReload(currentSock)
+    }, SYNC_INTERVAL_MS)
+  }
+}
+
+connect(handleMessages, onOpen)
