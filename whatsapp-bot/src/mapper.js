@@ -35,7 +35,10 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
   return candidatos.map(c => {
     const { produtoNome, storage } = extractProdutoEStorage(c.produtoBruto)
     const cor = normalizeColor(c.cor)
-    const variante = [storage, cor].filter(Boolean).join(' ')
+    const origem = (c.origem || '').trim()
+    // origem entra no docId pra não colidir o mesmo modelo/cor vendido em mercados
+    // diferentes (ex: mesmo iPhone Americano e Japonês, preços distintos).
+    const variante = [storage, origem, cor].filter(Boolean).join(' ')
 
     const fornecedorKey = groupMeta.fornecedorId || `raw:${groupMeta.phone || 'desconhecido'}`
     const docId = [

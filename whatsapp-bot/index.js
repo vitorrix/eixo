@@ -48,7 +48,7 @@ async function handleMessages(sock, messages) {
     try {
       ofertas = await mapMessageToOfertas(text, quotedAt, groupMeta)
     } catch (err) {
-      console.error('Erro ao interpretar mensagem via IA:', err)
+      console.error(`Erro ao interpretar mensagem via IA (grupo ${groupMeta.fornecedorNome}, ${jid}):`, err)
       continue
     }
 
