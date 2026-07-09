@@ -50,11 +50,47 @@ function filterIcon(key) {
   return svg
 }
 
+// origem/mercado de procedência do aparelho (ver whatsapp-bot/src/aiParser.js) — vem
+// embutida no início da "variante" (ex: "256GB Americano Azul"), antes da cor.
+// Mapeia pro nome canônico + bandeira do país pra exibir numa coluna própria,
+// já que "Americano"/"Indiano"/etc NÃO são cores.
+const ORIGEM_INFO = {
+  'americano': { label: 'Americano', flag: '🇺🇸' },
+  'japones':   { label: 'Japonês',   flag: '🇯🇵' },
+  'indiano':   { label: 'Indiano',   flag: '🇮🇳' },
+  'arabe':     { label: 'Árabe',     flag: '🇦🇪' },
+  'chines':    { label: 'Chinês',    flag: '🇨🇳' },
+  'europeu':   { label: 'Europeu',   flag: '🇪🇺' },
+}
+
+function stripAccents(str) {
+  return (str || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+function origemFlag(origem) {
+  const info = ORIGEM_INFO[stripAccents(origem).toLowerCase()]
+  return info ? info.flag : ''
+}
+
 function splitVariante(variante) {
-  if (!variante) return { capacidade: '', cor: '' }
-  const match = variante.match(/^(\d+\s?(?:GB|TB))\s*(.*)$/i)
-  if (match) return { capacidade: match[1].replace(/\s+/g, '').toUpperCase(), cor: match[2].trim() }
-  return { capacidade: '', cor: variante.trim() }
+  if (!variante) return { capacidade: '', origem: '', cor: '' }
+  let resto = variante.trim()
+
+  const capMatch = resto.match(/^(\d+\s?(?:GB|TB))\s*(.*)$/i)
+  const capacidade = capMatch ? capMatch[1].replace(/\s+/g, '').toUpperCase() : ''
+  if (capMatch) resto = capMatch[2].trim()
+
+  let origem = ''
+  const origemMatch = resto.match(/^(\S+)\s*(.*)$/)
+  if (origemMatch) {
+    const info = ORIGEM_INFO[stripAccents(origemMatch[1]).toLowerCase()]
+    if (info) {
+      origem = info.label
+      resto = origemMatch[2].trim()
+    }
+  }
+
+  return { capacidade, origem, cor: resto }
 }
 
 function produtoIconFile(produtoNome) {
@@ -165,6 +201,7 @@ export function renderBuscaList(container, ofertas) {
       el('tr', {},
         el('th', { class: 'busca-col-produto' }, 'Produto'),
         el('th', { class: 'busca-col-capacidade' }, 'Capacidade'),
+        el('th', { class: 'busca-col-origem' }, 'Origem'),
         el('th', { class: 'busca-col-cor' }, 'Cor'),
         el('th', { class: 'busca-col-fornecedor' }, 'Fornecedor'),
         el('th', { class: 'busca-col-preco' }, 'Preço'),
@@ -205,7 +242,7 @@ export function renderBuscaList(container, ofertas) {
     emptyState.classList.add('hidden')
 
     for (const o of pageSlice) {
-      const { capacidade, cor } = splitVariante(o.variante)
+      const { capacidade, origem, cor } = splitVariante(o.variante)
       const produtoCell = el('td', { class: 'td-name' },
         el('div', { class: 'busca-produto-cell' },
           el('img', {
@@ -254,9 +291,14 @@ export function renderBuscaList(container, ofertas) {
         )
       )
 
+      const origemCell = origem
+        ? el('td', { class: 'busca-origem-cell', title: origem }, origemFlag(origem) || origem)
+        : el('td', {}, '—')
+
       const cells = [
         produtoCell,
         el('td', {}, capacidade || '—'),
+        origemCell,
         el('td', {}, cor || '—'),
         fornecedorCell,
         precoCell,
