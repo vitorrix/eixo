@@ -1,4 +1,4 @@
-import { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } from '@whiskeysockets/baileys'
+import { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import pino from 'pino'
 import qrcode from 'qrcode-terminal'
@@ -21,6 +21,10 @@ export async function connect(onMessages, onOpen) {
     version,
     auth: state,
     logger,
+    // Sem isso o Baileys usa o default da lib (Browsers.ubuntu('Chrome')), que aparece
+    // nas notificações do WhatsApp como "Google Chrome (Ubuntu)" — confuso, parece
+    // dispositivo desconhecido/suspeito. Identifica como o bot que realmente é.
+    browser: Browsers.appropriate('EIXO Bot'),
   })
 
   sock.ev.on('creds.update', saveCreds)
