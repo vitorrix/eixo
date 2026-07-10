@@ -41,17 +41,19 @@ async function createEmployee(name, email, password, permissions) {
   }
 }
 
-function buildPermissionsSection() {
+function buildPermissionsSection(initialPermissions = {}) {
   const state = {}
   const grid = el('div', { class: 'perms-grid' })
 
   for (const mod of MODULES) {
     state[mod.key] = {}
     const actionsDiv = el('div', { class: 'perms-actions' })
+    const modInitial = initialPermissions[mod.key] || {}
 
     for (const action of ACTIONS) {
-      state[mod.key][action.key] = false
-      const cb = el('input', { type: 'checkbox', id: `perm-${mod.key}-${action.key}` })
+      const checked = !!modInitial[action.key]
+      state[mod.key][action.key] = checked
+      const cb = el('input', { type: 'checkbox', id: `perm-${mod.key}-${action.key}`, ...(checked ? { checked: '' } : {}) })
       cb.addEventListener('change', () => { state[mod.key][action.key] = cb.checked })
       const lbl = el('label', { for: `perm-${mod.key}-${action.key}`, class: 'perm-label' })
       lbl.append(cb, action.label)
@@ -59,7 +61,8 @@ function buildPermissionsSection() {
     }
 
     // "Tudo" shortcut
-    const allCb = el('input', { type: 'checkbox', id: `perm-${mod.key}-all` })
+    const allChecked = ACTIONS.every(action => state[mod.key][action.key])
+    const allCb = el('input', { type: 'checkbox', id: `perm-${mod.key}-all`, ...(allChecked ? { checked: '' } : {}) })
     allCb.addEventListener('change', () => {
       const checked = allCb.checked
       for (const action of ACTIONS) {
@@ -147,6 +150,51 @@ function openUserForm() {
   })
 }
 
+function openEditPermissions(user) {
+  openModal({
+    title: `Permissões — ${user.name || user.email}`,
+    size: 'md',
+    renderBody: (body, close) => {
+      const { el: permsEl, getState } = buildPermissionsSection(user.permissions)
+
+      mount(body,
+        el('div', { class: 'field' },
+          el('label', {}, 'Módulos que esta usuária pode acessar'),
+          permsEl
+        ),
+      )
+
+      body._getState = getState
+      body._close = close
+    },
+    footer: (close, footerEl) => {
+      const cancelBtn = el('button', { class: 'btn btn-ghost', type: 'button' }, 'Cancelar')
+      const saveBtn   = el('button', { class: 'btn btn-primary', type: 'button' }, 'Salvar')
+
+      cancelBtn.addEventListener('click', close)
+
+      saveBtn.addEventListener('click', async () => {
+        const body = document.querySelector('.modal-body')
+        const permissions = body?._getState?.() ?? {}
+
+        saveBtn.disabled = true
+        saveBtn.textContent = 'Salvando...'
+        try {
+          await updateDoc(doc(db, 'users', user.id), { permissions })
+          toastSuccess('Permissões atualizadas.')
+          close()
+        } catch (err) {
+          toastError(err.message || 'Erro ao salvar permissões')
+          saveBtn.disabled = false
+          saveBtn.textContent = 'Salvar'
+        }
+      })
+
+      footerEl.append(cancelBtn, saveBtn)
+    },
+  })
+}
+
 export function render(container) {
   if (!isMaster()) {
     mount(container, el('p', { class: 'text-muted' }, 'Acesso restrito a administradores.'))
@@ -214,12 +262,21 @@ export function render(container) {
         })
       }
 
+      const actionsWrap = el('div', { class: 'row-actions' })
+      if (!isSelf) {
+        const permsBtn = el('button', { class: 'btn btn-sm btn-outline', type: 'button' }, 'Permissões')
+        permsBtn.addEventListener('click', () => openEditPermissions(u))
+        actionsWrap.appendChild(permsBtn)
+      }
+      actionsWrap.appendChild(toggleBtn)
+      const actionsCell = el('td', { class: 'col-actions' }, actionsWrap)
+
       return el('tr', {},
         el('td', {}, u.name || '—'),
         el('td', {}, u.email || '—'),
         el('td', {}, u.role === 'master' ? 'Master' : 'Funcionária'),
         el('td', {}, statusBadge),
-        el('td', {}, toggleBtn),
+        actionsCell,
       )
     })
 
