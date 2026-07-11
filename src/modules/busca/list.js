@@ -37,6 +37,7 @@ function mostRecentDateValue(list) {
 function filterIcon(key) {
   const paths = {
     capacidade: ['M4 7l8-4 8 4-8 4-8-4z', 'M4 7v10l8 4 8-4V7', 'M12 11v10'],
+    ram: ['M4 4h16v16H4z', 'M9 4v4', 'M15 4v4', 'M9 16v4', 'M15 16v4', 'M4 9h4', 'M4 15h4', 'M16 9h4', 'M16 15h4'],
     tamanho: ['M3 16l5-5', 'M8 11l2 2', 'M12 7l2 2', 'M16 3l5 5-13 13-5-5z'],
     cor: ['M12 2a10 10 0 000 20c1.5 0 2-1 2-2s-.5-1.5-.5-2.5S14 16 15 16h2a4 4 0 004-4c0-5.5-4.5-10-9-10z', 'M7 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'M11 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'M16 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3z'],
     fornecedor: ['M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z', 'M9 22V12h6v10'],
@@ -128,6 +129,7 @@ export function renderBuscaList(container, ofertas) {
   }
 
   const capacidadeMs = createMultiSelect({ label: 'Capacidade', allLabel: 'Todas as capacidades', onChange: () => resetPageAndApply() })
+  const ramMs        = createMultiSelect({ label: 'Memória RAM', allLabel: 'Todas as memórias', onChange: () => resetPageAndApply() })
   const tamanhoMs    = createMultiSelect({ label: 'Tamanho', allLabel: 'Todos os tamanhos', onChange: () => resetPageAndApply() })
   const corMs        = createMultiSelect({ label: 'Cor', allLabel: 'Todas as cores', onChange: () => resetPageAndApply() })
   const fornecedorMs = createMultiSelect({ label: 'Fornecedor', allLabel: 'Todos os fornecedores', onChange: () => resetPageAndApply() })
@@ -143,6 +145,7 @@ export function renderBuscaList(container, ofertas) {
   const filtersRow = el('div', { class: 'busca-filters-row' },
     filterGroup('Data', 'data', dataInput),
     filterGroup('Capacidade', 'capacidade', capacidadeMs.el),
+    filterGroup('Memória RAM', 'ram', ramMs.el),
     filterGroup('Tamanho', 'tamanho', tamanhoMs.el),
     filterGroup('Cor', 'cor', corMs.el),
     filterGroup('Fornecedor', 'fornecedor', fornecedorMs.el),
@@ -182,6 +185,7 @@ export function renderBuscaList(container, ofertas) {
       el('tr', {},
         el('th', { class: 'busca-col-produto' }, 'Produto'),
         el('th', { class: 'busca-col-capacidade' }, 'Capacidade'),
+        el('th', { class: 'busca-col-ram' }, 'RAM'),
         el('th', { class: 'busca-col-tamanho' }, 'Tamanho'),
         el('th', { class: 'busca-col-origem' }, 'Origem'),
         el('th', { class: 'busca-col-cor' }, 'Cor'),
@@ -224,7 +228,7 @@ export function renderBuscaList(container, ofertas) {
     emptyState.classList.add('hidden')
 
     for (const o of pageSlice) {
-      const { capacidade, tamanho, origem, cor } = o
+      const { capacidade, ram, tamanho, origem, cor } = o
       const produtoCell = el('td', { class: 'td-name' },
         el('div', { class: 'busca-produto-cell' },
           el('img', {
@@ -280,6 +284,7 @@ export function renderBuscaList(container, ofertas) {
       const cells = [
         produtoCell,
         el('td', {}, capacidade || '—'),
+        el('td', {}, ram || '—'),
         el('td', {}, tamanho || '—'),
         origemCell,
         el('td', {}, cor || '—'),
@@ -300,6 +305,7 @@ export function renderBuscaList(container, ofertas) {
   function baseFilter(excludeFacet) {
     const q = searchInput.value.toLowerCase()
     const capacidades   = excludeFacet === 'capacidade' ? [] : capacidadeMs.getSelected()
+    const rams          = excludeFacet === 'ram' ? [] : ramMs.getSelected()
     const tamanhos      = excludeFacet === 'tamanho' ? [] : tamanhoMs.getSelected()
     const cores         = excludeFacet === 'cor' ? [] : corMs.getSelected()
     const fornecedores  = excludeFacet === 'fornecedor' ? [] : fornecedorMs.getSelected()
@@ -312,6 +318,7 @@ export function renderBuscaList(container, ofertas) {
         return false
       }
       if (capacidades.length && !capacidades.includes(o.capacidade)) return false
+      if (rams.length && !rams.includes(o.ram)) return false
       if (tamanhos.length && !tamanhos.includes(o.tamanho)) return false
       if (cores.length && !cores.includes(o.cor)) return false
       if (fornecedores.length && !fornecedores.includes(o.fornecedorNome)) return false
@@ -332,6 +339,10 @@ export function renderBuscaList(container, ofertas) {
     const capacidades = [...new Set(baseFilter('capacidade').map(o => o.capacidade).filter(Boolean))]
       .sort((a, b) => parseInt(a) - parseInt(b))
     capacidadeMs.setOptions(capacidades)
+
+    const rams = [...new Set(baseFilter('ram').map(o => o.ram).filter(Boolean))]
+      .sort((a, b) => parseInt(a) - parseInt(b))
+    ramMs.setOptions(rams)
 
     const tamanhos = [...new Set(baseFilter('tamanho').map(o => o.tamanho).filter(Boolean))]
       .sort((a, b) => parseInt(a) - parseInt(b))

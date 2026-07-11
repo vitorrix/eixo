@@ -2326,13 +2326,14 @@ html, body {
 }
 
 .busca-table { table-layout: fixed; }
-.busca-table .busca-col-produto     { width: 22%; }
-.busca-table .busca-col-capacidade  { width: 10%; }
-.busca-table .busca-col-tamanho     { width: 9%; }
+.busca-table .busca-col-produto     { width: 20%; }
+.busca-table .busca-col-capacidade  { width: 9%; }
+.busca-table .busca-col-ram         { width: 8%; }
+.busca-table .busca-col-tamanho     { width: 8%; }
 .busca-table .busca-col-origem      { width: 7%; }
-.busca-table .busca-col-cor         { width: 10%; }
-.busca-table .busca-col-fornecedor  { width: 26%; }
-.busca-table .busca-col-preco       { width: 16%; }
+.busca-table .busca-col-cor         { width: 9%; }
+.busca-table .busca-col-fornecedor  { width: 24%; }
+.busca-table .busca-col-preco       { width: 15%; }
 .busca-table td { overflow: hidden; text-overflow: ellipsis; }
 .busca-origem-cell { text-align: center; font-size: 1.1em; }
 
