@@ -1,7 +1,16 @@
-// Tabela fixa de cores Apple (todas as linhas: iPhone, Watch, iPad, Mac, AirPods,
-// Pencil, AirTag) -> nome em português usado para exibição no Eixo. Chave em
-// minúsculo e sem acento pra casar com qualquer variação que os fornecedores
-// escrevem (inglês, português, com/sem espaço).
+// Tabela fixa de cores Apple -> nome em português usado para exibição no Eixo.
+// Chave em minúsculo e sem acento pra casar com qualquer variação que os
+// fornecedores escrevem (inglês, português, com/sem espaço).
+//
+// O bloco "Modelos consolidados" vem das planilhas oficiais (cores_apple_simplificadas.xlsx
+// + novas_cores_apple_simplificadas.xlsx, 2026-07) cruzando iPhone/iPad/MacBook/Watch/
+// AirPods/iMac/Mac mini/Mac Studio/Mac Pro/AirTag/Pencil/Magic Mouse/Magic Keyboard —
+// 29 termos em inglês, verificados sem conflito entre os dois arquivos. Ao contrário da
+// versão anterior desta tabela, cores de marketing distintas NÃO são mais fundidas numa
+// cor-base (ex: Sálvia e Ultramarino ficam com nome próprio, não viram "Verde"/"Azul";
+// Branco e Prateado também não são mais a mesma cor) — segue exatamente o que a
+// planilha define pra cada modelo. Descritores como "Titânio"/"Espacial"/"(PRODUCT)"
+// foram removidos por decisão do usuário (ver abas "Observações" das planilhas).
 const COLOR_TABLE = {
   // Básicas
   'preto': 'Preto', 'black': 'Preto',
@@ -9,64 +18,77 @@ const COLOR_TABLE = {
   'azul': 'Azul', 'blue': 'Azul',
   'verde': 'Verde', 'green': 'Verde',
   'amarelo': 'Amarelo', 'yellow': 'Amarelo',
-  'rosa': 'Rosa', 'pink': 'Rosa',
-  'roxo': 'Roxo', 'purple': 'Roxo', 'lilas': 'Roxo', 'lilás': 'Roxo', 'lavanda': 'Roxo', 'lavender': 'Roxo',
-  'vermelho': 'Vermelho', 'red': 'Vermelho', 'product red': '(PRODUCT)RED',
+  'rosa': 'Rosa', 'pink': 'Rosa', 'rosa suave': 'Rosa', 'soft pink': 'Rosa',
+  'roxo': 'Roxo', 'purple': 'Roxo', 'lilas': 'Roxo', 'lilás': 'Roxo',
+  'vermelho': 'Vermelho', 'red': 'Vermelho', 'product red': 'Vermelho', '(product)red': 'Vermelho',
   'laranja': 'Laranja', 'orange': 'Laranja',
   'dourado': 'Dourado', 'gold': 'Dourado',
-  'prata': 'Prata', 'silver': 'Prata',
-  // Branco e Prata/Silver são a mesma cor real na prática (iPhone, iPad e Mac nunca
-  // vendem os dois como opções distintas do mesmo modelo — fornecedores só escrevem
-  // "Branco" ou "Prata"/"Silver" pra descrever o mesmo acabamento claro).
-  'branco': 'Prata', 'white': 'Prata',
   'cinza': 'Cinza', 'gray': 'Cinza', 'grey': 'Cinza',
   'grafite': 'Grafite', 'graphite': 'Grafite',
 
-  // Acabamentos iPhone — nomes de marketing da Apple que são, na prática, uma
-  // variação/tom da cor básica. Unificados na cor básica pra não duplicar no filtro
-  // (ex: "Cosmic Orange" e "Laranja" são a mesma cor pro comprador).
-  'space gray': 'Cinza-espacial', 'space grey': 'Cinza-espacial', 'cinza espacial': 'Cinza-espacial', 'cinza-espacial': 'Cinza-espacial',
-  'space black': 'Preto-espacial', 'preto espacial': 'Preto-espacial',
-  'jet black': 'Preto Brilhante',
-  'midnight': 'Meia-noite', 'meia noite': 'Meia-noite', 'meia-noite': 'Meia-noite',
-  'starlight': 'Estelar', 'estelar': 'Estelar',
+  // Acabamentos de marketing sem cobertura nas planilhas oficiais — mantidos
+  // fundidos na cor básica mais próxima (fallback, não vem de fonte oficial).
   'sierra blue': 'Azul', 'pacific blue': 'Azul', 'deep blue': 'Azul', 'mist blue': 'Azul',
-  'ultramarine': 'Azul', 'ultramarina': 'Azul', 'teal': 'Azul',
-  'alpine green': 'Verde', 'sage': 'Verde',
+  'alpine green': 'Verde',
   'deep purple': 'Roxo',
   'cosmic orange': 'Laranja',
-  // Nomes intermediários (já traduzidos numa versão anterior desta tabela) —
-  // mantidos aqui pra migração continuar unificando corretamente.
   'azul-profundo': 'Azul', 'azul-serra': 'Azul', 'azul-pacifico': 'Azul', 'azul-pacífico': 'Azul',
-  'azul-nevoa': 'Azul', 'azul-névoa': 'Azul', 'ultramarino': 'Azul', 'verde-azulado': 'Azul',
-  'verde-alpino': 'Verde', 'salvia': 'Verde', 'sálvia': 'Verde',
+  'azul-nevoa': 'Azul', 'azul-névoa': 'Azul', 'verde-azulado': 'Azul',
+  'verde-alpino': 'Verde',
   'roxo-profundo': 'Roxo',
   'laranja-cosmico': 'Laranja', 'laranja-cósmico': 'Laranja',
+  'space gray': 'Cinza espacial', 'space grey': 'Cinza espacial', 'cinza espacial': 'Cinza espacial',
+  'space black': 'Preto espacial', 'preto espacial': 'Preto espacial',
+  'space black (pro chip)': 'Preto espacial',
+  'carbon natural': 'Carbono Natural',
 
-  // Titânio (iPhone Pro)
-  'natural titanium': 'Titânio Natural', 'titanio natural': 'Titânio Natural', 'titânio natural': 'Titânio Natural', 'natural': 'Titânio Natural',
-  'blue titanium': 'Titânio Azul',
-  'white titanium': 'Titânio Branco',
-  'black titanium': 'Titânio Preto',
-  'desert titanium': 'Titânio Deserto', 'desert': 'Titânio Deserto',
-
-  // Watch / Ultra / bandas
-  'rose gold': 'Ouro Rosa',
+  // Watch / Ultra / bandas — sem cobertura nas planilhas oficiais.
   'rose': 'Rosé',
   'ocean': 'Ocean Band', 'ocean band': 'Ocean Band', 'black ocean': 'Ocean Band Preto', 'black ocean band': 'Ocean Band Preto',
   'blue black': 'Azul e Preto', 'orange beige': 'Laranja e Bege', 'green gray': 'Verde e Cinza', 'greengray': 'Verde e Cinza',
   'espresso': 'Espresso',
 
-  // Mac / iPad
-  'sky blue': 'Azul-céu', 'sky': 'Azul-céu',
-  'indigo': 'Índigo',
-  'citrus': 'Cítrico',
-  'blush': 'Blush',
-  'carbon natural': 'Carbono Natural',
-  'space black (pro chip)': 'Preto-espacial',
-
   // Sem cor definida
   'sem cor': '', '': '',
+
+  // Modelos consolidados — planilhas oficiais (fonte da verdade, sobrescreve
+  // qualquer entrada acima com a mesma chave).
+  'laranja': 'Laranja', 'orange': 'Laranja',
+  'azul': 'Azul', 'blue': 'Azul',
+  'prateado': 'Prateado', 'prata': 'Prateado', 'silver': 'Prateado',
+  'preto': 'Preto', 'black': 'Preto',
+  'branco': 'Branco', 'white': 'Branco',
+  'dourado': 'Dourado', 'gold': 'Dourado',
+  'azul céu': 'Azul céu', 'azul-céu': 'Azul céu', 'sky blue': 'Azul céu', 'sky': 'Azul céu', 'skyblue': 'Azul céu',
+  'rosa': 'Rosa', 'pink': 'Rosa',
+  'sálvia': 'Sálvia', 'salvia': 'Sálvia', 'sage': 'Sálvia',
+  'lavanda': 'Lavanda', 'lavender': 'Lavanda', 'lavander': 'Lavanda',
+  'natural': 'Natural',
+  'deserto': 'Deserto', 'desert': 'Deserto',
+  'teal': 'Verde',
+  'ultramarino': 'Ultramarino', 'ultramarine': 'Ultramarino', 'ultramarina': 'Ultramarino',
+  'amarelo': 'Amarelo', 'yellow': 'Amarelo',
+  'roxo': 'Roxo', 'purple': 'Roxo',
+  'meia noite': 'Meia noite', 'meia-noite': 'Meia noite', 'midnight': 'Meia noite',
+  'verde meia noite': 'Verde meia noite', 'midnight green': 'Verde meia noite',
+  'estelar': 'Estelar', 'starlight': 'Estelar',
+  'vermelho': 'Vermelho', 'red': 'Vermelho',
+  'grafite': 'Grafite', 'graphite': 'Grafite',
+  'cinza': 'Cinza', 'gray': 'Cinza', 'grey': 'Cinza',
+  'blush': 'Blush',
+  'cítrico': 'Cítrico', 'citrico': 'Cítrico', 'citrus': 'Cítrico',
+  'índigo': 'Índigo', 'indigo': 'Índigo',
+  'ouro rosa': 'Ouro rosa', 'rose gold': 'Ouro rosa',
+  'preto brilhante': 'Preto brilhante', 'jet black': 'Preto brilhante',
+  'ardósia': 'Ardósia', 'ardosia': 'Ardósia', 'slate': 'Ardósia',
+
+  // Titânio (iPhone Pro) — a planilha remove o descritor "Titânio", o acabamento
+  // vira a cor-base (ex: "Natural Titanium" -> "Natural", não "Titânio Natural").
+  'natural titanium': 'Natural', 'titanio natural': 'Natural', 'titânio natural': 'Natural',
+  'blue titanium': 'Azul',
+  'white titanium': 'Branco',
+  'black titanium': 'Preto',
+  'desert titanium': 'Deserto',
 }
 
 function stripAccents(s) {
