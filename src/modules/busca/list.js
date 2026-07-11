@@ -37,6 +37,7 @@ function mostRecentDateValue(list) {
 function filterIcon(key) {
   const paths = {
     capacidade: ['M4 7l8-4 8 4-8 4-8-4z', 'M4 7v10l8 4 8-4V7', 'M12 11v10'],
+    tamanho: ['M3 16l5-5', 'M8 11l2 2', 'M12 7l2 2', 'M16 3l5 5-13 13-5-5z'],
     cor: ['M12 2a10 10 0 000 20c1.5 0 2-1 2-2s-.5-1.5-.5-2.5S14 16 15 16h2a4 4 0 004-4c0-5.5-4.5-10-9-10z', 'M7 12a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'M11 8a1.5 1.5 0 100-3 1.5 1.5 0 000 3z', 'M16 9a1.5 1.5 0 100-3 1.5 1.5 0 000 3z'],
     fornecedor: ['M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z', 'M9 22V12h6v10'],
     data: ['M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2z', 'M16 3v4', 'M8 3v4', 'M4 10h16'],
@@ -50,10 +51,9 @@ function filterIcon(key) {
   return svg
 }
 
-// origem/mercado de procedência do aparelho (ver whatsapp-bot/src/aiParser.js) — vem
-// embutida no início da "variante" (ex: "256GB Americano Azul"), antes da cor.
-// Mapeia pro nome canônico + bandeira do país pra exibir numa coluna própria,
-// já que "Americano"/"Indiano"/etc NÃO são cores.
+// origem/mercado de procedência do aparelho (ver whatsapp-bot/src/aiParser.js), campo
+// próprio da oferta. Mapeia pro nome canônico + bandeira do país pra exibir numa coluna
+// própria, já que "Americano"/"Indiano"/etc NÃO são cores.
 const ORIGEM_INFO = {
   'americano': { label: 'Americano', flag: '🇺🇸' },
   'japones':   { label: 'Japonês',   flag: '🇯🇵' },
@@ -70,27 +70,6 @@ function stripAccents(str) {
 function origemFlag(origem) {
   const info = ORIGEM_INFO[stripAccents(origem).toLowerCase()]
   return info ? info.flag : ''
-}
-
-function splitVariante(variante) {
-  if (!variante) return { capacidade: '', origem: '', cor: '' }
-  let resto = variante.trim()
-
-  const capMatch = resto.match(/^(\d+\s?(?:GB|TB))\s*(.*)$/i)
-  const capacidade = capMatch ? capMatch[1].replace(/\s+/g, '').toUpperCase() : ''
-  if (capMatch) resto = capMatch[2].trim()
-
-  let origem = ''
-  const origemMatch = resto.match(/^(\S+)\s*(.*)$/)
-  if (origemMatch) {
-    const info = ORIGEM_INFO[stripAccents(origemMatch[1]).toLowerCase()]
-    if (info) {
-      origem = info.label
-      resto = origemMatch[2].trim()
-    }
-  }
-
-  return { capacidade, origem, cor: resto }
 }
 
 function produtoIconFile(produtoNome) {
@@ -149,6 +128,7 @@ export function renderBuscaList(container, ofertas) {
   }
 
   const capacidadeMs = createMultiSelect({ label: 'Capacidade', allLabel: 'Todas as capacidades', onChange: () => resetPageAndApply() })
+  const tamanhoMs    = createMultiSelect({ label: 'Tamanho', allLabel: 'Todos os tamanhos', onChange: () => resetPageAndApply() })
   const corMs        = createMultiSelect({ label: 'Cor', allLabel: 'Todas as cores', onChange: () => resetPageAndApply() })
   const fornecedorMs = createMultiSelect({ label: 'Fornecedor', allLabel: 'Todos os fornecedores', onChange: () => resetPageAndApply() })
 
@@ -163,6 +143,7 @@ export function renderBuscaList(container, ofertas) {
   const filtersRow = el('div', { class: 'busca-filters-row' },
     filterGroup('Data', 'data', dataInput),
     filterGroup('Capacidade', 'capacidade', capacidadeMs.el),
+    filterGroup('Tamanho', 'tamanho', tamanhoMs.el),
     filterGroup('Cor', 'cor', corMs.el),
     filterGroup('Fornecedor', 'fornecedor', fornecedorMs.el),
   )
@@ -201,6 +182,7 @@ export function renderBuscaList(container, ofertas) {
       el('tr', {},
         el('th', { class: 'busca-col-produto' }, 'Produto'),
         el('th', { class: 'busca-col-capacidade' }, 'Capacidade'),
+        el('th', { class: 'busca-col-tamanho' }, 'Tamanho'),
         el('th', { class: 'busca-col-origem' }, 'Origem'),
         el('th', { class: 'busca-col-cor' }, 'Cor'),
         el('th', { class: 'busca-col-fornecedor' }, 'Fornecedor'),
@@ -242,7 +224,7 @@ export function renderBuscaList(container, ofertas) {
     emptyState.classList.add('hidden')
 
     for (const o of pageSlice) {
-      const { capacidade, origem, cor } = splitVariante(o.variante)
+      const { capacidade, tamanho, origem, cor } = o
       const produtoCell = el('td', { class: 'td-name' },
         el('div', { class: 'busca-produto-cell' },
           el('img', {
@@ -298,6 +280,7 @@ export function renderBuscaList(container, ofertas) {
       const cells = [
         produtoCell,
         el('td', {}, capacidade || '—'),
+        el('td', {}, tamanho || '—'),
         origemCell,
         el('td', {}, cor || '—'),
         fornecedorCell,
@@ -317,6 +300,7 @@ export function renderBuscaList(container, ofertas) {
   function baseFilter(excludeFacet) {
     const q = searchInput.value.toLowerCase()
     const capacidades   = excludeFacet === 'capacidade' ? [] : capacidadeMs.getSelected()
+    const tamanhos      = excludeFacet === 'tamanho' ? [] : tamanhoMs.getSelected()
     const cores         = excludeFacet === 'cor' ? [] : corMs.getSelected()
     const fornecedores  = excludeFacet === 'fornecedor' ? [] : fornecedorMs.getSelected()
     const dataMinima = dataInput.value ? new Date(`${dataInput.value}T00:00:00`) : null
@@ -327,9 +311,9 @@ export function renderBuscaList(container, ofertas) {
       } else if (categoriaAtiva !== ALL && !(o.categorias || []).includes(categoriaAtiva)) {
         return false
       }
-      const v = splitVariante(o.variante)
-      if (capacidades.length && !capacidades.includes(v.capacidade)) return false
-      if (cores.length && !cores.includes(v.cor)) return false
+      if (capacidades.length && !capacidades.includes(o.capacidade)) return false
+      if (tamanhos.length && !tamanhos.includes(o.tamanho)) return false
+      if (cores.length && !cores.includes(o.cor)) return false
       if (fornecedores.length && !fornecedores.includes(o.fornecedorNome)) return false
       if (dataMinima) {
         const data = toDate(o.quotedAt)
@@ -345,17 +329,18 @@ export function renderBuscaList(container, ofertas) {
   }
 
   function refreshFilterOptions() {
-    const variantesCapacidade = baseFilter('capacidade').map(o => splitVariante(o.variante))
-    const capacidades = [...new Set(variantesCapacidade.map(v => v.capacidade).filter(Boolean))]
+    const capacidades = [...new Set(baseFilter('capacidade').map(o => o.capacidade).filter(Boolean))]
       .sort((a, b) => parseInt(a) - parseInt(b))
     capacidadeMs.setOptions(capacidades)
 
-    const variantesCor = baseFilter('cor').map(o => splitVariante(o.variante))
-    const cores = [...new Set(variantesCor.map(v => v.cor).filter(Boolean))].sort()
+    const tamanhos = [...new Set(baseFilter('tamanho').map(o => o.tamanho).filter(Boolean))]
+      .sort((a, b) => parseInt(a) - parseInt(b))
+    tamanhoMs.setOptions(tamanhos)
+
+    const cores = [...new Set(baseFilter('cor').map(o => o.cor).filter(Boolean))].sort()
     corMs.setOptions(cores)
 
-    const ofertasFornecedor = baseFilter('fornecedor')
-    const fornecedores = [...new Set(ofertasFornecedor.map(o => o.fornecedorNome).filter(Boolean))].sort()
+    const fornecedores = [...new Set(baseFilter('fornecedor').map(o => o.fornecedorNome).filter(Boolean))].sort()
     fornecedorMs.setOptions(fornecedores)
   }
 

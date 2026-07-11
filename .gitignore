@@ -10,6 +10,7 @@ dist/
 whatsapp-bot/node_modules/
 whatsapp-bot/auth/
 whatsapp-bot/serviceAccountKey.json
+whatsapp-bot/qr.png
 
 # planilhas de trabalho (dados de clientes/produtos, não versionar)
 CadastroDeClientes.xlsx
