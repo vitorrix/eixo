@@ -1,6 +1,7 @@
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { getCurrentProfile } from '../../auth/session.js'
 import { maskPhone, brl } from '../../shared/utils/formatters.js'
+import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { subscribeAniversariantes } from '../clientes/service.js'
 import { collection, query, where, getCountFromServer } from 'firebase/firestore'
 import { db } from '../../firebase.js'
@@ -45,6 +46,67 @@ function buildIcon(key, color) {
   })
   for (const d of paths) svg.appendChild(svgEl('path', { d }))
   return svg
+}
+
+// ── Mural de Recados ──────────────────────────────────────────────────
+// Feed único de avisos do dia — hoje só aniversariantes (dados reais), mas
+// já preparado para os próximos tipos que vão vir do módulo Financeiro
+// quando ele existir de verdade (contas a pagar/receber). Cada tipo tem
+// sua cor+ícone; a estrutura do card é sempre a mesma pra ficar uniforme
+// com o resto do dashboard, em vez do quadro amarelo isolado que existia.
+const RECADO_TIPOS = {
+  aniversario: { color: '#f59e0b', paths: ['M20 12v10H4V12', 'M2 7h20v5H2z', 'M12 22V7', 'M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z', 'M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z'] },
+  recebimento: { color: '#10B981', paths: ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M8 12l4 4 4-4', 'M12 8v8'] },
+  pagamento:   { color: '#d93025', paths: ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M16 12l-4-4-4 4', 'M12 16V8'] },
+  aviso:       { color: '#3b82f6', paths: ['M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 01-3.46 0'] },
+}
+
+function buildRecadoIcon(tipo) {
+  const cfg = RECADO_TIPOS[tipo] || RECADO_TIPOS.aviso
+  const svg = svgEl('svg', {
+    viewBox: '0 0 24 24', fill: 'none', stroke: cfg.color,
+    'stroke-width': '1.75', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    width: '18', height: '18',
+  })
+  for (const d of cfg.paths) svg.appendChild(svgEl('path', { d }))
+  return svg
+}
+
+function muralItem({ tipo, titulo, detalhe, action }) {
+  const cfg = RECADO_TIPOS[tipo] || RECADO_TIPOS.aviso
+  return el('div', { class: 'mural-item' },
+    el('div', { class: 'mural-item-icon', style: `background:${cfg.color}1a` }, buildRecadoIcon(tipo)),
+    el('div', { class: 'mural-item-body' },
+      el('div', { class: 'mural-item-title' }, titulo),
+      detalhe ? el('div', { class: 'mural-item-detalhe' }, detalhe) : null,
+    ),
+    action,
+  )
+}
+
+function buildMuralEmptyIcon() {
+  const svg = svgEl('svg', {
+    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    'stroke-width': '1.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    width: '28', height: '28',
+  })
+  svg.appendChild(svgEl('path', { d: 'M22 11.08V12a10 10 0 11-5.93-9.14' }))
+  svg.appendChild(svgEl('path', { d: 'M22 4L12 14.01l-3-3' }))
+  return svg
+}
+
+function buildMural(recados) {
+  const body = recados.length
+    ? el('div', { class: 'mural-list' }, ...recados.map(muralItem))
+    : el('div', { class: 'mural-empty' }, buildMuralEmptyIcon(), el('p', {}, 'Tudo em dia — nenhum recado por aqui.'))
+
+  return el('div', { class: 'mural-card' },
+    el('div', { class: 'mural-header' },
+      el('span', { class: 'mural-title' }, 'Mural de Recados'),
+      recados.length ? el('span', { class: 'count-badge' }, String(recados.length)) : null,
+    ),
+    body,
+  )
 }
 
 function buildRevenueChart() {
@@ -130,7 +192,7 @@ export function render(container) {
     return card
   })
 
-  const birthdaySection = el('div', { class: 'birthday-section' })
+  const muralWrap = el('div', { class: 'mural-wrap' })
 
   // Module shortcut cards
   const moduleCards = MODULE_CARDS.map(m => {
@@ -150,36 +212,30 @@ export function render(container) {
 
   mount(container,
     el('div', { class: 'page-header' }, greeting, sub),
-    el('p', { class: 'section-label' }, 'Acesso rápido'),
-    el('div', { class: 'dashboard-cards' }, ...moduleCards),
-    el('div', { class: 'stat-cards' }, ...statCards),
-    el('div', { class: 'dashboard-row' }, birthdaySection, buildRevenueChart())
+    el('div', { class: 'dashboard-section' },
+      el('p', { class: 'section-label' }, 'Acesso rápido'),
+      el('div', { class: 'dashboard-cards' }, ...moduleCards),
+    ),
+    el('div', { class: 'dashboard-section stat-cards' }, ...statCards),
+    el('div', { class: 'dashboard-section dashboard-row' }, muralWrap, buildRevenueChart())
   )
 
   const unsubBirthday = subscribeAniversariantes((aniversariantes) => {
-    birthdaySection.replaceChildren()
-    if (!aniversariantes.length) {
-      birthdaySection.append(
-        el('div', { class: 'birthday-title' },
-          el('span', { class: 'birthday-emoji' }, '🎂'),
-          el('strong', {}, 'Aniversariantes de hoje')
-        ),
-        el('p', { class: 'text-muted' }, 'Nenhum aniversariante hoje.')
-      )
-      return
-    }
-    const title = el('div', { class: 'birthday-title' },
-      el('span', { class: 'birthday-emoji' }, '🎂'),
-      el('strong', {}, `Aniversariante${aniversariantes.length > 1 ? 's' : ''} de hoje`)
-    )
-    const list = el('div', { class: 'birthday-list' })
-    for (const c of aniversariantes) {
-      list.appendChild(el('div', { class: 'birthday-item' },
-        el('span', { class: 'birthday-name' }, c.name),
-        el('span', { class: 'birthday-phone' }, maskPhone(c.phone || ''))
-      ))
-    }
-    birthdaySection.append(title, list)
+    const recados = aniversariantes.map(c => {
+      const phone = c.phone || ''
+      const primeiroNome = (c.name || '').split(' ')[0]
+      const link = whatsappLink(phone, c.phoneCountry, `Feliz aniversário, ${primeiroNome}! 🎉 Um abraço da equipe Baruk Technology.`)
+      const action = link
+        ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title: 'Parabenizar no WhatsApp' }, whatsappIcon())
+        : null
+      return {
+        tipo: 'aniversario',
+        titulo: c.name,
+        detalhe: `Aniversário hoje${phone ? ' · ' + maskPhone(phone) : ''}`,
+        action,
+      }
+    })
+    mount(muralWrap, buildMural(recados))
   })
 
   return unsubBirthday

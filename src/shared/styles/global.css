@@ -17,6 +17,7 @@
   --radius-sm: 6px;
   --shadow: 0 1px 3px rgba(18,60,67,.08), 0 4px 12px rgba(18,60,67,.06);
   --sidebar-width: 228px;
+  --sidebar-width-collapsed: 68px;
   --font: 'Inter', system-ui, sans-serif;
 }
 
@@ -43,11 +44,13 @@ html, body {
   position: fixed;
   inset: 0 auto 0 0;
   z-index: 100;
+  transition: width .18s ease;
 }
 
 .sidebar-header {
   padding: 16px 14px;
   border-bottom: 1px solid rgba(255,255,255,.08);
+  position: relative;
 }
 
 .sidebar-logo-wrap {
@@ -57,6 +60,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .sidebar-logo-img {
@@ -64,6 +68,28 @@ html, body {
   width: auto;
   display: block;
 }
+
+.sidebar-logo-icon { display: none; height: 32px; width: 32px; border-radius: 8px; }
+
+.sidebar-toggle {
+  position: absolute;
+  top: 22px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-sidebar-bg);
+  border: 1px solid rgba(255,255,255,.15);
+  color: var(--color-sidebar-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 101;
+  transition: background .15s, transform .18s ease;
+}
+.sidebar-toggle:hover { background: rgba(255,255,255,.12); }
+.sidebar-toggle svg { transition: transform .18s ease; }
 
 .sidebar-build-time {
   margin-top: 8px;
@@ -101,6 +127,8 @@ html, body {
 .nav-svg-icon { flex-shrink: 0; opacity: .85; }
 .nav-link.active .nav-svg-icon { opacity: 1; }
 
+.nav-label { white-space: nowrap; overflow: hidden; }
+
 .nav-link--wip { opacity: .38; cursor: default; pointer-events: none; }
 .nav-link--wip .nav-label { flex: 1; }
 .nav-wip-badge { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; background: rgba(255,255,255,.1); color: rgba(255,255,255,.45); border-radius: 4px; padding: 2px 5px; flex-shrink: 0; }
@@ -112,6 +140,19 @@ html, body {
   flex-direction: column;
   gap: 10px;
 }
+
+/* ── Sidebar encolhida (só ícones) ───────────── */
+#app.sidebar-collapsed .sidebar { width: var(--sidebar-width-collapsed); }
+#app.sidebar-collapsed .main-area { margin-left: var(--sidebar-width-collapsed); }
+#app.sidebar-collapsed .sidebar-logo-img { display: none; }
+#app.sidebar-collapsed .sidebar-logo-icon { display: block; }
+#app.sidebar-collapsed .sidebar-logo-wrap { background: transparent; padding: 0; }
+#app.sidebar-collapsed .nav-link { justify-content: center; padding: 9px; }
+#app.sidebar-collapsed .nav-link.active { padding-left: 7px; }
+#app.sidebar-collapsed .nav-label,
+#app.sidebar-collapsed .nav-wip-badge,
+#app.sidebar-collapsed .sidebar-footer { display: none; }
+#app.sidebar-collapsed .sidebar-toggle svg { transform: rotate(180deg); }
 
 .nav-user-name { display: block; font-size: 13px; font-weight: 600; }
 .nav-user-role { font-size: 11px; color: var(--color-sidebar-muted); text-transform: uppercase; letter-spacing: .5px; }
@@ -173,6 +214,7 @@ html, body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  transition: margin-left .18s ease;
 }
 
 .main-content {
@@ -244,12 +286,23 @@ html, body {
 .page-header h2 { font-size: 20px; font-weight: 700; }
 .text-muted { color: var(--color-muted); font-size: 14px; margin-top: 4px; }
 
+/* ── Dashboard — grade e ritmo comuns a todos os cards ───────────────
+   Um único vocabulário de espaçamento pra tela inteira: mesmo gap entre
+   cards de uma fileira, mesma margem entre fileiras, mesmo padding interno
+   em qualquer card de conteúdo (dash-card, stat-card, mural-card, chart-card). */
+:root {
+  --dash-gap: 16px;
+  --dash-section-gap: 24px;
+  --dash-card-padding: 20px;
+}
+
+.dashboard-section + .dashboard-section { margin-top: var(--dash-section-gap); }
+
 /* ── Dashboard stat cards ────────────────────── */
 .stat-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--dash-gap);
 }
 
 .stat-card {
@@ -269,7 +322,7 @@ html, body {
 }
 
 .stat-card-body {
-  padding: 18px 20px 16px;
+  padding: var(--dash-card-padding);
 }
 
 .stat-card-label {
@@ -299,15 +352,14 @@ html, body {
 .dashboard-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px;
-  margin-top: 8px;
+  gap: var(--dash-gap);
 }
 
 .dash-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: var(--dash-card-padding);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -816,34 +868,118 @@ html, body {
   vertical-align: middle;
 }
 
-/* ── Aniversariantes (dashboard) ─────────────── */
+/* ── Dashboard — layout de duas colunas ──────── */
 .dashboard-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
-  align-items: start;
+  gap: var(--dash-gap);
+  align-items: stretch;
 }
 
-.birthday-section {
-  background: #fff8e7;
-  border: 1px solid #f5d97a;
+/* ── Dashboard — Mural de Recados ─────────────── */
+.mural-wrap { display: flex; }
+
+.mural-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 14px 18px;
-  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  padding: var(--dash-card-padding);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
-.dashboard-row .birthday-section { margin-bottom: 0; }
+.mural-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
 
-.birthday-item { flex-wrap: wrap; row-gap: 2px; }
+.mural-title { font-size: 14px; font-weight: 600; color: var(--color-text); }
+
+.mural-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.mural-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 6px;
+  border-radius: var(--radius-sm);
+  transition: background .15s;
+}
+.mural-item:hover { background: var(--color-bg); }
+
+.mural-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mural-item-body { flex: 1; min-width: 0; }
+
+.mural-item-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mural-item-detalhe {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-top: 1px;
+}
+
+.mural-item-action {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8f9f1;
+  color: #10B981;
+  transition: background .15s;
+}
+.mural-item-action:hover { background: #d1f4e3; }
+
+.mural-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  padding: 28px 0;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 13px;
+}
+.mural-empty svg { color: #c3d3d6; }
 
 /* ── Dashboard — gráfico de faturamento (mock) ─── */
 .chart-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: var(--dash-card-padding);
   box-shadow: var(--shadow);
+  width: 100%;
 }
 
 .chart-header {
@@ -930,30 +1066,6 @@ html, body {
   margin-top: 12px;
   font-style: italic;
 }
-
-.birthday-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  font-size: 14px;
-  color: #92610a;
-}
-.birthday-emoji { font-size: 18px; }
-
-.birthday-list { display: flex; flex-direction: column; gap: 6px; }
-
-.birthday-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 14px;
-  padding: 6px 10px;
-  background: rgba(255,255,255,.6);
-  border-radius: var(--radius-sm);
-}
-.birthday-name  { font-weight: 600; color: #5a3c00; }
-.birthday-phone { color: #92610a; font-size: 13px; }
 
 /* ── Configurações module ────────────────────── */
 .config-tab-bar {

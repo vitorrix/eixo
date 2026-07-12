@@ -103,6 +103,12 @@ const NAV_ITEMS = [
   { path: '/ajuda',         label: 'Ajuda',          module: null,            iconKey: 'ajuda' },
 ]
 
+const SIDEBAR_COLLAPSED_KEY = 'eixo:sidebarCollapsed'
+
+function isSidebarCollapsed() {
+  return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
+}
+
 function buildIcon(key) {
   const paths = NAV_ICONS[key] || []
   const svg = svgEl('svg', {
@@ -124,14 +130,14 @@ export function renderLayout(container, profile) {
 
   const navLinks = visibleItems.map(item => {
     if (item.wip) {
-      const link = el('div', { class: 'nav-link nav-link--wip' },
+      const link = el('div', { class: 'nav-link nav-link--wip', title: item.label },
         buildIcon(item.iconKey),
         el('span', { class: 'nav-label' }, item.label),
         el('span', { class: 'nav-wip-badge' }, 'Em breve'),
       )
       return link
     }
-    const link = el('a', { class: 'nav-link', href: `#${item.path}` },
+    const link = el('a', { class: 'nav-link', href: `#${item.path}`, title: item.label },
       buildIcon(item.iconKey),
       el('span', { class: 'nav-label' }, item.label)
     )
@@ -143,6 +149,27 @@ export function renderLayout(container, profile) {
     src: `${import.meta.env.BASE_URL}logo.png`,
     alt: 'EIXO',
     class: 'sidebar-logo-img',
+  })
+  const logoIcon = el('img', {
+    src: `${import.meta.env.BASE_URL}apple-touch-icon.png`,
+    alt: 'EIXO',
+    class: 'sidebar-logo-icon',
+  })
+
+  const toggleIcon = svgEl('svg', {
+    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    width: '13', height: '13',
+  })
+  toggleIcon.appendChild(svgEl('path', { d: 'M15 18l-6-6 6-6' }))
+  const toggleBtn = el('button', {
+    type: 'button', class: 'sidebar-toggle',
+    title: isSidebarCollapsed() ? 'Expandir menu' : 'Encolher menu',
+  }, toggleIcon)
+  toggleBtn.addEventListener('click', () => {
+    const collapsed = container.classList.toggle('sidebar-collapsed')
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0')
+    toggleBtn.title = collapsed ? 'Expandir menu' : 'Encolher menu'
   })
 
   const buildTime = (() => {
@@ -158,11 +185,14 @@ export function renderLayout(container, profile) {
 
   const sidebar = el('aside', { class: 'sidebar' },
     el('div', { class: 'sidebar-header' },
-      el('div', { class: 'sidebar-logo-wrap' }, logoImg),
+      el('div', { class: 'sidebar-logo-wrap' }, logoImg, logoIcon),
+      toggleBtn,
     ),
     el('nav', { class: 'sidebar-nav' }, ...navLinks),
     el('div', { class: 'sidebar-footer' }, createCotacaoWidget())
   )
+
+  container.classList.toggle('sidebar-collapsed', isSidebarCollapsed())
 
   const logoutBtn = el('button', { class: 'btn btn-ghost header-logout' }, 'Sair')
   logoutBtn.addEventListener('click', async () => {
