@@ -9,6 +9,8 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
 const MODULES = [
   { key: 'pedidos',      label: 'Pedidos' },
+  { key: 'compras',      label: 'Compras' },
+  { key: 'vendas',       label: 'Vendas' },
   { key: 'clientes',     label: 'Clientes' },
   { key: 'fornecedores', label: 'Fornecedores' },
   { key: 'produtos',     label: 'Produtos' },
