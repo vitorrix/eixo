@@ -5,7 +5,7 @@ import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
   deletePedido, patchPedido, confirmarPagamento,
-  definirLogistica, salvarRoteiro, marcarEntregue,
+  definirLogistica, salvarRoteiro, marcarEntregue, produtoLabel,
 } from './service.js'
 import { renderPedidoForm } from './form.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
@@ -299,16 +299,15 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       const prodsCell = el('td', { class: 'td-produtos' })
       ;(p.produtos || []).forEach(pr => {
         if (pr.tipo === 'manutencao') {
-          const info = [pr.nome, pr.aparelho ? `(${pr.aparelho})` : ''].filter(Boolean).join(' ')
           prodsCell.appendChild(
             el('div', { class: 'pedido-produto-line' },
               el('span', { class: 'dot' }, '🛠️'),
-              el('span', { class: 'pedido-produto-nome' }, info || '—'),
+              el('span', { class: 'pedido-produto-nome' }, produtoLabel(pr) || '—'),
             )
           )
           return
         }
-        const info = [pr.nome, pr.cor].filter(Boolean).join(' · ')
+        const info = produtoLabel(pr)
         prodsCell.appendChild(
           el('div', { class: 'pedido-produto-line' },
             el('span', { class: 'dot' }, '●'),
@@ -338,7 +337,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       }
 
       if (canEdit && p.status === 'aguardando_pagamento') {
-        actionsInner.appendChild(actionBtn('check', 'Confirmar Pgto', 'btn-success', () => confirmarPgto(p.id)))
+        actionsInner.appendChild(actionBtn('check', 'Confirmar Pgto', 'btn-success', () => abrirConfirmarPagamentoModal(p)))
         actionsInner.appendChild(actionBtn('x', 'Excluir', 'btn-danger-outline', () => cancelarPedido(p)))
       }
 
@@ -385,9 +384,66 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     catch { toastError('Erro ao atualizar status.') }
   }
 
-  async function confirmarPgto(id) {
-    try { await confirmarPagamento(id); toastSuccess('Pagamento confirmado.') }
-    catch { toastError('Erro ao confirmar pagamento.') }
+  // ── Modal confirmar pagamento (gera Compra + Venda de cada item) ──────────
+  function abrirConfirmarPagamentoModal(pedido) {
+    const fornecedorNomes = fornecedores.map(f => f.box ? `${f.name} - ${f.box}` : f.name)
+
+    openModal({
+      title: 'Confirmar Pagamento',
+      size:  'lg',
+      renderBody: (body, closeModal) => {
+        const itens = pedido.produtos.map(() => ({ fornecedor: '', custo: '' }))
+
+        const itemBlocks = pedido.produtos.map((p, i) => {
+          const fornAc = createAutocomplete({
+            placeholder: 'Fornecedor',
+            items:       fornecedorNomes,
+            onSelect:    v => { itens[i].fornecedor = v },
+          })
+          fornAc.el.style.width = '100%'
+          fornAc.el.addEventListener('input', () => { itens[i].fornecedor = fornAc.getValue() })
+
+          const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+          custoInp.addEventListener('input', () => { itens[i].custo = custoInp.value })
+
+          return el('div', { class: 'form-produto-block' },
+            el('div', { class: 'form-produto-header' },
+              el('span', { class: 'form-produto-label' }, produtoLabel(p) || `Item ${i + 1}`),
+              el('span', { class: 'text-muted' }, `Venda: ${brl(p.valor || 0)}`),
+            ),
+            el('div', { class: 'form-grid' },
+              el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornAc.el),
+              el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+            )
+          )
+        })
+
+        const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+        cancelBtn.addEventListener('click', closeModal)
+        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Confirmar Pagamento')
+        okBtn.addEventListener('click', async () => {
+          const faltando = itens.some(it => !it.fornecedor.trim() || it.custo === '')
+          if (faltando) { toastError('Informe fornecedor e custo de cada item.'); return }
+          okBtn.disabled = true; okBtn.textContent = 'Confirmando...'
+          try {
+            await confirmarPagamento(pedido, itens)
+            toastSuccess('Pagamento confirmado. Compra e venda geradas.')
+            closeModal()
+          } catch (err) {
+            console.error(err)
+            toastError('Erro ao confirmar pagamento.')
+            okBtn.disabled = false; okBtn.textContent = 'Confirmar Pagamento'
+          }
+        })
+
+        mount(body,
+          el('p', { class: 'text-muted', style: 'margin-bottom:12px;font-size:13px' },
+            'Informe o fornecedor e o custo de cada item — a compra e a venda são geradas automaticamente.'),
+          ...itemBlocks,
+          el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
+        )
+      },
+    })
   }
 
   function confirmarEntrega(id) {

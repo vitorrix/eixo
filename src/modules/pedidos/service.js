@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, serverTimestamp, deleteField,
+  onSnapshot, query, orderBy, serverTimestamp, deleteField, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -53,8 +53,51 @@ export async function deletePedido(id) {
   return deleteDoc(doc(db, COL, id))
 }
 
-export async function confirmarPagamento(id) {
-  return patchPedido(id, { status: 'pago' })
+export function produtoLabel(pr) {
+  return pr.tipo === 'manutencao'
+    ? [pr.nome, pr.aparelho ? `(${pr.aparelho})` : ''].filter(Boolean).join(' ')
+    : [pr.nome, pr.cor].filter(Boolean).join(' · ')
+}
+
+// Confirma o pagamento do pedido e, no mesmo lote, gera a Compra (custo/fornecedor
+// informados agora) e a Venda (dados do próprio pedido) de cada item — produto ou
+// manutenção. Não mexe em estoqueAtual: esse fluxo é sempre compra-e-venda simultânea
+// (o produto nunca fica parado em estoque); só entra em estoque o que for lançado
+// direto no menu Compras.
+export async function confirmarPagamento(pedido, itensCompra) {
+  const batch = writeBatch(db)
+
+  batch.update(doc(db, COL, pedido.id), { status: 'pago', atualizadoEm: serverTimestamp() })
+
+  pedido.produtos.forEach((p, i) => {
+    const item  = itensCompra[i] || {}
+    const label = produtoLabel(p)
+
+    batch.set(doc(collection(db, 'compras')), {
+      pedidoId:   pedido.id,
+      cliente:    pedido.cliente,
+      produto:    label,
+      tipo:       p.tipo || 'produto',
+      fornecedor: (item.fornecedor || '').trim(),
+      custo:      parseFloat(item.custo) || 0,
+      status:     'comprado',
+      criadoEm:   serverTimestamp(),
+    })
+
+    batch.set(doc(collection(db, 'vendas')), {
+      pedidoId:       pedido.id,
+      cliente:        pedido.cliente,
+      produto:        label,
+      tipo:           p.tipo || 'produto',
+      valorVenda:     p.valor || 0,
+      formaPagamento: (pedido.formasPagamento || [])[0] || '',
+      statusEntrega:  'aguardando',
+      reciboEmitido:  false,
+      criadoEm:       serverTimestamp(),
+    })
+  })
+
+  return batch.commit()
 }
 
 export async function definirLogistica(id, tipo) {
