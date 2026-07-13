@@ -161,7 +161,9 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         if (s === v.statusEntrega) opt.selected = true
         entregaSel.appendChild(opt)
       })
-      if (!canEdit) entregaSel.disabled = true
+      // Venda vinda de pedido: entrega obedece a logística do pedido, não é editável aqui.
+      if (!canEdit || v.pedidoId) entregaSel.disabled = true
+      if (v.pedidoId) entregaSel.title = 'Segue a logística do pedido'
       entregaSel.addEventListener('change', async () => {
         const prev = entregaSel.className
         entregaSel.className = `status-inline-sel ${ENTREGA_META[entregaSel.value]?.cls || ''}`

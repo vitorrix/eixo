@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, serverTimestamp, deleteField, writeBatch,
+  onSnapshot, query, orderBy, where, getDocs, serverTimestamp, deleteField, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -100,8 +100,19 @@ export async function confirmarPagamento(pedido, itensCompra) {
   return batch.commit()
 }
 
+// A entrega da Venda obedece a logística do Pedido — nunca editada à mão
+// quando vem de pedido (só vendas avulsas, sem pedidoId, têm status livre).
+async function syncVendasEntrega(pedidoId, statusEntrega) {
+  const snap = await getDocs(query(collection(db, 'vendas'), where('pedidoId', '==', pedidoId)))
+  if (snap.empty) return
+  const batch = writeBatch(db)
+  snap.docs.forEach(d => batch.update(d.ref, { statusEntrega }))
+  return batch.commit()
+}
+
 export async function definirLogistica(id, tipo) {
-  return patchPedido(id, { status: tipo, 'logistica.tipo': tipo })
+  await patchPedido(id, { status: tipo, 'logistica.tipo': tipo })
+  return syncVendasEntrega(id, tipo)
 }
 
 export async function salvarRoteiro(id, roteiro) {
@@ -109,7 +120,8 @@ export async function salvarRoteiro(id, roteiro) {
 }
 
 export async function marcarEntregue(id) {
-  return patchPedido(id, { status: 'entregue' })
+  await patchPedido(id, { status: 'entregue' })
+  return syncVendasEntrega(id, 'entregue')
 }
 
 function sanitize(d) {
