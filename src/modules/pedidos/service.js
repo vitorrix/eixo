@@ -71,15 +71,29 @@ export async function marcarEntregue(id) {
 
 function sanitize(d) {
   const produtos = (d.produtos || [])
-    .map(p => ({
-      nome:       (p.nome       || '').trim(),
-      cor:        (p.cor        || '').trim(),
-      valor:      parseFloat(p.valor) || 0,
-      acessorios: (p.acessorios || []).filter(Boolean),
-    }))
+    .map(p => {
+      const tipo = p.tipo === 'manutencao' ? 'manutencao' : 'produto'
+      if (tipo === 'manutencao') {
+        return {
+          tipo,
+          nome:       (p.nome     || '').trim(), // serviço selecionado (ex: Troca de Tela)
+          aparelho:   (p.aparelho || '').trim(),
+          valor:      parseFloat(p.valor) || 0,
+          acessorios: [],
+        }
+      }
+      return {
+        tipo,
+        nome:       (p.nome       || '').trim(),
+        cor:        (p.cor        || '').trim(),
+        valor:      parseFloat(p.valor) || 0,
+        acessorios: (p.acessorios || []).filter(Boolean),
+      }
+    })
     .filter(p => p.nome)
 
   const valorNegociado = produtos.reduce((s, p) => s + p.valor, 0)
+  const temManutencao  = produtos.some(p => p.tipo === 'manutencao') // pra filtrar em relatórios sem varrer o array
 
   const formasPagamento = Array.isArray(d.formasPagamento)
     ? d.formasPagamento
@@ -90,6 +104,7 @@ function sanitize(d) {
     cliente:        (d.cliente    || '').trim(),
     produtos,
     valorNegociado,
+    temManutencao,
     formasPagamento,
     troca:          d.troca       || null,
     observacoes:    (d.observacoes || '').trim(),

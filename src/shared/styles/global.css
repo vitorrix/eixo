@@ -1403,6 +1403,11 @@ html, body {
   letter-spacing: .5px;
   color: var(--color-muted);
 }
+.form-produto-block.manutencao {
+  background: #fff7ed;
+  border-color: #f59e0b;
+}
+.form-produto-block.manutencao .form-produto-label { color: #b45309; }
 .form-produto-row {
   display: grid;
   grid-template-columns: 1fr 120px 120px 100px;

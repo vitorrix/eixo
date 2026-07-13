@@ -22,13 +22,15 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   const isEdit = !!pedido
 
   // ── Estado ────────────────────────────────────────────────────────────────
-  let produtos = (pedido?.produtos || [{ nome: '', cor: '', valor: '', acessorios: [] }]).map(p => ({
+  let produtos = (pedido?.produtos || [{ tipo: 'produto', nome: '', cor: '', valor: '', acessorios: [] }]).map(p => ({
+    tipo:       p.tipo === 'manutencao' ? 'manutencao' : 'produto',
     nome:       p.nome       || '',
     cor:        p.cor        || '',
+    aparelho:   p.aparelho   || '',
     valor:      p.valor      !== undefined ? p.valor : '',
     acessorios: [...(p.acessorios || [])],
   }))
-  if (!produtos.length) produtos = [{ nome: '', cor: '', valor: '', acessorios: [] }]
+  if (!produtos.length) produtos = [{ tipo: 'produto', nome: '', cor: '', valor: '', acessorios: [] }]
 
   let formasPagamento = Array.isArray(pedido?.formasPagamento)
     ? [...pedido.formasPagamento]
@@ -37,6 +39,20 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
   const produtoNomes     = produtosCatalogo.map(p => p.nome)
   const produtoNomesSN   = produtosCatalogo.map(p => p.nome).filter(n => n.trim().toUpperCase().endsWith('S/N'))
+  // Aparelho da manutenção: só identifica o modelo que está entrando, sem capacidade (GB/TB) —
+  // "iPhone 16 128GB/256GB/512GB" viram só "iPhone 16", sem os seminovos (S/N)
+  function semCapacidade(nome) {
+    return nome.replace(/\s*\d+\s*(GB|TB)\b/gi, '').replace(/\s{2,}/g, ' ').trim()
+  }
+  const produtoNomesAparelho = [...new Set(
+    produtoNomes
+      .filter(n => !n.trim().toUpperCase().endsWith('S/N'))
+      .map(semCapacidade)
+  )]
+  // Serviços de manutenção: produtos cadastrados com categoria "Manutenção"
+  const produtoNomesManutencao = produtosCatalogo
+    .filter(p => (p.categoria || '').trim().toLowerCase() === 'manutenção' || (p.categoria || '').trim().toLowerCase() === 'manutencao')
+    .map(p => p.nome)
   let clientesList    = [...clientes]
 
   // ── Cliente com autocomplete + cadastro rápido ────────────────────────────
@@ -127,6 +143,51 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     produtosWrap.replaceChildren()
 
     produtos.forEach((p, i) => {
+      if (p.tipo === 'manutencao') {
+        const aparelhoAc = createAutocomplete({
+          placeholder:  'ex: iPhone 13 Pro Max 256GB',
+          items:        produtoNomesAparelho,
+          initialValue: p.aparelho,
+          onSelect:     v => { produtos[i].aparelho = v },
+        })
+        aparelhoAc.el.style.width = '100%'
+        aparelhoAc.el.addEventListener('input', () => { produtos[i].aparelho = aparelhoAc.getValue() })
+
+        const servicoAc = createAutocomplete({
+          placeholder:  'ex: Troca de Tela',
+          items:        produtoNomesManutencao,
+          initialValue: p.nome,
+          onSelect:     v => { produtos[i].nome = v },
+        })
+        servicoAc.el.style.width = '100%'
+        servicoAc.el.addEventListener('input', () => { produtos[i].nome = servicoAc.getValue() })
+
+        const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+        valorInp.value = p.valor !== undefined && p.valor !== '' ? p.valor : ''
+        valorInp.addEventListener('input', () => { produtos[i].valor = valorInp.value; updateTotal() })
+
+        const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
+        delBtn.addEventListener('click', () => {
+          if (produtos.length === 1) return
+          produtos.splice(i, 1); renderProdutos(); updateTotal()
+        })
+
+        produtosWrap.appendChild(
+          el('div', { class: 'form-produto-block manutencao' },
+            el('div', { class: 'form-produto-header' },
+              el('span', { class: 'form-produto-label' }, `🛠️ Manutenção ${i + 1}`),
+              delBtn
+            ),
+            el('div', { class: 'form-produto-row3' },
+              el('div', { class: 'field' }, el('label', {}, 'Aparelho'), aparelhoAc.el),
+              el('div', { class: 'field' }, el('label', {}, 'Serviço'), servicoAc.el),
+              el('div', { class: 'field field-valor' }, el('label', {}, 'Valor R$'), valorInp),
+            )
+          )
+        )
+        return
+      }
+
       const acessListEl = el('div', { class: 'acessorios-selected' })
 
       function renderAcess() {
@@ -209,7 +270,13 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
   const addProdutoBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ produto')
   addProdutoBtn.addEventListener('click', () => {
-    produtos.push({ nome: '', cor: '', valor: '', acessorios: [] })
+    produtos.push({ tipo: 'produto', nome: '', cor: '', valor: '', acessorios: [] })
+    renderProdutos()
+  })
+
+  const addManutencaoBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ manutenção')
+  addManutencaoBtn.addEventListener('click', () => {
+    produtos.push({ tipo: 'manutencao', nome: '', aparelho: '', valor: '', acessorios: [] })
     renderProdutos()
   })
 
@@ -317,7 +384,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       el('div', { class: 'form-section' },
         el('div', { class: 'form-produto-header' },
           el('p', { class: 'form-section-title', style: 'margin:0' }, 'Produtos'),
-          addProdutoBtn
+          el('div', { style: 'display:flex;gap:8px' }, addManutencaoBtn, addProdutoBtn)
         ),
         produtosWrap,
         totalDisplay

@@ -268,7 +268,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     }
     if (q) list = list.filter(p => {
       const cli  = (p.cliente || p.clienteNome || '').toLowerCase()
-      const pros = (p.produtos || []).map(pr => pr.nome || '').join(' ').toLowerCase()
+      const pros = (p.produtos || []).map(pr => [pr.nome, pr.aparelho].filter(Boolean).join(' ')).join(' ').toLowerCase()
       return cli.includes(q) || pros.includes(q)
     })
     return sortList(list)
@@ -298,6 +298,16 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       // Produtos
       const prodsCell = el('td', { class: 'td-produtos' })
       ;(p.produtos || []).forEach(pr => {
+        if (pr.tipo === 'manutencao') {
+          const info = [pr.nome, pr.aparelho ? `(${pr.aparelho})` : ''].filter(Boolean).join(' ')
+          prodsCell.appendChild(
+            el('div', { class: 'pedido-produto-line' },
+              el('span', { class: 'dot' }, '🛠️'),
+              el('span', { class: 'pedido-produto-nome' }, info || '—'),
+            )
+          )
+          return
+        }
         const info = [pr.nome, pr.cor].filter(Boolean).join(' · ')
         prodsCell.appendChild(
           el('div', { class: 'pedido-produto-line' },
