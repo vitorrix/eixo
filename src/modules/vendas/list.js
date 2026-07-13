@@ -1,8 +1,10 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
+import { openModal } from '../../shared/components/Modal.js'
+import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { patchVenda } from './service.js'
+import { createVenda, patchVenda } from './service.js'
 
 const ENTREGA_META = {
   aguardando: { label: 'Aguardando',    cls: 'badge-negociando'  },
@@ -26,8 +28,9 @@ function monthKey(ts) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-export function renderVendasList(container, vendas) {
-  const canEdit = can('vendas', 'edit')
+export function renderVendasList(container, vendas, { produtosCatalogo, clientes } = {}) {
+  const canCreate = can('vendas', 'create')
+  const canEdit   = can('vendas', 'edit')
 
   let currentMonth = nowMonth()
 
@@ -84,9 +87,16 @@ export function renderVendasList(container, vendas) {
   prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); refresh() })
   nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); refresh() })
 
+  const newBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Nova Venda')
+  newBtn.style.display = canCreate ? '' : 'none'
+  newBtn.addEventListener('click', () => abrirNovaVendaModal())
+
   const countBadge = el('span', { class: 'count-badge' })
   const toolbar = el('div', { class: 'toolbar' },
-    el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn),
+    el('div', { style: 'display:flex;gap:10px;align-items:center' },
+      newBtn,
+      el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
+    ),
     countBadge
   )
 
@@ -198,6 +208,77 @@ export function renderVendasList(container, vendas) {
       )
       tbody.appendChild(row)
     }
+  }
+
+  function abrirNovaVendaModal() {
+    const produtoNomes  = (produtosCatalogo || []).map(p => p.nome)
+    const clienteNomes  = (clientes || []).map(c => c.name)
+
+    openModal({
+      title: 'Nova Venda',
+      size:  'md',
+      renderBody: (body, closeModal) => {
+        let produtoId = null
+
+        const produtoAc = createAutocomplete({
+          placeholder: 'Produto do catálogo',
+          items:       produtoNomes,
+          onSelect:    v => { produtoId = (produtosCatalogo || []).find(p => p.nome === v)?.id || null },
+        })
+        produtoAc.el.style.width = '100%'
+        produtoAc.el.addEventListener('input', () => {
+          produtoId = (produtosCatalogo || []).find(p => p.nome === produtoAc.getValue())?.id || null
+        })
+
+        const clienteAc = createAutocomplete({
+          placeholder: 'Nome do cliente',
+          items:       clienteNomes,
+        })
+        clienteAc.el.style.width = '100%'
+
+        const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+
+        const pagSel = el('select', {})
+        Object.entries(PAG_LABEL).forEach(([value, label]) => pagSel.appendChild(el('option', { value }, label)))
+
+        const entregaSelNew = el('select', {})
+        ENTREGA_ORDER.forEach(s => entregaSelNew.appendChild(el('option', { value: s }, ENTREGA_META[s]?.label || s)))
+
+        const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+        cancelBtn.addEventListener('click', closeModal)
+        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Criar venda')
+        okBtn.addEventListener('click', async () => {
+          const produto = produtoAc.getValue().trim()
+          if (!produto) { toastError('Selecione o produto.'); return }
+          okBtn.disabled = true
+          try {
+            await createVenda({
+              produtoId, produto,
+              cliente:        clienteAc.getValue(),
+              valorVenda:     valorInp.value,
+              formaPagamento: pagSel.value,
+              statusEntrega:  entregaSelNew.value,
+            })
+            toastSuccess('Venda criada.'); closeModal()
+          } catch (err) {
+            console.error(err)
+            toastError('Erro ao criar venda.')
+            okBtn.disabled = false
+          }
+        })
+
+        mount(body,
+          el('div', { class: 'form-grid' },
+            el('div', { class: 'field field-full' }, el('label', {}, 'Produto'), produtoAc.el),
+            el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteAc.el),
+            el('div', { class: 'field' }, el('label', {}, 'Valor R$'), valorInp),
+            el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagSel),
+            el('div', { class: 'field' }, el('label', {}, 'Entrega'), entregaSelNew),
+          ),
+          el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
+        )
+      },
+    })
   }
 
   mount(container, kpisRow, toolbar, searchInp, tableWrap, emptyState)

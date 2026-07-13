@@ -1,3 +1,5 @@
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
 import { toastError } from '../../shared/components/Toast.js'
 import { subscribeVendas } from './service.js'
@@ -9,6 +11,18 @@ export function render(container) {
 }
 
 async function _init(container) {
+  let produtosCatalogo = [], clientes = []
+  try {
+    const [pSnap, cSnap] = await Promise.all([
+      getDocs(query(collection(db, 'produtos'), orderBy('nameLower'))),
+      getDocs(query(collection(db, 'clientes'), orderBy('nameLower'))),
+    ])
+    produtosCatalogo = pSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    clientes         = cSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+  } catch (err) {
+    console.error(err)
+  }
+
   let listController = null
   let firstLoad = true
 
@@ -16,7 +30,7 @@ async function _init(container) {
     vendas => {
       if (firstLoad) {
         firstLoad = false
-        listController = renderVendasList(container, vendas)
+        listController = renderVendasList(container, vendas, { produtosCatalogo, clientes })
       } else {
         listController?.update(vendas)
       }

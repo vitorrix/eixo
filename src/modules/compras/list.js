@@ -3,8 +3,9 @@ import { brl, shortDate } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
+import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { patchCompra, updateCompra, deleteCompra } from './service.js'
+import { createCompra, patchCompra, atualizarStatusCompra, updateCompra, deleteCompra } from './service.js'
 
 const STATUS_META = {
   pendente:  { label: 'Pendente',  cls: 'badge-pendente'  },
@@ -24,7 +25,8 @@ function monthKey(ts) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-export function renderComprasList(container, compras, { fornecedores }) {
+export function renderComprasList(container, compras, { fornecedores, produtosCatalogo }) {
+  const canCreate = can('compras', 'create')
   const canEdit   = can('compras', 'edit')
   const canDelete = can('compras', 'delete')
 
@@ -81,9 +83,16 @@ export function renderComprasList(container, compras, { fornecedores }) {
   prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); refresh() })
   nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); refresh() })
 
+  const newBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Nova Compra')
+  newBtn.style.display = canCreate ? '' : 'none'
+  newBtn.addEventListener('click', () => abrirNovaCompraModal())
+
   const countBadge = el('span', { class: 'count-badge' })
   const toolbar = el('div', { class: 'toolbar' },
-    el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn),
+    el('div', { style: 'display:flex;gap:10px;align-items:center' },
+      newBtn,
+      el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
+    ),
     countBadge
   )
 
@@ -153,8 +162,12 @@ export function renderComprasList(container, compras, { fornecedores }) {
         const prev = statusSel.className
         statusSel.className = `status-inline-sel ${STATUS_META[statusSel.value]?.cls || ''}`
         try {
-          await patchCompra(c.id, { status: statusSel.value })
-          toastSuccess('Status atualizado.')
+          await atualizarStatusCompra(c, statusSel.value)
+          toastSuccess(
+            statusSel.value === 'recebido' && !c.pedidoId && c.produtoId
+              ? 'Status atualizado. Estoque atualizado.'
+              : 'Status atualizado.'
+          )
         } catch {
           toastError('Erro ao atualizar.')
           statusSel.value = c.status
@@ -182,6 +195,71 @@ export function renderComprasList(container, compras, { fornecedores }) {
       )
       tbody.appendChild(row)
     }
+  }
+
+  function abrirNovaCompraModal() {
+    const produtoNomes = produtosCatalogo.map(p => p.nome)
+
+    openModal({
+      title: 'Nova Compra',
+      size:  'md',
+      renderBody: (body, closeModal) => {
+        let produtoId = null
+
+        const produtoAc = createAutocomplete({
+          placeholder: 'Produto do catálogo',
+          items:       produtoNomes,
+          onSelect:    v => { produtoId = produtosCatalogo.find(p => p.nome === v)?.id || null },
+        })
+        produtoAc.el.style.width = '100%'
+        produtoAc.el.addEventListener('input', () => {
+          produtoId = produtosCatalogo.find(p => p.nome === produtoAc.getValue())?.id || null
+        })
+
+        const fornAc = createAutocomplete({
+          placeholder: 'Fornecedor',
+          items:       fornecedores.map(f => f.box ? `${f.name} - ${f.box}` : f.name),
+        })
+        fornAc.el.style.width = '100%'
+
+        const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+
+        const statusSelNew = el('select', {})
+        STATUS_ORDER.forEach(s => statusSelNew.appendChild(el('option', { value: s }, STATUS_META[s]?.label || s)))
+
+        const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+        cancelBtn.addEventListener('click', closeModal)
+        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Criar compra')
+        okBtn.addEventListener('click', async () => {
+          const produto = produtoAc.getValue().trim()
+          if (!produto) { toastError('Selecione o produto.'); return }
+          okBtn.disabled = true
+          try {
+            await createCompra({
+              produtoId, produto,
+              fornecedor: fornAc.getValue(),
+              custo:      custoInp.value,
+              status:     statusSelNew.value,
+            })
+            toastSuccess('Compra criada.'); closeModal()
+          } catch (err) {
+            console.error(err)
+            toastError('Erro ao criar compra.')
+            okBtn.disabled = false
+          }
+        })
+
+        mount(body,
+          el('div', { class: 'form-grid' },
+            el('div', { class: 'field field-full' }, el('label', {}, 'Produto'), produtoAc.el),
+            el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornAc.el),
+            el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+            el('div', { class: 'field' }, el('label', {}, 'Status'), statusSelNew),
+          ),
+          el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
+        )
+      },
+    })
   }
 
   function openEditModal(compra) {
