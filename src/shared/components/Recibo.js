@@ -17,6 +17,16 @@ export function toWhatsappNumber(phoneDigits) {
   return d.startsWith('55') && d.length > 11 ? d : `55${d}`
 }
 
+// Botão "Imprimir / PDF" — usa o diálogo nativo de impressão do navegador
+// (a própria janela do sistema já oferece "Salvar como PDF" como impressora,
+// então cobre as duas coisas sem precisar gerar o PDF de novo no cliente).
+// O CSS @media print (global.css) isola só o .recibo-doc, formatado pra A4.
+export function criarBotaoImprimir() {
+  const btn = el('button', { type: 'button', class: 'btn btn-outline' }, '🖨️ Imprimir / PDF')
+  btn.addEventListener('click', () => window.print())
+  return btn
+}
+
 // Grava o pedido de envio na fila (recibosFila) — o bot do WhatsApp escuta essa
 // coleção e manda o PDF de verdade. pedidoId/vendaId identificam a origem (só
 // um dos dois é preenchido), útil pra rastrear de onde veio o envio.

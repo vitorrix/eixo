@@ -13,7 +13,7 @@ import { renderPedidoForm } from './form.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import {
   montarDadosRecibo, renderReciboPreview, garantirNumeroRecibo,
-  toWhatsappNumber, enviarReciboFila, FILA_STATUS_LABEL,
+  toWhatsappNumber, enviarReciboFila, FILA_STATUS_LABEL, criarBotaoImprimir,
 } from '../../shared/components/Recibo.js'
 
 // ── Status ────────────────────────────────────────────────────────────────────
@@ -490,6 +490,8 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
           fecharBtn.addEventListener('click', () => { unsubFila?.(); closeModal() })
 
+          const imprimirBtn = criarBotaoImprimir()
+
           const statusEl = el('span', { class: 'text-muted', style: 'margin-left:10px;font-size:13px' })
 
           let unsubFila = null
@@ -518,7 +520,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
           mount(body,
             previewWrap,
-            el('div', { class: 'modal-footer' }, fecharBtn, enviarBtn, statusEl)
+            el('div', { class: 'modal-footer no-print' }, fecharBtn, imprimirBtn, enviarBtn, statusEl)
           )
         }).catch(err => {
           console.error(err)

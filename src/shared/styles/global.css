@@ -2722,4 +2722,33 @@ html, body {
   color: #7c9096;
 }
 .recibo-footer-mark { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
+
+.recibo-doc, .recibo-masthead, .recibo-footer, .recibo-badge-pago, .recibo-obs, .recibo-table th {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ── Impressão / exportar PDF (usa o diálogo nativo do navegador) ─────
+   Some tudo da página exceto o próprio recibo, tira a moldura do modal
+   e força as cores do masthead a saírem no papel (por padrão o navegador
+   apaga fundos coloridos ao imprimir). */
+@media print {
+  body > *:not(.modal-overlay) { display: none !important; }
+  .modal-overlay {
+    position: static !important;
+    background: none !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+  .modal-overlay .modal {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: none !important;
+    width: auto !important;
+    max-height: none !important;
+  }
+  .modal-header, .no-print { display: none !important; }
+  .recibo-doc { border: none !important; }
+  @page { size: A4; margin: 14mm; }
+}
 .recibo-footer strong { color: #123c43; }
