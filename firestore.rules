@@ -91,6 +91,17 @@ service cloud.firestore {
       allow delete: if isMaster();
     }
 
+    // ── /recibosFila ──────────────────────────────────────────────────────
+    // Fila de envio de recibo em PDF pelo bot do WhatsApp. O app só cria o
+    // pedido de envio; quem atualiza o status (enviado/erro) é o bot, via
+    // Admin SDK — que não passa por estas regras.
+    match /recibosFila/{id} {
+      allow read:   if hasPermission('pedidos', 'view');
+      allow create: if hasPermission('pedidos', 'edit');
+      allow update: if false;
+      allow delete: if isMaster();
+    }
+
     // ── /orcamentos ───────────────────────────────────────────────────────
     match /orcamentos/{id} {
       allow read:   if hasPermission('orcamento', 'view');

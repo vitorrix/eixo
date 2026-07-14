@@ -4,6 +4,7 @@ import { connect } from './src/connection.js'
 import { mapMessageToOfertas } from './src/mapper.js'
 import { upsertOferta, db } from './src/firestoreWriter.js'
 import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
+import { watchRecibosFila } from './src/reciboWatcher.js'
 
 const GROUPS_PATH = new URL('./config/groups.json', import.meta.url)
 const SYNC_INTERVAL_MS = 60 * 60 * 1000 // 1h — cobre "cadastrou fornecedor novo" sem precisar de deploy/restart
@@ -65,10 +66,11 @@ async function handleMessages(sock, messages) {
 
 let currentSock = null
 let intervalStarted = false
+let filaWatcherStarted = false
 
 // onOpen dispara a cada (re)conexão — inclusive após restarts forçados pelo
 // WhatsApp — então guardamos o sock mais recente e só armamos o setInterval
-// uma vez, pra não empilhar sincronizações duplicadas a cada reconexão.
+// e o listener da fila de recibos uma vez, pra não duplicar.
 async function onOpen(sock) {
   currentSock = sock
   await syncAndReload(sock)
@@ -77,6 +79,10 @@ async function onOpen(sock) {
     setInterval(() => {
       if (currentSock) syncAndReload(currentSock)
     }, SYNC_INTERVAL_MS)
+  }
+  if (!filaWatcherStarted) {
+    filaWatcherStarted = true
+    watchRecibosFila(() => currentSock, db)
   }
 }
 

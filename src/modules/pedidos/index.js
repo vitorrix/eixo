@@ -2,6 +2,7 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
 import { toastError } from '../../shared/components/Toast.js'
+import { getEmpresa } from '../configuracoes/service.js'
 import { subscribePedidos } from './service.js'
 import { renderPedidoList } from './list.js'
 
@@ -38,6 +39,20 @@ async function _init(container) {
     console.error('Erro ao carregar dependências:', err)
   }
 
+  // Dados do recibo: só master consegue listar /users (funcionário só lê o próprio
+  // doc) — falha aqui não pode derrubar o módulo inteiro, só o nome do vendedor no recibo.
+  let usuariosPorUid = {}, empresa = {}
+  try {
+    const [uSnap, empresaData] = await Promise.all([
+      getDocs(collection(db, 'users')),
+      getEmpresa(),
+    ])
+    uSnap.docs.forEach(d => { usuariosPorUid[d.id] = d.data().name })
+    empresa = empresaData
+  } catch (err) {
+    console.error('Erro ao carregar dados da empresa/usuários (recibo ficará incompleto):', err)
+  }
+
   let listController = null
   let firstLoad = true
 
@@ -45,7 +60,7 @@ async function _init(container) {
     pedidos => {
       if (firstLoad) {
         firstLoad = false
-        listController = renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores })
+        listController = renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores, usuariosPorUid, empresa })
       } else {
         listController?.update(pedidos)
       }

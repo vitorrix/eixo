@@ -1,6 +1,8 @@
+import { collection, addDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
+import { db } from '../../firebase.js'
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate } from '../../shared/utils/formatters.js'
-import { can } from '../../auth/session.js'
+import { can, getCurrentProfile } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
@@ -9,6 +11,8 @@ import {
 } from './service.js'
 import { renderPedidoForm } from './form.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
+import { montarDadosRecibo, renderReciboPreview } from './recibo.js'
+import { proximoNumeroRecibo } from '../configuracoes/service.js'
 
 // ── Status ────────────────────────────────────────────────────────────────────
 const STATUS_META = {
@@ -39,6 +43,8 @@ const PATHS = {
   map:     ['M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z', 'M8 2v16', 'M16 6v16'],
   x:       ['M18 6L6 18', 'M6 6l12 12'],
   trash:   ['M3 6h18', 'M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2'],
+  recibo:  ['M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2', 'M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', 'M9 12h6M9 16h4'],
+  send:    ['M22 2L11 13', 'M22 2l-7 20-4-9-9-4 20-7z'],
 }
 
 function ico(key, size = 13) {
@@ -107,7 +113,7 @@ function formatRoteiro({ retiradas = [], entrega = {} }, dataISO = '') {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export function renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores }) {
+export function renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores, usuariosPorUid = {}, empresa = {} }) {
   const canCreate = can('pedidos', 'create')
   const canEdit   = can('pedidos', 'edit')
   const canDelete = can('pedidos', 'delete')
@@ -331,6 +337,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         actionsInner.appendChild(actionBtn('edit', 'Editar', 'btn-outline', () => openPedidoModal(p)))
       }
 
+      if (PAID_STATUSES.has(p.status)) {
+        actionsInner.appendChild(actionBtn('recibo', 'Recibo', 'btn-outline', () => abrirReciboModal(p)))
+      }
+
       if (canEdit && p.status === 'negociando') {
         actionsInner.appendChild(actionBtn('arrow', 'Pagamento', 'btn-outline-blue', () => advanceStatus(p.id, 'aguardando_pagamento')))
         actionsInner.appendChild(actionBtn('x', 'Excluir', 'btn-danger-outline', () => cancelarPedido(p)))
@@ -442,6 +452,101 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           ...itemBlocks,
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
+      },
+    })
+  }
+
+  // ── Recibo ────────────────────────────────────────────────────────────────
+  function toWhatsappNumber(phoneDigits) {
+    const d = (phoneDigits || '').replace(/\D/g, '')
+    if (!d) return ''
+    return d.startsWith('55') && d.length > 11 ? d : `55${d}`
+  }
+
+  async function garantirNumeroRecibo(pedido) {
+    if (pedido.numeroRecibo) return pedido.numeroRecibo
+    const numero = await proximoNumeroRecibo()
+    await patchPedido(pedido.id, { numeroRecibo: numero })
+    pedido.numeroRecibo = numero // evita gerar de novo se reabrir o recibo na mesma sessão
+    return numero
+  }
+
+  async function montarReciboCompleto(pedido) {
+    const numero = await garantirNumeroRecibo(pedido)
+    const cliente = clientes.find(c => c.name === pedido.cliente)
+    const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
+    return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome })
+  }
+
+  async function enviarReciboWhatsapp(pedido, dados) {
+    const cliente = clientes.find(c => c.name === pedido.cliente)
+    const telefone = toWhatsappNumber(cliente?.phone)
+    if (!telefone) throw new Error('Cliente sem telefone cadastrado.')
+    const { uid } = getCurrentProfile()
+    return addDoc(collection(db, 'recibosFila'), {
+      pedidoId:  pedido.id,
+      numero:    dados.numero,
+      telefone,
+      dados,
+      status:    'pendente',
+      criadoEm:  serverTimestamp(),
+      criadoPor: uid,
+    })
+  }
+
+  const FILA_STATUS_LABEL = { pendente: 'Na fila de envio...', enviado: '✅ Enviado.', erro: '❌ Erro ao enviar.' }
+
+  function abrirReciboModal(pedido) {
+    openModal({
+      title: 'Recibo',
+      size:  'lg',
+      renderBody: (body, closeModal) => {
+        mount(body, el('div', { class: 'loading' }, 'Montando recibo...'))
+
+        montarReciboCompleto(pedido).then(dados => {
+          const previewWrap = el('div', {})
+          renderReciboPreview(previewWrap, dados)
+
+          const cliente = clientes.find(c => c.name === pedido.cliente)
+          const temTelefone = !!toWhatsappNumber(cliente?.phone)
+
+          const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
+          fecharBtn.addEventListener('click', () => { unsubFila?.(); closeModal() })
+
+          const statusEl = el('span', { class: 'text-muted', style: 'margin-left:10px;font-size:13px' })
+
+          let unsubFila = null
+          const enviarBtn = actionBtn('send', 'Enviar por WhatsApp', 'btn-success', async () => {
+            enviarBtn.disabled = true
+            try {
+              const ref = await enviarReciboWhatsapp(pedido, dados)
+              toastSuccess('Enviado para a fila — o bot manda pro cliente em instantes.')
+              statusEl.textContent = FILA_STATUS_LABEL.pendente
+              unsubFila = onSnapshot(ref, snap => {
+                const fila = snap.data()
+                if (!fila) return
+                statusEl.textContent = FILA_STATUS_LABEL[fila.status] || fila.status
+                if (fila.status === 'erro') enviarBtn.disabled = false
+              })
+            } catch (err) {
+              console.error(err)
+              toastError(err.message || 'Erro ao enviar recibo.')
+              enviarBtn.disabled = false
+            }
+          })
+          if (!temTelefone) {
+            enviarBtn.disabled = true
+            statusEl.textContent = 'Cliente sem telefone cadastrado.'
+          }
+
+          mount(body,
+            previewWrap,
+            el('div', { class: 'modal-footer' }, fecharBtn, enviarBtn, statusEl)
+          )
+        }).catch(err => {
+          console.error(err)
+          mount(body, el('p', { class: 'text-muted' }, 'Erro ao montar o recibo.'))
+        })
       },
     })
   }
