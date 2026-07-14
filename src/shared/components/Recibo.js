@@ -154,49 +154,56 @@ export function montarDadosReciboVendaAvulsa(venda, { numero, empresa, cliente, 
   }
 }
 
-export function renderReciboPreview(container, dados) {
-  const linha = txt => el('div', {}, txt)
+function situacaoCell(texto) {
+  return texto === 'Já pago'
+    ? el('span', { class: 'recibo-badge-pago' }, texto)
+    : el('span', {}, texto)
+}
 
-  const header = el('div', { class: 'recibo-header' },
-    el('div', { class: 'recibo-empresa' },
-      el('strong', {}, dados.empresa.fantasia || dados.empresa.razao),
-      ...dados.empresa.enderecoLinhas.map(linha),
-      dados.empresa.tel1 ? linha(`${dados.empresa.tel1} (whatsapp)`) : null,
-      dados.empresa.tel2 ? linha(dados.empresa.tel2) : null,
-      dados.empresa.cnpj ? linha(`CNPJ: ${dados.empresa.cnpj}`) : null,
+export function renderReciboPreview(container, dados) {
+  const linha = (txt, muted) => el('div', { class: muted ? 'recibo-line recibo-line-muted' : 'recibo-line' }, txt)
+  const markSrc = `${import.meta.env.BASE_URL}apple-touch-icon.png`
+
+  const masthead = el('div', { class: 'recibo-masthead' },
+    el('img', { src: markSrc, alt: '', class: 'recibo-mark' }),
+    el('div', { class: 'recibo-masthead-empresa' },
+      el('div', { class: 'recibo-empresa-nome' }, dados.empresa.fantasia || dados.empresa.razao),
+      ...dados.empresa.enderecoLinhas.map(l => el('div', { class: 'recibo-empresa-linha' }, l)),
+      dados.empresa.tel1 ? el('div', { class: 'recibo-empresa-linha' }, `${dados.empresa.tel1} (whatsapp)`) : null,
+      dados.empresa.tel2 ? el('div', { class: 'recibo-empresa-linha' }, dados.empresa.tel2) : null,
+      dados.empresa.cnpj ? el('div', { class: 'recibo-empresa-linha' }, `CNPJ ${dados.empresa.cnpj}`) : null,
     ),
-    el('div', { class: 'recibo-numero' }, `Venda número ${dados.numero}`)
+    el('div', { class: 'recibo-masthead-numero' },
+      el('div', { class: 'recibo-numero-label' }, 'Recibo'),
+      el('div', { class: 'recibo-numero-valor' }, `Nº ${dados.numero}`),
+    )
   )
 
-  const dadosVenda = el('div', { class: 'recibo-section' },
-    el('p', { class: 'recibo-section-title' }, 'DADOS DA VENDA'),
-    el('div', { class: 'recibo-dados-grid' },
-      el('div', {},
-        linha(`Cliente: ${dados.cliente.nome}`),
-        dados.cliente.telefone ? linha(`Telefone: ${dados.cliente.telefone}`) : null,
-        dados.cliente.email ? linha(`E-mail: ${dados.cliente.email}`) : null,
-        ...dados.cliente.enderecoLinhas.map((l, i) => linha(i === 0 ? `Endereço: ${l}` : l)),
-      ),
-      el('div', {},
-        linha(`Data: ${dados.data}`),
-        linha(`Situação: ${dados.situacao}`),
-        linha(`Vendedor: ${dados.vendedor}`),
-      ),
-    )
+  const dadosVenda = el('div', { class: 'recibo-section recibo-grid-2' },
+    el('div', {},
+      el('p', { class: 'recibo-eyebrow' }, 'Faturado para'),
+      linha(dados.cliente.nome),
+      dados.cliente.telefone ? linha(dados.cliente.telefone, true) : null,
+      dados.cliente.email ? linha(dados.cliente.email, true) : null,
+      ...dados.cliente.enderecoLinhas.map(l => linha(l, true)),
+    ),
+    el('div', {},
+      el('p', { class: 'recibo-eyebrow' }, 'Detalhes'),
+      linha(`Data: ${dados.data}`),
+      linha(`Situação: ${dados.situacao}`),
+      linha(`Vendedor: ${dados.vendedor}`),
+    ),
   )
 
   const tabelaItens = el('table', { class: 'recibo-table' },
     el('thead', {}, el('tr', {},
       el('th', {}, '#'), el('th', {}, 'Descrição'), el('th', {}, 'Preço unit.'),
-      el('th', {}, 'Quant.'), el('th', {}, 'Desconto'), el('th', {}, 'Total'),
+      el('th', {}, 'Qtd.'), el('th', {}, 'Desconto'), el('th', {}, 'Total'),
     )),
     el('tbody', {}, ...dados.itens.map((it, i) => el('tr', {},
       el('td', {}, String(i + 1)), el('td', {}, it.descricao), el('td', {}, brl(it.precoUnit)),
       el('td', {}, String(it.quant)), el('td', {}, brl(it.desconto)), el('td', {}, brl(it.total)),
     ))),
-    el('tfoot', {}, el('tr', {},
-      el('td', { colspan: '3' }, ''), el('td', {}, 'TOTAL'), el('td', {}, String(dados.totalItens)), el('td', {}, brl(dados.totalValor)),
-    ))
   )
 
   const tabelaFinanceiro = el('table', { class: 'recibo-table' },
@@ -206,23 +213,35 @@ export function renderReciboPreview(container, dados) {
     )),
     el('tbody', {}, ...dados.financeiro.map(f => el('tr', {},
       el('td', {}, f.numParcela), el('td', {}, brl(f.valor)), el('td', {}, f.dataPgto),
-      el('td', {}, f.formaPagamento), el('td', {}, f.situacao),
+      el('td', {}, f.formaPagamento), el('td', {}, situacaoCell(f.situacao)),
     ))),
   )
 
   const secoes = [
-    header,
     dadosVenda,
-    el('div', { class: 'recibo-section' }, el('p', { class: 'recibo-section-title' }, 'ITENS DA VENDA'), tabelaItens),
-    el('div', { class: 'recibo-section' }, el('p', { class: 'recibo-section-title' }, 'FINANCEIRO'), tabelaFinanceiro,
-      el('div', { class: 'recibo-total-geral' }, brl(dados.totalValor))),
+    el('div', { class: 'recibo-section' },
+      el('p', { class: 'recibo-eyebrow' }, 'Itens'),
+      tabelaItens,
+      el('div', { class: 'recibo-total-row' }, el('span', {}, 'Total'), el('strong', {}, brl(dados.totalValor))),
+    ),
+    el('div', { class: 'recibo-section' },
+      el('p', { class: 'recibo-eyebrow' }, 'Pagamento'),
+      tabelaFinanceiro,
+    ),
   ]
   if (dados.observacoes) {
     secoes.push(el('div', { class: 'recibo-obs' },
-      el('p', { class: 'recibo-section-title' }, 'Observações gerais'),
-      el('p', { style: 'white-space:pre-line' }, dados.observacoes)
+      el('p', { class: 'recibo-eyebrow' }, 'Observações'),
+      el('p', { style: 'white-space:pre-line;margin:0' }, dados.observacoes)
     ))
   }
 
-  mount(container, el('div', { class: 'recibo-doc' }, ...secoes))
+  const footer = el('div', { class: 'recibo-footer' },
+    el('img', { src: markSrc, alt: '', class: 'recibo-footer-mark' }),
+    el('span', {},
+      'Emitido pelo ', el('strong', {}, 'Eixo'), ' — uma plataforma ', el('strong', {}, 'Baruk Technology & Consulting'), '.'
+    ),
+  )
+
+  mount(container, el('div', { class: 'recibo-doc' }, masthead, el('div', { class: 'recibo-body' }, ...secoes), footer))
 }

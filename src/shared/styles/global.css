@@ -2587,68 +2587,139 @@ html, body {
 }
 .btn-link:hover { text-decoration: underline; }
 
-/* ── Recibo (preview do documento de venda) ─────────────────────────── */
+/* ── Recibo (documento de venda) ──────────────────────────────────────
+   Registro impresso: masthead em Verde Petróleo + serifada pra
+   identidade, corpo em grotesca pra dados tabulares — a mesma dupla
+   Times/Helvetica que o pdfkit consegue reproduzir no PDF de verdade
+   enviado pelo bot, então o preview aqui e o PDF do cliente combinam. */
 .recibo-doc {
   background: #fff;
-  color: #1a1a1a;
-  font-size: 13px;
-  padding: 4px 2px 12px;
+  color: #16232a;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  border: 1px solid #dce6e8;
+  border-radius: 10px;
+  overflow: hidden;
 }
-.recibo-header {
+
+.recibo-masthead {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid #222;
-  margin-bottom: 16px;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  background: #123c43;
+  color: #fff;
 }
-.recibo-empresa { line-height: 1.5; }
-.recibo-empresa strong { font-size: 15px; }
-.recibo-numero { font-size: 20px; font-weight: 700; white-space: nowrap; }
-.recibo-section { margin-bottom: 18px; }
-.recibo-section-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  color: #555;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 4px;
-  margin-bottom: 8px;
-}
-.recibo-dados-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  line-height: 1.6;
-}
-.recibo-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-.recibo-table th {
-  background: #f2f2f2;
-  text-align: left;
-  padding: 6px 8px;
-  font-weight: 600;
-  border-bottom: 1px solid #ddd;
-}
-.recibo-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid #eee;
-}
-.recibo-table th:last-child, .recibo-table td:last-child { text-align: right; }
-.recibo-table tfoot td { font-weight: 700; background: #f7f7f7; }
-.recibo-total-geral {
-  text-align: right;
+.recibo-mark { width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0; }
+.recibo-masthead-empresa { flex: 1; min-width: 0; }
+.recibo-empresa-nome {
   font-size: 16px;
   font-weight: 700;
-  margin-top: 8px;
+  letter-spacing: .4px;
 }
+.recibo-empresa-linha {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  color: #a9c2c6;
+  line-height: 1.55;
+}
+.recibo-masthead-numero { text-align: right; flex-shrink: 0; }
+.recibo-numero-label {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #6fb8ae;
+}
+.recibo-numero-valor { font-size: 20px; font-weight: 700; margin-top: 2px; }
+
+.recibo-body { padding: 22px 24px 4px; font-family: Helvetica, Arial, sans-serif; }
+
+.recibo-eyebrow {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #123c43;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid #123c43;
+}
+
+.recibo-section { margin-bottom: 22px; }
+.recibo-grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
+.recibo-line { font-size: 13px; line-height: 1.7; color: #16232a; }
+.recibo-line-muted { color: #6b8087; }
+
+.recibo-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.recibo-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: #6b8087;
+  padding: 0 8px 8px;
+  border-bottom: 1.5px solid #123c43;
+}
+.recibo-table td { padding: 9px 8px; border-bottom: 1px solid #dce6e8; }
+.recibo-table th:last-child, .recibo-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.recibo-table tbody tr:last-child td { border-bottom: none; }
+
+.recibo-total-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 10px;
+  padding-top: 12px;
+  margin-top: 2px;
+  border-top: 2px solid #123c43;
+}
+.recibo-total-row span {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  color: #6b8087;
+}
+.recibo-total-row strong { font-family: Georgia, serif; font-size: 21px; color: #0b7a53; }
+
+.recibo-badge-pago {
+  display: inline-block;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  color: #0b7a53;
+  background: #e3f6ee;
+  padding: 3px 9px;
+  border-radius: 99px;
+}
+
 .recibo-obs {
-  background: #f7f7f7;
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
+  background: #f4f8f8;
+  border-left: 3px solid #10b981;
+  border-radius: 0 4px 4px 0;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  color: #33474c;
+  white-space: pre-line;
 }
+
+.recibo-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #dce6e8;
+  background: #fafcfc;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  color: #7c9096;
+}
+.recibo-footer-mark { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
+.recibo-footer strong { color: #123c43; }
