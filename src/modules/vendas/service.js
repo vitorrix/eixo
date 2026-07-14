@@ -39,3 +39,14 @@ export async function createVenda(data) {
 export async function patchVenda(id, fields) {
   return updateDoc(doc(db, COL, id), { ...fields })
 }
+
+// Desfaz a entrada de estoque se a venda avulsa tinha descontado 1 na criação —
+// venda vinda de pedido nunca mexeu em estoque, então não devolve nada.
+export async function deleteVenda(venda) {
+  const batch = writeBatch(db)
+  batch.delete(doc(db, COL, venda.id))
+  if (!venda.pedidoId && venda.produtoId) {
+    batch.update(doc(db, 'produtos', venda.produtoId), { estoqueAtual: increment(1) })
+  }
+  return batch.commit()
+}

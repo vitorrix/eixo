@@ -1782,6 +1782,8 @@ html, body {
 .badge-pendente      { background: #fef3c7; color: #92400e; }
 .badge-comprado      { background: #dbeafe; color: #1e40af; }
 .badge-recebido      { background: #d1fae5; color: #065f46; }
+.badge-orcamento     { background: #ede9fe; color: #5b21b6; }
+.badge-realizada     { background: #052e16; color: #86efac; }
 
 /* ── Inline status select (looks like a badge) ────── */
 .status-inline-sel {
@@ -1811,6 +1813,8 @@ html, body {
 .status-inline-sel.badge-pendente    { background-color: #fef3c7; color: #92400e; }
 .status-inline-sel.badge-comprado    { background-color: #dbeafe; color: #1e40af; }
 .status-inline-sel.badge-recebido    { background-color: #d1fae5; color: #065f46; }
+.status-inline-sel.badge-orcamento   { background-color: #ede9fe; color: #5b21b6; }
+.status-inline-sel.badge-realizada   { background-color: #052e16; color: #86efac; }
 
 /* ── Recibo toggle ────────────────────────────────── */
 .recibo-label {

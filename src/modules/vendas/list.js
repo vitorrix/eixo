@@ -1,10 +1,11 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
-import { openModal } from '../../shared/components/Modal.js'
+import { openModal, openConfirm } from '../../shared/components/Modal.js'
+import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { createVenda, patchVenda } from './service.js'
+import { createVenda, patchVenda, deleteVenda } from './service.js'
 
 const ENTREGA_META = {
   aguardando: { label: 'Aguardando',    cls: 'badge-negociando'  },
@@ -31,6 +32,7 @@ function monthKey(ts) {
 export function renderVendasList(container, vendas, { produtosCatalogo, clientes } = {}) {
   const canCreate = can('vendas', 'create')
   const canEdit   = can('vendas', 'edit')
+  const canDelete = can('vendas', 'delete')
 
   let currentMonth = nowMonth()
 
@@ -112,6 +114,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         el('th', {}, 'Pgto'),
         el('th', {}, 'Entrega'),
         el('th', {}, 'Recibo'),
+        ...(canDelete ? [el('th', { class: 'col-actions' }, '')] : []),
       )
     ),
     tbody
@@ -199,6 +202,11 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       const dateStr = v.criadoEm?.toDate ? shortDate(v.criadoEm.toDate().toISOString().slice(0,10)) : '—'
       const pagLabel = PAG_LABEL[v.formaPagamento] || v.formaPagamento || '—'
 
+      const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
+        canEdit: false, canDelete,
+        onDelete: () => confirmDelete(v),
+      }))
+
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
         el('td', { class: 'td-name' }, v.cliente || '—'),
@@ -207,9 +215,23 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         el('td', {}, pagLabel),
         el('td', {}, entregaSel),
         el('td', {}, reciboLabel),
+        ...(canDelete ? [actionsCell] : []),
       )
       tbody.appendChild(row)
     }
+  }
+
+  function confirmDelete(v) {
+    openConfirm({
+      title:        'Excluir venda',
+      message:      `Excluir venda de "${v.produto}"${v.cliente ? ` para ${v.cliente}` : ''}?`,
+      confirmLabel: 'Excluir',
+      danger:       true,
+      onConfirm:    async () => {
+        try { await deleteVenda(v); toastSuccess('Venda excluída.') }
+        catch { toastError('Erro ao excluir.') }
+      },
+    })
   }
 
   function abrirNovaVendaModal() {

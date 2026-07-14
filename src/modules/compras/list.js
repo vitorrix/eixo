@@ -8,12 +8,17 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { createCompra, patchCompra, atualizarStatusCompra, updateCompra, deleteCompra } from './service.js'
 
 const STATUS_META = {
-  pendente:  { label: 'Pendente',  cls: 'badge-pendente'  },
-  comprado:  { label: 'Comprado',  cls: 'badge-comprado'  },
-  recebido:  { label: 'Recebido',  cls: 'badge-recebido'  },
+  pendente:        { label: 'Pendente',         cls: 'badge-pendente'  },
+  comprado:        { label: 'Comprado',         cls: 'badge-comprado'  },
+  recebido:        { label: 'Recebido',         cls: 'badge-recebido'  },
+  orcamento:       { label: 'Orçamento',        cls: 'badge-orcamento' },
+  compra_realizada:{ label: 'Compra Realizada', cls: 'badge-realizada' },
 }
 
-const STATUS_ORDER = ['pendente', 'comprado', 'recebido']
+// "Orçamento" e "Compra Realizada" são pra aparelho recebido em troca (forma de
+// pagamento): entra em estoque como orçamento (valor ainda não definido pra
+// revenda); quando anunciado/pronto pra vender, vira "Compra Realizada".
+const STATUS_ORDER = ['pendente', 'comprado', 'recebido', 'orcamento', 'compra_realizada']
 
 function nowMonth() {
   const d = new Date()
@@ -164,7 +169,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         try {
           await atualizarStatusCompra(c, statusSel.value)
           toastSuccess(
-            statusSel.value === 'recebido' && !c.pedidoId && c.produtoId
+            ['recebido', 'orcamento'].includes(statusSel.value) && !c.pedidoId && c.produtoId
               ? 'Status atualizado. Estoque atualizado.'
               : 'Status atualizado.'
           )
