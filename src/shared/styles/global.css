@@ -1946,6 +1946,9 @@ html, body {
 .roteiro-retirada .roteiro-section-title { color: #ea580c; }
 .roteiro-entrega  .roteiro-section-title { color: var(--color-primary); }
 .roteiro-fields { display: flex; flex-direction: column; gap: 10px; }
+/* Nome do produto pode ficar longo (specs entre parênteses) — trunca com "..."
+   e mostra o nome inteiro ao passar o mouse (via atributo title). */
+.roteiro-item-inp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .roteiro-entrega-unica { margin-top: 4px; border: 2px solid #10b98133; }
 .roteiro-preview-wrap  { margin-top: 16px; }
 .roteiro-preview-label { font-size: 11px; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }

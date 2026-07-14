@@ -1,4 +1,4 @@
-import { collection, addDoc, onSnapshot, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, onSnapshot, serverTimestamp, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate } from '../../shared/utils/formatters.js'
@@ -651,7 +651,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       renderBody: (body, closeModal) => {
         // Suporta formato novo {retiradas, entrega} e legado (array de paradas)
         const saved = pedido.logistica?.roteiro
-        let retiradas, entrega
+        let retiradas, entrega, isFresh = false
 
         if (saved && !Array.isArray(saved) && saved.retiradas) {
           retiradas = saved.retiradas.map(r => ({ ...r }))
@@ -660,6 +660,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           retiradas = saved.map(p => ({ item: p.retirada?.item || '', loja: p.retirada?.loja || '' }))
           entrega   = { endereco: saved[0]?.entrega?.endereco || '', cliente: pedido.cliente || '' }
         } else {
+          isFresh = true
           retiradas = (pedido.produtos || [{}]).map(pr => ({
             item: [pr.nome, pr.cor].filter(Boolean).join(' '),
             loja: '',
@@ -682,10 +683,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         const pedidoData = pedido.dataContato || pedido.data || ''
         function updatePreview() { previewEl.value = formatRoteiro(getRoteiro(), pedidoData) }
 
-        function inp(val, onInput, placeholder) {
-          const i = el('input', { type: 'text', placeholder })
+        function inp(val, onInput, placeholder, { title } = {}) {
+          const i = el('input', { type: 'text', placeholder, class: title ? 'roteiro-item-inp' : '', title: title || val || '' })
           i.value = val || ''
-          i.addEventListener('input', () => { onInput(i.value); updatePreview() })
+          i.addEventListener('input', () => { onInput(i.value); if (!title) i.title = i.value; updatePreview() })
           return i
         }
 
@@ -697,14 +698,19 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
             onSelect:     v => { onInput(v); updatePreview() },
           })
           ac.el.style.width = '100%'
-          return ac.el
+          return ac
         }
 
+        let lojaAcs = []
         function renderRetiradas() {
           retiradasWrap.replaceChildren()
+          lojaAcs = []
           retiradas.forEach((r, i) => {
             const removeBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline roteiro-remove-btn' }, '×')
             removeBtn.addEventListener('click', () => { retiradas.splice(i, 1); renderRetiradas(); updatePreview() })
+
+            const lojaAc = lojaField(r.loja, v => { retiradas[i].loja = v })
+            lojaAcs[i] = lojaAc
 
             retiradasWrap.appendChild(
               el('div', { class: 'roteiro-parada' },
@@ -716,9 +722,9 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
                   el('div', { class: 'roteiro-section-title' }, '↑ Retirada'),
                   el('div', { class: 'roteiro-fields' },
                     el('div', { class: 'field' }, el('label', {}, 'Item'),
-                      inp(r.item, v => { retiradas[i].item = v }, 'Produto a retirar')),
+                      inp(r.item, v => { retiradas[i].item = v }, 'Produto a retirar', { title: r.item })),
                     el('div', { class: 'field' }, el('label', {}, 'Loja / Fornecedor'),
-                      lojaField(r.loja, v => { retiradas[i].loja = v })),
+                      lojaAc.el),
                   )
                 )
               )
@@ -811,6 +817,31 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
             el('div', { style: 'display:flex;gap:8px' }, waBtn, saveBtn),
           )
         )
+
+        // Roteiro recém-gerado (ainda não editado/salvo): já sabemos o fornecedor
+        // de cada item pela Compra feita na confirmação de pagamento — preenche
+        // "Loja/Fornecedor" sozinho, sem precisar digitar de novo.
+        if (isFresh) {
+          getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
+            .then(snap => {
+              const comprasPedido = snap.docs.map(d => d.data())
+              let mudou = false
+              retiradas.forEach((r, i) => {
+                if (r.loja) return
+                const produtoOriginal = pedido.produtos?.[i]
+                if (!produtoOriginal) return
+                const label = produtoLabel(produtoOriginal)
+                const compra = comprasPedido.find(c => c.produto === label)
+                if (compra?.fornecedor) {
+                  retiradas[i].loja = compra.fornecedor
+                  lojaAcs[i]?.setValue(compra.fornecedor)
+                  mudou = true
+                }
+              })
+              if (mudou) updatePreview()
+            })
+            .catch(err => console.error('Erro ao buscar fornecedor da compra:', err))
+        }
       },
     })
   }
