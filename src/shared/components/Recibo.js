@@ -172,16 +172,18 @@ function situacaoCell(texto) {
 
 export function renderReciboPreview(container, dados) {
   const linha = (txt, muted) => el('div', { class: muted ? 'recibo-line recibo-line-muted' : 'recibo-line' }, txt)
-  const markSrc = `${import.meta.env.BASE_URL}apple-touch-icon.png`
+  const logoSrc = `${import.meta.env.BASE_URL}logo-baruk.png` // empresa que usa o Eixo — vai no cabeçalho
+  const markSrc = `${import.meta.env.BASE_URL}apple-touch-icon.png` // selo do Eixo — só no rodapé
 
   const masthead = el('div', { class: 'recibo-masthead' },
-    el('img', { src: markSrc, alt: '', class: 'recibo-mark' }),
-    el('div', { class: 'recibo-masthead-empresa' },
-      el('div', { class: 'recibo-empresa-nome' }, dados.empresa.fantasia || dados.empresa.razao),
-      ...dados.empresa.enderecoLinhas.map(l => el('div', { class: 'recibo-empresa-linha' }, l)),
-      dados.empresa.tel1 ? el('div', { class: 'recibo-empresa-linha' }, `${dados.empresa.tel1} (whatsapp)`) : null,
-      dados.empresa.tel2 ? el('div', { class: 'recibo-empresa-linha' }, dados.empresa.tel2) : null,
-      dados.empresa.cnpj ? el('div', { class: 'recibo-empresa-linha' }, `CNPJ ${dados.empresa.cnpj}`) : null,
+    el('div', { class: 'recibo-masthead-brand' },
+      el('img', { src: logoSrc, alt: dados.empresa.fantasia || 'Baruk', class: 'recibo-logo' }),
+      el('div', { class: 'recibo-masthead-info' },
+        ...dados.empresa.enderecoLinhas.map(l => el('div', { class: 'recibo-empresa-linha' }, l)),
+        dados.empresa.tel1 ? el('div', { class: 'recibo-empresa-linha' }, `${dados.empresa.tel1} (whatsapp)`) : null,
+        dados.empresa.tel2 ? el('div', { class: 'recibo-empresa-linha' }, dados.empresa.tel2) : null,
+        dados.empresa.cnpj ? el('div', { class: 'recibo-empresa-linha' }, `CNPJ ${dados.empresa.cnpj}`) : null,
+      ),
     ),
     el('div', { class: 'recibo-masthead-numero' },
       el('div', { class: 'recibo-numero-label' }, 'Recibo'),
@@ -214,6 +216,13 @@ export function renderReciboPreview(container, dados) {
       el('td', {}, String(i + 1)), el('td', {}, it.descricao), el('td', {}, brl(it.precoUnit)),
       el('td', {}, String(it.quant)), el('td', {}, brl(it.desconto)), el('td', {}, brl(it.total)),
     ))),
+    el('tfoot', {}, el('tr', {},
+      el('td', { colspan: '2' }, 'Total'),
+      el('td', {}, ''),
+      el('td', {}, String(dados.itens.reduce((s, i) => s + i.quant, 0))),
+      el('td', {}, brl(dados.itens.reduce((s, i) => s + i.desconto, 0))),
+      el('td', {}, brl(dados.totalValor)),
+    )),
   )
 
   const tabelaFinanceiro = el('table', { class: 'recibo-table' },
@@ -232,7 +241,6 @@ export function renderReciboPreview(container, dados) {
     el('div', { class: 'recibo-section' },
       el('p', { class: 'recibo-eyebrow' }, 'Itens'),
       tabelaItens,
-      el('div', { class: 'recibo-total-row' }, el('span', {}, 'Total'), el('strong', {}, brl(dados.totalValor))),
     ),
     el('div', { class: 'recibo-section' },
       el('p', { class: 'recibo-eyebrow' }, 'Pagamento'),

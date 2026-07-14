@@ -7,18 +7,19 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { fileURLToPath } from 'url'
 
 const COL = 'recibosFila'
-const LOGO_PATH = fileURLToPath(new URL('../../public/apple-touch-icon.png', import.meta.url))
+// Logo da Baruk (empresa que usa o Eixo) no cabeçalho — selo do Eixo (compass)
+// só no rodapé, creditando a plataforma. Mesma regra do preview no app.
+const BARUK_LOGO_PATH = fileURLToPath(new URL('../../public/logo-baruk.png', import.meta.url))
+const EIXO_MARK_PATH  = fileURLToPath(new URL('../../public/apple-touch-icon.png', import.meta.url))
+const BARUK_LOGO_RATIO = 370 / 132 // largura/altura do arquivo public/logo-baruk.png
 
-// Mesma paleta do preview em Eixo (shared/components/Recibo.js) — Verde
-// Petróleo pro masthead/rodapé, Esmeralda (escurecido pra contraste em texto)
-// pro total e "já pago".
-const PETROL       = '#123c43'
-const PETROL_LIGHT = '#a9c2c6'
-const EMERALD      = '#6fb8ae'
-const EMERALD_TXT  = '#0b7a53'
-const INK          = '#16232a'
-const MUTED        = '#6b8087'
-const LINE         = '#dce6e8'
+// Mesma paleta clara do preview em Eixo (shared/components/Recibo.js).
+const PETROL     = '#123c43'
+const EMERALD_TXT = '#0b7a53'
+const INK        = '#1a1a1a'
+const MUTED      = '#6b7280'
+const LINE       = '#e2e6e7'
+const TABLE_BG   = '#f3f5f5'
 
 const PAGE_W    = 595.28 // A4 em pt
 const MARGIN    = 40
@@ -68,13 +69,13 @@ async function processarRecibo(sock, doc) {
 
 const brl = v => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
-// Escreve um "eyebrow" (rótulo pequeno maiúsculo + régua embaixo) e devolve o y
-// onde o conteúdo da seção deve começar.
+// Escreve um "eyebrow" (rótulo pequeno maiúsculo + régua fina embaixo) e
+// devolve o y onde o conteúdo da seção deve começar.
 function eyebrow(doc, texto, x, y, width) {
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor(PETROL)
     .text(texto.toUpperCase(), x, y, { width, characterSpacing: 0.6 })
   const ruleY = doc.y + 3
-  doc.moveTo(x, ruleY).lineTo(x + width, ruleY).lineWidth(1.2).strokeColor(PETROL).stroke()
+  doc.moveTo(x, ruleY).lineTo(x + width, ruleY).lineWidth(0.75).strokeColor(LINE).stroke()
   return ruleY + 9
 }
 
@@ -86,33 +87,34 @@ function gerarPdf(dados) {
     doc.on('end', () => resolve(Buffer.concat(chunks)))
     doc.on('error', reject)
 
-    // ── Masthead (Verde Petróleo, sangria total) ──────────────────────────
-    doc.rect(0, 0, PAGE_W, 96).fill(PETROL)
-    try { doc.image(LOGO_PATH, MARGIN, 25, { width: 46, height: 46 }) } catch { /* segue sem o selo se o arquivo não existir */ }
+    // ── Masthead (branco, logo de verdade da Baruk) ───────────────────────
+    const logoH = 32, logoW = logoH * BARUK_LOGO_RATIO
+    try { doc.image(BARUK_LOGO_PATH, MARGIN, 26, { height: logoH }) } catch { /* segue sem o logo se o arquivo não existir */ }
 
-    const textX = MARGIN + 46 + 14
-    const textW = 260
-    doc.font('Times-Bold').fontSize(14).fillColor('#ffffff')
-      .text(dados.empresa.fantasia || dados.empresa.razao || '', textX, 22, { width: textW })
-    doc.font('Helvetica').fontSize(8.5).fillColor(PETROL_LIGHT)
-    let ly = doc.y + 2
+    const textX = MARGIN
+    const textW = 300
+    doc.font('Helvetica').fontSize(8.5).fillColor(MUTED)
+    let ly = 26 + logoH + 10
     ;[
       ...dados.empresa.enderecoLinhas,
       dados.empresa.tel1 ? `${dados.empresa.tel1} (whatsapp)` : null,
       dados.empresa.tel2,
       dados.empresa.cnpj ? `CNPJ ${dados.empresa.cnpj}` : null,
-    ].filter(Boolean).forEach(l => { doc.text(l, textX, ly, { width: textW }); ly = doc.y })
+    ].filter(Boolean).forEach(l => { doc.text(l, textX, ly, { width: textW }); ly = doc.y + 1 })
 
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(EMERALD)
-      .text('RECIBO', MARGIN, 30, { width: CONTENT_W, align: 'right', characterSpacing: 1 })
-    doc.font('Times-Bold').fontSize(18).fillColor('#ffffff')
-      .text(`Nº ${dados.numero}`, MARGIN, 44, { width: CONTENT_W, align: 'right' })
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#8a9297')
+      .text('RECIBO', MARGIN, 28, { width: CONTENT_W, align: 'right', characterSpacing: 1 })
+    doc.font('Helvetica-Bold').fontSize(19).fillColor(PETROL)
+      .text(`Nº ${dados.numero}`, MARGIN, 42, { width: CONTENT_W, align: 'right' })
+
+    const mastheadBottom = Math.max(ly, 26 + logoH) + 14
+    doc.moveTo(MARGIN, mastheadBottom).lineTo(MARGIN + CONTENT_W, mastheadBottom).lineWidth(2).strokeColor(PETROL).stroke()
 
     // ── Corpo ──────────────────────────────────────────────────────────────
     doc.fillColor(INK)
     const col1X = MARGIN, col1W = 300
     const col2X = MARGIN + col1W + 20, col2W = CONTENT_W - col1W - 20
-    let yTop = 128
+    let yTop = mastheadBottom + 20
 
     const y1 = eyebrow(doc, 'Faturado para', col1X, yTop, col1W)
     doc.font('Helvetica').fontSize(10).fillColor(INK).text(dados.cliente.nome, col1X, y1, { width: col1W })
@@ -129,7 +131,7 @@ function gerarPdf(dados) {
 
     let y = Math.max(yAfterCol1, doc.y) + 22
 
-    // ── Itens ──────────────────────────────────────────────────────────────
+    // ── Itens (formato de tabela, cabeçalho e total com fundo leve) ────────
     y = eyebrow(doc, 'Itens', MARGIN, y, CONTENT_W)
     const cols = [
       { label: '#',            x: MARGIN,       w: 20,  align: 'left'  },
@@ -139,11 +141,10 @@ function gerarPdf(dados) {
       { label: 'Desconto',     x: MARGIN + 376, w: 65,  align: 'right' },
       { label: 'Total',        x: MARGIN + 445, w: 70,  align: 'right' },
     ]
+    doc.rect(MARGIN, y, CONTENT_W, 20).fill(TABLE_BG)
     doc.font('Helvetica-Bold').fontSize(8).fillColor(MUTED)
-    cols.forEach(c => doc.text(c.label.toUpperCase(), c.x, y, { width: c.w, align: c.align, characterSpacing: 0.4 }))
-    y = doc.y + 5
-    doc.moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).lineWidth(1.2).strokeColor(PETROL).stroke()
-    y += 8
+    cols.forEach(c => doc.text(c.label.toUpperCase(), c.x, y + 6, { width: c.w, align: c.align, characterSpacing: 0.4 }))
+    y += 24
 
     doc.font('Helvetica').fontSize(9.5).fillColor(INK)
     dados.itens.forEach((it, i) => {
@@ -154,12 +155,15 @@ function gerarPdf(dados) {
       doc.moveTo(MARGIN, y - 3).lineTo(MARGIN + CONTENT_W, y - 3).lineWidth(0.5).strokeColor(LINE).stroke()
     })
 
-    y += 4
-    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(MUTED)
-      .text('TOTAL', MARGIN, y, { width: CONTENT_W - 90, align: 'right', characterSpacing: 0.5 })
-    doc.font('Times-Bold').fontSize(15).fillColor(EMERALD_TXT)
-      .text(brl(dados.totalValor), MARGIN, y - 3, { width: CONTENT_W, align: 'right' })
-    y = doc.y + 22
+    const totalQtd      = dados.itens.reduce((s, i) => s + i.quant, 0)
+    const totalDesconto = dados.itens.reduce((s, i) => s + i.desconto, 0)
+    doc.rect(MARGIN, y, CONTENT_W, 22).fill(TABLE_BG)
+    doc.font('Helvetica-Bold').fontSize(9)
+    doc.fillColor('#374151').text('TOTAL', cols[1].x, y + 6, { width: cols[1].w, align: 'left', characterSpacing: 0.4 })
+    doc.fillColor('#374151').text(String(totalQtd), cols[3].x, y + 6, { width: cols[3].w, align: 'right' })
+    doc.fillColor('#374151').text(brl(totalDesconto), cols[4].x, y + 6, { width: cols[4].w, align: 'right' })
+    doc.fillColor(EMERALD_TXT).fontSize(10.5).text(brl(dados.totalValor), cols[5].x, y + 5, { width: cols[5].w, align: 'right' })
+    y += 42
 
     // ── Pagamento ──────────────────────────────────────────────────────────
     y = eyebrow(doc, 'Pagamento', MARGIN, y, CONTENT_W)
@@ -187,7 +191,7 @@ function gerarPdf(dados) {
     // ── Rodapé ────────────────────────────────────────────────────────────
     const footerY = 792 - 40 // A4 = 841.89pt de altura; deixa 40pt de respiro embaixo
     doc.moveTo(MARGIN, footerY).lineTo(MARGIN + CONTENT_W, footerY).lineWidth(0.5).strokeColor(LINE).stroke()
-    try { doc.image(LOGO_PATH, MARGIN, footerY + 10, { width: 14, height: 14 }) } catch { /* ok sem selo */ }
+    try { doc.image(EIXO_MARK_PATH, MARGIN, footerY + 10, { width: 14, height: 14 }) } catch { /* ok sem selo */ }
     doc.font('Helvetica').fontSize(8.5).fillColor(MUTED)
       .text('Emitido pelo Eixo — uma plataforma Baruk Technology & Consulting.', MARGIN + 20, footerY + 12, { width: CONTENT_W - 20 })
 

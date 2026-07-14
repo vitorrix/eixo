@@ -2588,55 +2588,46 @@ html, body {
 .btn-link:hover { text-decoration: underline; }
 
 /* ── Recibo (documento de venda) ──────────────────────────────────────
-   Registro impresso: masthead em Verde Petróleo + serifada pra
-   identidade, corpo em grotesca pra dados tabulares — a mesma dupla
-   Times/Helvetica que o pdfkit consegue reproduzir no PDF de verdade
-   enviado pelo bot, então o preview aqui e o PDF do cliente combinam. */
+   Documento claro e "de tabela": cabeçalho branco com o logo de verdade
+   da Baruk (a empresa que usa o Eixo), tudo em grotesca (Helvetica),
+   tabelas com fundo leve pro cabeçalho e pro total — igual ao modelo de
+   recibo que já era usado antes. O selo do Eixo fica só no rodapé,
+   creditando a plataforma. Mesma fonte e cores que o pdfkit reproduz no
+   PDF de verdade (reciboWatcher.js), pra preview e PDF baterem. */
 .recibo-doc {
   background: #fff;
-  color: #16232a;
-  font-family: Georgia, 'Times New Roman', Times, serif;
-  border: 1px solid #dce6e8;
+  color: #1a1a1a;
+  font-family: Helvetica, Arial, sans-serif;
+  border: 1px solid #e2e6e7;
   border-radius: 10px;
   overflow: hidden;
 }
 
 .recibo-masthead {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 20px 24px;
-  background: #123c43;
-  color: #fff;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 2px solid #123c43;
 }
-.recibo-mark { width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0; }
-.recibo-masthead-empresa { flex: 1; min-width: 0; }
-.recibo-empresa-nome {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: .4px;
-}
-.recibo-empresa-linha {
-  font-family: Helvetica, Arial, sans-serif;
-  font-size: 11px;
-  color: #a9c2c6;
-  line-height: 1.55;
-}
-.recibo-masthead-numero { text-align: right; flex-shrink: 0; }
+.recibo-masthead-brand { display: flex; flex-direction: column; gap: 10px; }
+.recibo-logo { height: 34px; width: auto; display: block; }
+.recibo-masthead-info { }
+.recibo-empresa-linha { font-size: 11px; color: #6b7280; line-height: 1.6; }
+.recibo-masthead-numero { text-align: right; flex-shrink: 0; white-space: nowrap; }
 .recibo-numero-label {
-  font-family: Helvetica, Arial, sans-serif;
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #6fb8ae;
+  color: #8a9297;
 }
-.recibo-numero-valor { font-size: 20px; font-weight: 700; margin-top: 2px; }
+.recibo-numero-valor { font-size: 22px; font-weight: 700; color: #123c43; margin-top: 2px; }
 
-.recibo-body { padding: 22px 24px 4px; font-family: Helvetica, Arial, sans-serif; }
+.recibo-body { padding: 22px 24px 4px; }
 
 .recibo-eyebrow {
-  font-family: Helvetica, Arial, sans-serif;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1.1px;
@@ -2644,51 +2635,40 @@ html, body {
   color: #123c43;
   margin: 0 0 8px;
   padding-bottom: 6px;
-  border-bottom: 1.5px solid #123c43;
+  border-bottom: 1px solid #e2e6e7;
 }
 
 .recibo-section { margin-bottom: 22px; }
 .recibo-grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
-.recibo-line { font-size: 13px; line-height: 1.7; color: #16232a; }
-.recibo-line-muted { color: #6b8087; }
+.recibo-line { font-size: 13px; line-height: 1.7; color: #1a1a1a; }
+.recibo-line-muted { color: #6b7280; }
 
 .recibo-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .recibo-table th {
   text-align: left;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: .5px;
+  letter-spacing: .4px;
   text-transform: uppercase;
-  color: #6b8087;
-  padding: 0 8px 8px;
-  border-bottom: 1.5px solid #123c43;
+  color: #6b7280;
+  background: #f3f5f5;
+  padding: 8px;
 }
-.recibo-table td { padding: 9px 8px; border-bottom: 1px solid #dce6e8; }
+.recibo-table td { padding: 9px 8px; border-bottom: 1px solid #edf0f0; }
 .recibo-table th:last-child, .recibo-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-.recibo-table tbody tr:last-child td { border-bottom: none; }
-
-.recibo-total-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: baseline;
-  gap: 10px;
-  padding-top: 12px;
-  margin-top: 2px;
-  border-top: 2px solid #123c43;
-}
-.recibo-total-row span {
-  font-family: Helvetica, Arial, sans-serif;
-  font-size: 10.5px;
+.recibo-table tbody tr:last-child td { border-bottom: 1px solid #e2e6e7; }
+.recibo-table tfoot td {
+  padding: 9px 8px;
   font-weight: 700;
-  letter-spacing: .7px;
+  background: #f3f5f5;
   text-transform: uppercase;
-  color: #6b8087;
+  font-size: 11px;
+  color: #374151;
 }
-.recibo-total-row strong { font-family: Georgia, serif; font-size: 21px; color: #0b7a53; }
+.recibo-table tfoot td:last-child { color: #0b7a53; font-size: 13.5px; }
 
 .recibo-badge-pago {
   display: inline-block;
-  font-family: Helvetica, Arial, sans-serif;
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: .3px;
@@ -2699,14 +2679,13 @@ html, body {
 }
 
 .recibo-obs {
-  background: #f4f8f8;
+  background: #f9fafa;
   border-left: 3px solid #10b981;
   border-radius: 0 4px 4px 0;
   padding: 12px 16px;
   margin-bottom: 20px;
-  font-family: Helvetica, Arial, sans-serif;
   font-size: 12px;
-  color: #33474c;
+  color: #4b5563;
   white-space: pre-line;
 }
 
@@ -2715,15 +2694,14 @@ html, body {
   align-items: center;
   gap: 10px;
   padding: 14px 24px;
-  border-top: 1px solid #dce6e8;
+  border-top: 1px solid #e2e6e7;
   background: #fafcfc;
-  font-family: Helvetica, Arial, sans-serif;
   font-size: 11px;
   color: #7c9096;
 }
 .recibo-footer-mark { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; }
 
-.recibo-doc, .recibo-masthead, .recibo-footer, .recibo-badge-pago, .recibo-obs, .recibo-table th {
+.recibo-doc, .recibo-table th, .recibo-table tfoot td, .recibo-badge-pago, .recibo-obs, .recibo-footer {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
