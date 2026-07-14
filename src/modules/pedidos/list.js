@@ -1,7 +1,7 @@
 import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
-import { brl, shortDate } from '../../shared/utils/formatters.js'
+import { brl, shortDate, maskMoeda, moedaParaNumero } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
@@ -404,7 +404,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       title: 'Confirmar Pagamento',
       size:  'lg',
       renderBody: (body, closeModal) => {
-        const itens = pedido.produtos.map(() => ({ fornecedor: '', custo: '' }))
+        const itens = pedido.produtos.map(() => ({ fornecedor: '', custo: '', observacoes: '' }))
 
         const itemBlocks = pedido.produtos.map((p, i) => {
           const fornAc = createAutocomplete({
@@ -415,8 +415,15 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           fornAc.el.style.width = '100%'
           fornAc.el.addEventListener('input', () => { itens[i].fornecedor = fornAc.getValue() })
 
-          const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
-          custoInp.addEventListener('input', () => { itens[i].custo = custoInp.value })
+          const custoInp = el('input', { type: 'text', inputmode: 'numeric', placeholder: 'R$ 0' })
+          custoInp.addEventListener('input', () => {
+            custoInp.value = maskMoeda(custoInp.value)
+            itens[i].custo = moedaParaNumero(custoInp.value)
+          })
+
+          const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
+            placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente)' })
+          aparelhoInp.addEventListener('input', () => { itens[i].observacoes = aparelhoInp.value })
 
           return el('div', { class: 'form-produto-block' },
             el('div', { class: 'form-produto-header' },
@@ -426,6 +433,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
             el('div', { class: 'form-grid' },
               el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornAc.el),
               el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+              el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
             )
           )
         })
@@ -463,7 +471,9 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     const numero = await garantirNumeroRecibo(pedido, patchPedido)
     const cliente = clientes.find(c => c.name === pedido.cliente)
     const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
-    return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome })
+    const comprasSnap = await getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
+    const comprasPedido = comprasSnap.docs.map(d => d.data())
+    return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome, comprasPedido })
   }
 
   async function enviarReciboWhatsapp(pedido, dados) {

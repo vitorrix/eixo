@@ -74,14 +74,15 @@ export async function confirmarPagamento(pedido, itensCompra) {
     const label = produtoLabel(p)
 
     batch.set(doc(collection(db, 'compras')), {
-      pedidoId:   pedido.id,
-      cliente:    pedido.cliente,
-      produto:    label,
-      tipo:       p.tipo || 'produto',
-      fornecedor: (item.fornecedor || '').trim(),
-      custo:      parseFloat(item.custo) || 0,
-      status:     'comprado',
-      criadoEm:   serverTimestamp(),
+      pedidoId:    pedido.id,
+      cliente:     pedido.cliente,
+      produto:     label,
+      tipo:        p.tipo || 'produto',
+      fornecedor:  (item.fornecedor || '').trim(),
+      custo:       parseFloat(item.custo) || 0,
+      status:      'comprado',
+      observacoes: (item.observacoes || '').trim(),
+      criadoEm:    serverTimestamp(),
     })
 
     batch.set(doc(collection(db, 'vendas')), {

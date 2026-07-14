@@ -101,9 +101,29 @@ function montarItensPedido(pedido) {
   return itens
 }
 
+// Junta a observação livre do pedido com os "dados do aparelho" de cada Compra
+// linkada (preenchidos na confirmação de pagamento ou depois, em Editar Compra)
+// — mesmo texto que aparece no recibo da venda avulsa via montarDadosReciboVendaAvulsa.
+function montarObservacoesPedido(pedido, comprasPedido) {
+  const partes = pedido.observacoes ? [pedido.observacoes] : []
+  const produtos = pedido.produtos || []
+  const itensComAparelho = produtos
+    .map(p => ({ label: produtoLabel(p), compra: (comprasPedido || []).find(c => c.produto === produtoLabel(p)) }))
+    .filter(x => x.compra?.observacoes)
+
+  if (itensComAparelho.length === 1 && produtos.length === 1) {
+    partes.push(itensComAparelho[0].compra.observacoes)
+  } else {
+    itensComAparelho.forEach(({ label, compra }) => partes.push(`${label}:\n${compra.observacoes}`))
+  }
+  return partes.join('\n\n')
+}
+
 // Monta o objeto de dados do recibo de um Pedido — mesma estrutura usada no
 // preview (HTML) e gravada na fila (recibosFila) pro bot montar o PDF de verdade.
-export function montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome }) {
+// comprasPedido: Compras vinculadas a esse pedido (pedidoId) — usadas só pra
+// puxar os "dados do aparelho" de cada item pro campo de observações.
+export function montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome, comprasPedido = [] }) {
   const itens = montarItensPedido(pedido)
   const totalValor = itens.reduce((s, i) => s + i.total, 0)
   const pago = PAID_STATUSES.has(pedido.status)
@@ -125,7 +145,7 @@ export function montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNo
       formaPagamento: (pedido.formasPagamento || []).map(f => PAG_TEXTO[f] || f).join(' + ') || '—',
       situacao:       pago ? 'Já pago' : 'Pendente',
     }],
-    observacoes: pedido.observacoes || '',
+    observacoes: montarObservacoesPedido(pedido, comprasPedido),
   }
 }
 

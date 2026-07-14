@@ -45,6 +45,18 @@ export function brl(v) {
   })
 }
 
+// Máscara pra campo de custo/valor digitado — número contínuo (1234) vira
+// "R$ 1.234" enquanto digita, sem casas decimais (mesmo padrão do brl()).
+export function maskMoeda(v) {
+  const digits = rawDigits(v || '')
+  return digits ? brl(parseInt(digits, 10)) : ''
+}
+
+export function moedaParaNumero(v) {
+  const digits = rawDigits(v || '')
+  return digits ? parseInt(digits, 10) : 0
+}
+
 export function shortDate(iso) {
   if (!iso || iso.length < 10) return iso || '—'
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
