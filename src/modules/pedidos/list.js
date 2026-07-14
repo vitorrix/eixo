@@ -1,8 +1,8 @@
-import { collection, addDoc, onSnapshot, serverTimestamp, query, where, getDocs } from 'firebase/firestore'
+import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate } from '../../shared/utils/formatters.js'
-import { can, getCurrentProfile } from '../../auth/session.js'
+import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
@@ -11,8 +11,10 @@ import {
 } from './service.js'
 import { renderPedidoForm } from './form.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
-import { montarDadosRecibo, renderReciboPreview } from './recibo.js'
-import { proximoNumeroRecibo } from '../configuracoes/service.js'
+import {
+  montarDadosRecibo, renderReciboPreview, garantirNumeroRecibo,
+  toWhatsappNumber, enviarReciboFila, FILA_STATUS_LABEL,
+} from '../../shared/components/Recibo.js'
 
 // ── Status ────────────────────────────────────────────────────────────────────
 const STATUS_META = {
@@ -457,22 +459,8 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   }
 
   // ── Recibo ────────────────────────────────────────────────────────────────
-  function toWhatsappNumber(phoneDigits) {
-    const d = (phoneDigits || '').replace(/\D/g, '')
-    if (!d) return ''
-    return d.startsWith('55') && d.length > 11 ? d : `55${d}`
-  }
-
-  async function garantirNumeroRecibo(pedido) {
-    if (pedido.numeroRecibo) return pedido.numeroRecibo
-    const numero = await proximoNumeroRecibo()
-    await patchPedido(pedido.id, { numeroRecibo: numero })
-    pedido.numeroRecibo = numero // evita gerar de novo se reabrir o recibo na mesma sessão
-    return numero
-  }
-
   async function montarReciboCompleto(pedido) {
-    const numero = await garantirNumeroRecibo(pedido)
+    const numero = await garantirNumeroRecibo(pedido, patchPedido)
     const cliente = clientes.find(c => c.name === pedido.cliente)
     const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
     return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome })
@@ -482,19 +470,8 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     const cliente = clientes.find(c => c.name === pedido.cliente)
     const telefone = toWhatsappNumber(cliente?.phone)
     if (!telefone) throw new Error('Cliente sem telefone cadastrado.')
-    const { uid } = getCurrentProfile()
-    return addDoc(collection(db, 'recibosFila'), {
-      pedidoId:  pedido.id,
-      numero:    dados.numero,
-      telefone,
-      dados,
-      status:    'pendente',
-      criadoEm:  serverTimestamp(),
-      criadoPor: uid,
-    })
+    return enviarReciboFila({ dados, telefone, pedidoId: pedido.id })
   }
-
-  const FILA_STATUS_LABEL = { pendente: 'Na fila de envio...', enviado: '✅ Enviado.', erro: '❌ Erro ao enviar.' }
 
   function abrirReciboModal(pedido) {
     openModal({

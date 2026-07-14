@@ -3,6 +3,7 @@ import {
   doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch, increment,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
+import { getCurrentProfile } from '../../auth/session.js'
 
 const COL = 'vendas'
 
@@ -17,6 +18,7 @@ export function subscribeVendas(callback, onError) {
 // Venda avulsa (sem vir de pedido) — desconta 1 do estoqueAtual do produto na
 // hora, já que só entra estoque o que foi lançado direto no menu Compras.
 export async function createVenda(data) {
+  const { uid } = getCurrentProfile()
   const batch = writeBatch(db)
   const ref = doc(collection(db, COL))
   batch.set(ref, {
@@ -28,6 +30,7 @@ export async function createVenda(data) {
     statusEntrega:  data.statusEntrega || 'aguardando',
     reciboEmitido:  false,
     pedidoId:       null,
+    criadoPor:      uid,
     criadoEm:       serverTimestamp(),
   })
   if (data.produtoId) {

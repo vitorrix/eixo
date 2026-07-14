@@ -96,8 +96,8 @@ service cloud.firestore {
     // pedido de envio; quem atualiza o status (enviado/erro) é o bot, via
     // Admin SDK — que não passa por estas regras.
     match /recibosFila/{id} {
-      allow read:   if hasPermission('pedidos', 'view');
-      allow create: if hasPermission('pedidos', 'edit');
+      allow read:   if hasPermission('pedidos', 'view') || hasPermission('vendas', 'view');
+      allow create: if hasPermission('pedidos', 'edit') || hasPermission('vendas', 'edit');
       allow update: if false;
       allow delete: if isMaster();
     }

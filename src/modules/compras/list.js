@@ -232,6 +232,9 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         const statusSelNew = el('select', {})
         STATUS_ORDER.forEach(s => statusSelNew.appendChild(el('option', { value: s }, STATUS_META[s]?.label || s)))
 
+        const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
+          placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente)' })
+
         const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelBtn.addEventListener('click', closeModal)
         const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Criar compra')
@@ -242,9 +245,10 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           try {
             await createCompra({
               produtoId, produto,
-              fornecedor: fornAc.getValue(),
-              custo:      custoInp.value,
-              status:     statusSelNew.value,
+              fornecedor:  fornAc.getValue(),
+              custo:       custoInp.value,
+              status:      statusSelNew.value,
+              observacoes: aparelhoInp.value,
             })
             toastSuccess('Compra criada.'); closeModal()
           } catch (err) {
@@ -260,6 +264,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
             el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornAc.el),
             el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
             el('div', { class: 'field' }, el('label', {}, 'Status'), statusSelNew),
+            el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
@@ -280,13 +285,17 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         fornInp.value  = compra.fornecedor || ''
         custoInp.value = compra.custo || ''
 
+        const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
+          placeholder: 'Specs, serial, IMEI... (aparece no recibo do cliente)' })
+        aparelhoInp.value = compra.observacoes || ''
+
         const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelBtn.addEventListener('click', close)
         const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Salvar')
         okBtn.addEventListener('click', async () => {
           okBtn.disabled = true
           try {
-            await updateCompra(compra.id, { fornecedor: fornInp.value, custo: custoInp.value })
+            await updateCompra(compra.id, { fornecedor: fornInp.value, custo: custoInp.value, observacoes: aparelhoInp.value })
             toastSuccess('Compra atualizada.'); close()
           } catch {
             toastError('Erro ao salvar.')
@@ -299,6 +308,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           el('div', { class: 'form-grid' },
             el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornInp),
             el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+            el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )

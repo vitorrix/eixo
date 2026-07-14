@@ -29,10 +29,11 @@ export async function createCompra(data) {
   const ref = doc(collection(db, COL))
   batch.set(ref, {
     produtoId:       data.produtoId || null,
-    produto:         (data.produto    || '').trim(),
-    fornecedor:      (data.fornecedor || '').trim(),
+    produto:         (data.produto      || '').trim(),
+    fornecedor:      (data.fornecedor   || '').trim(),
     custo:           parseFloat(data.custo) || 0,
     status,
+    observacoes:     (data.observacoes || '').trim(), // dados do aparelho — mesmos que vão pro recibo
     cliente:         '',
     pedidoId:        null,
     estoqueAplicado: !!jaRecebida,
@@ -66,8 +67,9 @@ export async function atualizarStatusCompra(compra, novoStatus) {
 
 export async function updateCompra(id, data) {
   return updateDoc(doc(db, COL, id), {
-    fornecedor: (data.fornecedor || '').trim(),
-    custo:      parseFloat(data.custo) || 0,
+    fornecedor:  (data.fornecedor  || '').trim(),
+    custo:       parseFloat(data.custo) || 0,
+    observacoes: (data.observacoes || '').trim(),
   })
 }
 

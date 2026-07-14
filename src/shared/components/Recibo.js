@@ -1,9 +1,37 @@
-import { el, mount } from '../../shared/utils/dom.js'
-import { brl, fullDate, maskCEP, maskPhone } from '../../shared/utils/formatters.js'
-import { produtoLabel } from './service.js'
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../../firebase.js'
+import { getCurrentProfile } from '../../auth/session.js'
+import { el, mount } from '../utils/dom.js'
+import { brl, fullDate, maskCEP, maskPhone } from '../utils/formatters.js'
+import { proximoNumeroRecibo } from '../../modules/configuracoes/service.js'
+import { produtoLabel } from '../../modules/pedidos/service.js'
 
-const PAG_TEXTO = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão' }
+const PAG_TEXTO = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão', link: 'Link' }
 const PAID_STATUSES = new Set(['pago', 'motoboy', 'retirada', 'correio', 'entregue'])
+
+export const FILA_STATUS_LABEL = { pendente: 'Na fila de envio...', enviado: '✅ Enviado.', erro: '❌ Erro ao enviar.' }
+
+export function toWhatsappNumber(phoneDigits) {
+  const d = (phoneDigits || '').replace(/\D/g, '')
+  if (!d) return ''
+  return d.startsWith('55') && d.length > 11 ? d : `55${d}`
+}
+
+// Grava o pedido de envio na fila (recibosFila) — o bot do WhatsApp escuta essa
+// coleção e manda o PDF de verdade. pedidoId/vendaId identificam a origem (só
+// um dos dois é preenchido), útil pra rastrear de onde veio o envio.
+export async function enviarReciboFila({ dados, telefone, pedidoId = null, vendaId = null }) {
+  const { uid } = getCurrentProfile()
+  return addDoc(collection(db, 'recibosFila'), {
+    pedidoId, vendaId,
+    numero:    dados.numero,
+    telefone,
+    dados,
+    status:    'pendente',
+    criadoEm:  serverTimestamp(),
+    criadoPor: uid,
+  })
+}
 
 function linhasEndereco(addr, { comBairro = true } = {}) {
   if (!addr) return []
@@ -17,10 +45,42 @@ function linhasEndereco(addr, { comBairro = true } = {}) {
   return linhas
 }
 
+function montarEmpresa(empresa) {
+  return {
+    razao:          empresa?.razao    || '',
+    fantasia:       empresa?.fantasia || '',
+    cnpj:           empresa?.cnpj     || '',
+    tel1:           empresa?.tel1 ? maskPhone(empresa.tel1) : '',
+    tel2:           empresa?.tel2 ? maskPhone(empresa.tel2) : '',
+    email:          empresa?.email    || '',
+    enderecoLinhas: linhasEndereco(empresa?.address, { comBairro: false }),
+  }
+}
+
+function montarCliente(nome, cliente) {
+  return {
+    nome:           nome || '',
+    telefone:       cliente?.phone ? maskPhone(cliente.phone) : '',
+    email:          cliente?.email || '',
+    enderecoLinhas: linhasEndereco(cliente?.address),
+  }
+}
+
+// Garante um número sequencial de recibo pra qualquer entidade (Pedido ou Venda
+// avulsa) — se já tem, não gera outro; se não, pega o próximo do contador
+// compartilhado (configuracoes/contadores) e grava de volta via patchFn.
+export async function garantirNumeroRecibo(entidade, patchFn) {
+  if (entidade.numeroRecibo) return entidade.numeroRecibo
+  const numero = await proximoNumeroRecibo()
+  await patchFn(entidade.id, { numeroRecibo: numero })
+  entidade.numeroRecibo = numero
+  return numero
+}
+
 // Cada produto do pedido vira um item; cada acessório vira um item "brinde" (preço
 // e desconto não são rastreados por acessório hoje, então entra a R$ 0 — simplificação
 // a refinar depois se quisermos casar o preço com o catálogo).
-function montarItens(pedido) {
+function montarItensPedido(pedido) {
   const itens = []
   ;(pedido.produtos || []).forEach(p => {
     itens.push({ descricao: produtoLabel(p), precoUnit: p.valor || 0, quant: 1, desconto: 0, total: p.valor || 0 })
@@ -31,33 +91,20 @@ function montarItens(pedido) {
   return itens
 }
 
-// Monta o objeto de dados do recibo — mesma estrutura usada no preview (HTML) e
-// gravada na fila (recibosFila) pro bot montar o PDF de verdade.
+// Monta o objeto de dados do recibo de um Pedido — mesma estrutura usada no
+// preview (HTML) e gravada na fila (recibosFila) pro bot montar o PDF de verdade.
 export function montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome }) {
-  const itens = montarItens(pedido)
+  const itens = montarItensPedido(pedido)
   const totalValor = itens.reduce((s, i) => s + i.total, 0)
   const pago = PAID_STATUSES.has(pedido.status)
 
   return {
     numero,
-    data: fullDate(pedido.dataContato),
+    data:     fullDate(pedido.dataContato),
     situacao: 'Venda',
     vendedor: vendedorNome || '—',
-    empresa: {
-      razao:          empresa?.razao    || '',
-      fantasia:       empresa?.fantasia || '',
-      cnpj:           empresa?.cnpj     || '',
-      tel1:           empresa?.tel1 ? maskPhone(empresa.tel1) : '',
-      tel2:           empresa?.tel2 ? maskPhone(empresa.tel2) : '',
-      email:          empresa?.email    || '',
-      enderecoLinhas: linhasEndereco(empresa?.address, { comBairro: false }),
-    },
-    cliente: {
-      nome:           pedido.cliente || '',
-      telefone:       cliente?.phone ? maskPhone(cliente.phone) : '',
-      email:          cliente?.email || '',
-      enderecoLinhas: linhasEndereco(cliente?.address),
-    },
+    empresa:  montarEmpresa(empresa),
+    cliente:  montarCliente(pedido.cliente, cliente),
     itens,
     totalItens: itens.length,
     totalValor,
@@ -69,6 +116,41 @@ export function montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNo
       situacao:       pago ? 'Já pago' : 'Pendente',
     }],
     observacoes: pedido.observacoes || '',
+  }
+}
+
+function dataDaVenda(venda) {
+  const d = venda.criadoEm?.toDate ? venda.criadoEm.toDate() : null
+  if (!d) return '—'
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+}
+
+// Monta o recibo de uma Venda avulsa (lançada direto no menu Vendas, sem vir de
+// pedido) — um único item. "compra" é a Compra vinculada ao mesmo produtoId (se
+// achada), de onde vêm os dados do aparelho (specs/serial/IMEI) pro campo de
+// observações — mesmo texto cadastrado em "Editar Compra".
+export function montarDadosReciboVendaAvulsa(venda, { numero, empresa, cliente, vendedorNome, compra }) {
+  const valor = venda.valorVenda || 0
+  const data = dataDaVenda(venda)
+
+  return {
+    numero,
+    data,
+    situacao: 'Venda',
+    vendedor: vendedorNome || '—',
+    empresa:  montarEmpresa(empresa),
+    cliente:  montarCliente(venda.cliente, cliente),
+    itens: [{ descricao: venda.produto || '—', precoUnit: valor, quant: 1, desconto: 0, total: valor }],
+    totalItens: 1,
+    totalValor: valor,
+    financeiro: [{
+      numParcela:     '1/1',
+      valor,
+      dataPgto:       data,
+      formaPagamento: PAG_TEXTO[venda.formaPagamento] || venda.formaPagamento || '—',
+      situacao:       'Já pago', // só existe botão de recibo quando a venda já está entregue
+    }],
+    observacoes: compra?.observacoes || '',
   }
 }
 
