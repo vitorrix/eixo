@@ -7,6 +7,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { fileURLToPath } from 'url'
 
 const COL = 'recibosFila'
+const GOOGLE_REVIEW_URL = 'https://g.co/kgs/L7iwqtP'
 // Logo da Baruk (empresa que usa o Eixo) no cabeçalho — selo do Eixo (compass)
 // só no rodapé, creditando a plataforma. Mesma regra do preview no app.
 const BARUK_LOGO_PATH = fileURLToPath(new URL('../../public/logo-baruk.png', import.meta.url))
@@ -43,18 +44,35 @@ export function watchRecibosFila(getSock, db) {
   })
 }
 
+const primeiroNome = nomeCompleto => (nomeCompleto || '').trim().split(/\s+/)[0] || 'Olá'
+
+const mensagemAvaliacao = nome => `${nome}, foi um prazer realizar essa conquista com você.
+
+Queremos te pedir um pequeno favor: sua opinião é muito importante para nós e ajuda outras pessoas a confiarem no nosso trabalho. Você pode deixar uma avaliação sobre sua experiência conosco no Google?
+
+⭐⭐⭐⭐⭐
+${GOOGLE_REVIEW_URL}
+
+Se precisar de qualquer coisa, estamos sempre aqui para ajudar.
+
+• Equipe Baruk Store 🍎`
+
 async function processarRecibo(sock, doc) {
   const data = doc.data()
   console.log(`[recibo] enviando recibo ${data.numero} para ${data.telefone}...`)
   try {
     const pdfBuffer = await gerarPdf(data.dados)
     const jid = `${data.telefone}@s.whatsapp.net`
+    const nome = data.dados?.cliente?.nome || ''
+    const nome1 = primeiroNome(nome)
+    const nomeArquivo = nome.replace(/[\\/]/g, '-')
     await sock.sendMessage(jid, {
       document: pdfBuffer,
       mimetype: 'application/pdf',
-      fileName: `recibo-${data.numero}.pdf`,
-      caption: `Recibo da sua compra — Venda número ${data.numero}`,
+      fileName: `Recibo de compra Nº ${data.numero}${nomeArquivo ? ` - ${nomeArquivo}` : ''}.pdf`,
+      caption: `${nome1}, segue seu recibo.`,
     })
+    await sock.sendMessage(jid, { text: mensagemAvaliacao(nome1) })
     await doc.ref.update({ status: 'enviado', enviadoEm: FieldValue.serverTimestamp() })
     console.log(`[recibo] ${data.numero} enviado com sucesso.`)
   } catch (err) {
@@ -126,8 +144,6 @@ function gerarPdf(dados) {
     const y2 = eyebrow(doc, 'Detalhes', col2X, yTop, col2W)
     doc.font('Helvetica').fontSize(9.5).fillColor(INK)
       .text(`Data: ${dados.data}`, col2X, y2, { width: col2W })
-      .text(`Situação: ${dados.situacao}`, col2X, doc.y + 2, { width: col2W })
-      .text(`Vendedor: ${dados.vendedor}`, col2X, doc.y + 2, { width: col2W })
 
     let y = Math.max(yAfterCol1, doc.y) + 22
 

@@ -2611,7 +2611,7 @@ html, body {
   padding: 22px 24px 18px;
   border-bottom: 2px solid #123c43;
 }
-.recibo-masthead-brand { display: flex; flex-direction: column; gap: 10px; }
+.recibo-masthead-brand { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .recibo-logo { height: 34px; width: auto; display: block; }
 .recibo-masthead-info { }
 .recibo-empresa-linha { font-size: 11px; color: #6b7280; line-height: 1.6; }

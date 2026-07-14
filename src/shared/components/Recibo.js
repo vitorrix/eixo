@@ -202,8 +202,6 @@ export function renderReciboPreview(container, dados) {
     el('div', {},
       el('p', { class: 'recibo-eyebrow' }, 'Detalhes'),
       linha(`Data: ${dados.data}`),
-      linha(`Situação: ${dados.situacao}`),
-      linha(`Vendedor: ${dados.vendedor}`),
     ),
   )
 
