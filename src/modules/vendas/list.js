@@ -267,7 +267,9 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       const numero = await garantirNumeroRecibo(pedido, patchPedido)
       const cliente = clientes.find(c => c.name === pedido.cliente)
       const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
-      return { dados: montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome }), tipo: 'pedido', entidade: pedido }
+      const comprasSnap = await getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
+      const comprasPedido = comprasSnap.docs.map(d => d.data())
+      return { dados: montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome, comprasPedido }), tipo: 'pedido', entidade: pedido }
     }
 
     const numero = await garantirNumeroRecibo(venda, patchVenda)

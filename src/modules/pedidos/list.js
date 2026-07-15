@@ -520,7 +520,9 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     const numero = await garantirNumeroRecibo(pedido, patchPedido)
     const cliente = clientes.find(c => c.name === pedido.cliente)
     const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
-    return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome })
+    const comprasSnap = await getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
+    const comprasPedido = comprasSnap.docs.map(d => d.data())
+    return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome, comprasPedido })
   }
 
   async function enviarReciboWhatsapp(pedido, dados) {
