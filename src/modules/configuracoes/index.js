@@ -3,12 +3,14 @@ import { getEmpresa, getOperacoes } from './service.js'
 import { renderTabEmpresa } from './tabEmpresa.js'
 import { renderTabFormasPagamento } from './tabFormasPagamento.js'
 import { renderTabContas } from './tabContas.js'
+import { renderTabCategorias } from './tabCategorias.js'
 import { toastError } from '../../shared/components/Toast.js'
 
 const TABS = [
-  { key: 'empresa', label: 'Empresa' },
-  { key: 'formas',  label: 'Formas de Pagamento' },
-  { key: 'contas',  label: 'Contas' },
+  { key: 'empresa',     label: 'Empresa' },
+  { key: 'formas',      label: 'Formas de Pagamento' },
+  { key: 'contas',      label: 'Contas' },
+  { key: 'categorias',  label: 'Categorias' },
 ]
 
 export function render(container) {
@@ -51,6 +53,8 @@ async function _load(container) {
       renderTabFormasPagamento(tabContent, state.operacoes, saved => { state.operacoes = saved })
     } else if (key === 'contas') {
       renderTabContas(tabContent, state.operacoes, saved => { state.operacoes = saved })
+    } else if (key === 'categorias') {
+      renderTabCategorias(tabContent, state.operacoes, saved => { state.operacoes = saved })
     }
   }
 

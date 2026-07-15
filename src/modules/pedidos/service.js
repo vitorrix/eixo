@@ -4,6 +4,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
+import { getOperacoes, proximoNumeroFinanceiro } from '../configuracoes/service.js'
 
 const COL = 'pedidos'
 
@@ -59,17 +60,19 @@ export function produtoLabel(pr) {
     : [pr.nome, pr.cor].filter(Boolean).join(' · ')
 }
 
-// Apaga Compra(s)/Venda(s) já vinculadas a esse pedido — usado antes de gerar
-// novas, pra nunca duplicar quando o pedido foi editado e reconfirmado (a
-// edição reseta o status pra negociando, mas não limpa o que já tinha sido
-// gerado; sem isso, cada reconfirmação criava um segundo par Compra+Venda).
+// Apaga Compra(s)/Venda/lançamentos financeiros já vinculados a esse pedido —
+// usado antes de gerar novos, pra nunca duplicar quando o pedido foi editado e
+// reconfirmado (a edição reseta o status pra negociando, mas não limpa o que
+// já tinha sido gerado; sem isso, cada reconfirmação criava registros extras).
 async function limparCompraEVenda(pedidoId, batch) {
-  const [comprasSnap, vendasSnap] = await Promise.all([
-    getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedidoId))),
-    getDocs(query(collection(db, 'vendas'),  where('pedidoId', '==', pedidoId))),
+  const [comprasSnap, vendasSnap, financeiroSnap] = await Promise.all([
+    getDocs(query(collection(db, 'compras'),   where('pedidoId', '==', pedidoId))),
+    getDocs(query(collection(db, 'vendas'),    where('pedidoId', '==', pedidoId))),
+    getDocs(query(collection(db, 'financeiro'), where('origem.pedidoId', '==', pedidoId))),
   ])
   comprasSnap.docs.forEach(d => batch.delete(d.ref))
   vendasSnap.docs.forEach(d => batch.delete(d.ref))
+  financeiroSnap.docs.forEach(d => batch.delete(d.ref))
 }
 
 // Gera a Compra (custo/fornecedor informados agora) de cada item — produto ou
@@ -80,52 +83,115 @@ async function limparCompraEVenda(pedidoId, batch) {
 // mexe em estoqueAtual: esse fluxo é sempre compra-e-venda simultânea (o
 // produto nunca fica parado em estoque); só entra em estoque o que for
 // lançado direto no menu Compras.
-function criarCompraEVenda(batch, pedido, itensCompra) {
-  const itensVenda = pedido.produtos.map((p, i) => {
+//
+// Junto, já lança no Financeiro: 1 Pagamento por item com custo informado
+// (vinculado à Compra) e 1 Recebimento pro pedido inteiro (vinculado à Venda)
+// — ambos marcados como já liquidados, já que "confirmar pagamento"/"efetuar
+// compra" representa o dinheiro já ter saído/entrado nesse momento.
+async function criarCompraEVenda(batch, pedido, itensCompra) {
+  const hoje = new Date().toISOString().slice(0, 10)
+  const operacoes = await getOperacoes()
+  const formaPag = (pedido.formasPagamento || [])[0] || ''
+  const contaPadrao = operacoes.formasPagamento?.find(f => f.nome === formaPag)?.contaPadrao || ''
+  const categoriaReceber = operacoes.categorias?.find(c => c.tipo === 'receber')?.nome || ''
+  const categoriaPagar = operacoes.categorias?.find(c => c.tipo === 'pagar' && c.grupoDRE === 'Custo dos produtos (CMV)')?.nome
+    || operacoes.categorias?.find(c => c.tipo === 'pagar')?.nome || ''
+
+  const itensVenda = []
+  for (let i = 0; i < pedido.produtos.length; i++) {
+    const p     = pedido.produtos[i]
     const item  = itensCompra[i] || {}
     const label = produtoLabel(p)
+    const custo = parseFloat(item.custo) || 0
+    const fornecedor = (item.fornecedor || '').trim()
 
-    batch.set(doc(collection(db, 'compras')), {
+    const compraRef = doc(collection(db, 'compras'))
+    batch.set(compraRef, {
       pedidoId:    pedido.id,
       cliente:     pedido.cliente,
       produto:     label,
       tipo:        p.tipo || 'produto',
-      fornecedor:  (item.fornecedor || '').trim(),
-      custo:       parseFloat(item.custo) || 0,
+      fornecedor,
+      custo,
       status:      'comprado',
       observacoes: (item.observacoes || '').trim(),
       criadoEm:    serverTimestamp(),
     })
 
-    return { produto: label, tipo: p.tipo || 'produto', valor: p.valor || 0 }
-  })
+    if (custo > 0) {
+      const numero = await proximoNumeroFinanceiro()
+      batch.set(doc(collection(db, 'financeiro')), {
+        numero, tipo: 'pagar',
+        descricao:       `Compra: ${label}`,
+        valor:           custo,
+        contato:         fornecedor,
+        categoria:       categoriaPagar,
+        conta:           '',
+        formaPagamento:  '',
+        liquidado:       true,
+        dataVencimento:  hoje,
+        dataLiquidacao:  hoje,
+        numeroDocumento: '',
+        observacoes:     '',
+        parcela:         { numero: 1, total: 1 },
+        origem:          { tipo: 'compra', id: compraRef.id, pedidoId: pedido.id },
+        recorrencia:     null,
+        criadoEm:        serverTimestamp(),
+      })
+    }
 
-  batch.set(doc(collection(db, 'vendas')), {
+    itensVenda.push({ produto: label, tipo: p.tipo || 'produto', valor: p.valor || 0 })
+  }
+
+  const vendaRef = doc(collection(db, 'vendas'))
+  const valorVenda = itensVenda.reduce((s, it) => s + it.valor, 0)
+  batch.set(vendaRef, {
     pedidoId:       pedido.id,
     cliente:        pedido.cliente,
     itens:          itensVenda,
-    valorVenda:     itensVenda.reduce((s, it) => s + it.valor, 0),
-    formaPagamento: (pedido.formasPagamento || [])[0] || '',
+    valorVenda,
+    formaPagamento: formaPag,
     statusEntrega:  'aguardando',
     reciboEmitido:  false,
     criadoEm:       serverTimestamp(),
   })
+
+  const numeroReceber = await proximoNumeroFinanceiro()
+  batch.set(doc(collection(db, 'financeiro')), {
+    numero: numeroReceber, tipo: 'receber',
+    descricao:       `Venda — ${pedido.cliente}`,
+    valor:           valorVenda,
+    contato:         pedido.cliente,
+    categoria:       categoriaReceber,
+    conta:           contaPadrao,
+    formaPagamento:  formaPag,
+    liquidado:       true,
+    dataVencimento:  hoje,
+    dataLiquidacao:  hoje,
+    numeroDocumento: '',
+    observacoes:     '',
+    parcela:         { numero: 1, total: 1 },
+    origem:          { tipo: 'venda', id: vendaRef.id, pedidoId: pedido.id },
+    recorrencia:     null,
+    criadoEm:        serverTimestamp(),
+  })
 }
 
 // Confirma o pagamento e já efetua a compra (fluxo "Sim, efetuar compra agora").
-// Limpa qualquer Compra/Venda antiga desse pedido antes de gerar as novas —
-// cobre o caso de reconfirmação após edição, sem nunca duplicar.
+// Limpa qualquer Compra/Venda/financeiro antigos desse pedido antes de gerar
+// os novos — cobre o caso de reconfirmação após edição, sem nunca duplicar.
 export async function confirmarPagamento(pedido, itensCompra) {
   const batch = writeBatch(db)
   await limparCompraEVenda(pedido.id, batch)
   batch.update(doc(db, COL, pedido.id), { status: 'pago', compraFeita: true, atualizadoEm: serverTimestamp() })
-  criarCompraEVenda(batch, pedido, itensCompra)
+  await criarCompraEVenda(batch, pedido, itensCompra)
   return batch.commit()
 }
 
 // Confirma o pagamento sem efetuar a compra agora (fluxo "Não") — fica pendente
-// pra lançar depois em "Efetuar Compra". Também limpa Compra/Venda antigas do
-// pedido, já que uma edição pode ter tornado obsoletos os dados anteriores.
+// pra lançar depois em "Efetuar Compra". Também limpa Compra/Venda/financeiro
+// antigos do pedido, já que uma edição pode ter tornado obsoletos os dados
+// anteriores.
 export async function confirmarPagamentoSemCompra(pedido) {
   const batch = writeBatch(db)
   await limparCompraEVenda(pedido.id, batch)
@@ -134,11 +200,15 @@ export async function confirmarPagamentoSemCompra(pedido) {
 }
 
 // Efetua a compra de um pedido que já está pago mas ficou pendente (respondeu
-// "Não" no prompt). Não mexe no status — só gera Compra + Venda.
+// "Não" no prompt). Não mexe no status — só gera Compra + Venda + financeiro.
+// Também limpa antes, pelo mesmo motivo de confirmarPagamento — sem isso,
+// clicar "Efetuar Compra" duas vezes (ou depois de reeditar o pedido) geraria
+// registros duplicados de novo.
 export async function efetuarCompra(pedido, itensCompra) {
   const batch = writeBatch(db)
+  await limparCompraEVenda(pedido.id, batch)
   batch.update(doc(db, COL, pedido.id), { compraFeita: true, atualizadoEm: serverTimestamp() })
-  criarCompraEVenda(batch, pedido, itensCompra)
+  await criarCompraEVenda(batch, pedido, itensCompra)
   return batch.commit()
 }
 

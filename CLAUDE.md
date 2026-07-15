@@ -35,15 +35,17 @@ Contrato obrigatório: exportar `render(container)`. O container é `#module-con
 | Módulo | Rota | Status |
 |---|---|---|
 | dashboard | `#/` | Funcional — stat cards de Clientes e Pedidos |
-| pedidos | `#/pedidos` | Em desenvolvimento — list + form parcial; form precisa revisão (remover custo, selecionar produto do catálogo) |
+| pedidos | `#/pedidos` | Funcional — confirmar pagamento gera Compra+Venda+Financeiro (ou só marca pago, com "Efetuar Compra" pra depois) |
+| compras | `#/compras` | Funcional — uma Compra por aparelho |
+| vendas | `#/vendas` | Funcional — uma Venda por pedido (todos os itens dentro), avulsa continua item único |
 | clientes | `#/clientes` | Completo — form, list, service |
 | fornecedores | `#/fornecedores` | Completo |
 | produtos | `#/produtos` | Completo — cadastro, list com busca, estoque; sem imagem |
-| configuracoes | `#/configuracoes` | Funcional |
+| configuracoes | `#/configuracoes` | Funcional — abas Empresa, Formas de Pagamento, Contas, Categorias |
 | usuarios | `#/usuarios` | Funcional |
 | recibo | `#/recibo` | Placeholder |
 | relatorios | `#/relatorios` | Placeholder |
-| financeiro | `#/financeiro` | Placeholder |
+| financeiro | `#/financeiro` | Funcional — Recebimentos/Pagamentos manuais + gerados automaticamente pelo Pedido; recorrência simples (data inicial/final); DRE ainda não tem relatório visual |
 
 ### Auth & Permissões (`src/auth/session.js`)
 - `onSessionReady(cb)` — observador de boot; carrega perfil do Firestore
@@ -96,11 +98,13 @@ Segurança declarada no servidor — não confiar só no JS. Toda coleção tem 
 /fornecedores/{id}
 /produtos/{id}         ← catálogo de produtos com preços e estoque
 /pedidos/{id}
+/compras/{id}          ← uma por aparelho, origem.pedidoId liga ao Pedido
+/vendas/{id}           ← uma por pedido (itens[] dentro) ou avulsa (produto único)
 /orcamentos/{id}
 /recibos/{id}
 /relatorios/{id}
-/financeiro/{tipo}/{id}
-/configuracoes/{docId} ← operacoes: formasPagamento[], etc.
+/financeiro/{id}        ← tipo: 'receber'|'pagar'; origem.pedidoId liga ao Pedido quando automático
+/configuracoes/{docId} ← operacoes: formasPagamento[], contas[], categorias[]
 ```
 
 ## Decisões arquiteturais

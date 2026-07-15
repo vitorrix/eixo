@@ -16,6 +16,7 @@ const MODULES = [
   { key: 'produtos',     label: 'Produtos' },
   { key: 'orcamentos',   label: 'Orçamentos' },
   { key: 'busca',        label: 'Busca' },
+  { key: 'financeiro',   label: 'Financeiro' },
 ]
 const ACTIONS = [
   { key: 'view',   label: 'Ver' },

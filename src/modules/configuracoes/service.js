@@ -24,10 +24,23 @@ export async function saveEmpresa(data) {
 
 export async function getOperacoes() {
   const snap = await getDoc(doc(db, 'configuracoes', 'operacoes'))
-  if (!snap.exists()) return { formasPagamento: [], contas: [] }
-  return snap.data()
+  const base = { formasPagamento: [], contas: [], categorias: [] }
+  if (!snap.exists()) return base
+  return { ...base, ...snap.data() }
 }
 
 export async function saveOperacoes(data) {
   await setDoc(doc(db, 'configuracoes', 'operacoes'), data)
+}
+
+// Numeração sequencial dos lançamentos financeiros — mesmo padrão do contador
+// de recibo, contador atômico próprio pra não misturar as duas sequências.
+export async function proximoNumeroFinanceiro() {
+  const ref = doc(db, 'configuracoes', 'contadores')
+  return runTransaction(db, async tx => {
+    const snap = await tx.get(ref)
+    const atual = snap.exists() ? (snap.data().proximoFinanceiro || 1) : 1
+    tx.set(ref, { proximoFinanceiro: atual + 1 }, { merge: true })
+    return atual
+  })
 }

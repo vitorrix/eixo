@@ -125,11 +125,11 @@ service cloud.firestore {
     }
 
     // ── /financeiro ───────────────────────────────────────────────────────
-    match /financeiro/{tipo}/{id} {
+    match /financeiro/{id} {
       allow read:   if hasPermission('financeiro', 'view');
-      allow create: if hasPermission('financeiro', 'create');
+      allow create: if hasPermission('financeiro', 'create') || hasPermission('pedidos', 'edit'); // avulso ou via confirmarPagamento/efetuarCompra
       allow update: if hasPermission('financeiro', 'edit');
-      allow delete: if hasPermission('financeiro', 'delete');
+      allow delete: if isMaster(); // mesmo padrão de compras/vendas — limpeza ao reconfirmar pagamento também usa isso
     }
 
     // ── /ofertas (gerada pelo robô de leitura do WhatsApp — somente leitura) ──
