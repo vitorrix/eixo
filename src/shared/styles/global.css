@@ -565,12 +565,26 @@ html, body {
 
 .data-table tbody tr:last-child td { border-bottom: none; }
 .data-table tbody tr:hover td { background: #ddeef1; }
+.data-table tbody tr.row-clicavel { cursor: pointer; }
 
 .td-name { font-weight: 500; }
 .col-actions { text-align: right; white-space: nowrap; vertical-align: middle; }
 .col-center { text-align: center; }
 
 .row-actions { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
+
+.detalhes-grid { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.detalhes-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf0f0;
+  font-size: 13.5px;
+}
+.detalhes-linha:last-child { border-bottom: none; }
+.detalhes-label { color: #6b7280; font-weight: 600; flex-shrink: 0; }
+.detalhes-valor { color: #1a1a1a; text-align: right; }
 
 .icon-btn {
   display: inline-flex;

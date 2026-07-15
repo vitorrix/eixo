@@ -14,7 +14,9 @@ import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import {
   montarDadosRecibo, renderReciboPreview, garantirNumeroRecibo,
   toWhatsappNumber, enviarReciboFila, FILA_STATUS_LABEL, criarBotaoImprimir,
+  imprimirReciboAutomaticamente,
 } from '../../shared/components/Recibo.js'
+import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 
 // ── Status ────────────────────────────────────────────────────────────────────
 const STATUS_META = {
@@ -386,6 +388,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         el('td', {}, el('span', { class: `status-badge ${meta.cls}` }, meta.label)),
         ...(canEdit || canDelete ? [actionsCell] : []),
       )
+      tornarLinhaClicavel(row, () => abrirDetalhesPedidoModal(p))
       tbody.appendChild(row)
     })
   }
@@ -483,7 +486,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     return enviarReciboFila({ dados, telefone, pedidoId: pedido.id })
   }
 
-  function abrirReciboModal(pedido) {
+  function abrirReciboModal(pedido, { autoImprimir = false } = {}) {
     openModal({
       title: 'Recibo',
       size:  'lg',
@@ -493,6 +496,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         montarReciboCompleto(pedido).then(dados => {
           const previewWrap = el('div', {})
           renderReciboPreview(previewWrap, dados)
+          if (autoImprimir) imprimirReciboAutomaticamente(previewWrap)
 
           const cliente = clientes.find(c => c.name === pedido.cliente)
           const temTelefone = !!toWhatsappNumber(cliente?.phone)
@@ -537,6 +541,31 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           mount(body, el('p', { class: 'text-muted' }, 'Erro ao montar o recibo.'))
         })
       },
+    })
+  }
+
+  // ── Detalhes (consulta) ──────────────────────────────────────────────────
+  function abrirDetalhesPedidoModal(p) {
+    const meta = STATUS_META[p.status] || { label: p.status || '—' }
+    const valor = p.valorNegociado ?? p.totalVenda ?? 0
+    const produtosTxt = (p.produtos || []).map(pr => produtoLabel(pr)).join(', ') || '—'
+    const fps = Array.isArray(p.formasPagamento) ? p.formasPagamento : (p.formaPagamento ? [p.formaPagamento] : [])
+    const pago = PAID_STATUSES.has(p.status)
+
+    abrirDetalhesModal({
+      title: 'Detalhes do Pedido',
+      campos: [
+        ['Cliente', p.cliente || p.clienteNome],
+        ['Data', shortDate(p.dataContato || p.data || '')],
+        ['Produtos', produtosTxt],
+        ['Valor', brl(valor)],
+        ['Forma de pagamento', fps.length ? fps.map(f => PAG_LABEL[f] || f).join(' + ') : '—'],
+        ['Status', meta.label],
+        p.observacoes ? ['Observações', p.observacoes] : null,
+      ],
+      onEditar:   canEdit ? () => openPedidoModal(p) : null,
+      onImprimir: pago ? () => abrirReciboModal(p, { autoImprimir: true }) : null,
+      onRecibo:   pago ? () => abrirReciboModal(p) : null,
     })
   }
 

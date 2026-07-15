@@ -27,6 +27,16 @@ export function criarBotaoImprimir() {
   return btn
 }
 
+// Atalho "Imprimir" da janela de Detalhes: abre o recibo e já manda pra
+// impressão sozinho — espera o logo/selo carregar pra não imprimir sem imagem.
+export function imprimirReciboAutomaticamente(container) {
+  const imgs = [...container.querySelectorAll('img')]
+  Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => {
+    img.addEventListener('load', res, { once: true })
+    img.addEventListener('error', res, { once: true })
+  }))).then(() => window.print())
+}
+
 // Grava o pedido de envio na fila (recibosFila) — o bot do WhatsApp escuta essa
 // coleção e manda o PDF de verdade. pedidoId/vendaId identificam a origem (só
 // um dos dois é preenchido), útil pra rastrear de onde veio o envio.

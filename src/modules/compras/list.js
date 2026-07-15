@@ -6,6 +6,7 @@ import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { createCompra, patchCompra, atualizarStatusCompra, updateCompra, deleteCompra } from './service.js'
+import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 
 const STATUS_META = {
   pendente:        { label: 'Pendente',         cls: 'badge-pendente'  },
@@ -198,8 +199,26 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         el('td', {}, statusSel),
         ...(canEdit || canDelete ? [actionsCell] : []),
       )
+      tornarLinhaClicavel(row, () => abrirDetalhesCompraModal(c))
       tbody.appendChild(row)
     }
+  }
+
+  // ── Detalhes (consulta) ──────────────────────────────────────────────────
+  function abrirDetalhesCompraModal(c) {
+    const meta = STATUS_META[c.status] || { label: c.status || '—' }
+    abrirDetalhesModal({
+      title: 'Detalhes da Compra',
+      campos: [
+        ['Cliente', c.cliente],
+        ['Produto', c.produto],
+        ['Fornecedor', c.fornecedor],
+        ['Custo', brl(c.custo || 0)],
+        ['Status', meta.label],
+        c.observacoes ? ['Dados do aparelho', c.observacoes] : null,
+      ],
+      onEditar: canEdit ? () => openEditModal(c) : null,
+    })
   }
 
   function abrirNovaCompraModal() {

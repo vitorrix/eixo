@@ -10,7 +10,9 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
   montarDadosRecibo, montarDadosReciboVendaAvulsa, renderReciboPreview,
   garantirNumeroRecibo, toWhatsappNumber, enviarReciboFila, FILA_STATUS_LABEL, criarBotaoImprimir,
+  imprimirReciboAutomaticamente,
 } from '../../shared/components/Recibo.js'
+import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { patchPedido } from '../pedidos/service.js'
 import { createVenda, patchVenda, deleteVenda } from './service.js'
 
@@ -121,7 +123,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         el('th', {}, 'Pgto'),
         el('th', {}, 'Entrega'),
         el('th', {}, 'Recibo'),
-        ...(canDelete ? [el('th', { class: 'col-actions' }, '')] : []),
+        ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, '')] : []),
       )
     ),
     tbody
@@ -218,7 +220,8 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       const pagLabel = PAG_LABEL[v.formaPagamento] || v.formaPagamento || '—'
 
       const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
-        canEdit: false, canDelete,
+        canEdit, canDelete,
+        onEdit: () => abrirEditarVendaModal(v),
         onDelete: () => confirmDelete(v),
       }))
 
@@ -230,8 +233,9 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         el('td', {}, pagLabel),
         el('td', {}, entregaSel),
         reciboCell,
-        ...(canDelete ? [actionsCell] : []),
+        ...(canEdit || canDelete ? [actionsCell] : []),
       )
+      tornarLinhaClicavel(row, () => abrirDetalhesVendaModal(v))
       tbody.appendChild(row)
     }
   }
@@ -286,7 +290,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     }
   }
 
-  function abrirReciboVendaModal(venda) {
+  function abrirReciboVendaModal(venda, { autoImprimir = false } = {}) {
     openModal({
       title: 'Recibo',
       size:  'lg',
@@ -296,6 +300,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         montarReciboVenda(venda).then(({ dados, tipo, entidade }) => {
           const previewWrap = el('div', {})
           renderReciboPreview(previewWrap, dados)
+          if (autoImprimir) imprimirReciboAutomaticamente(previewWrap)
 
           const clienteNome = tipo === 'pedido' ? entidade.cliente : venda.cliente
           const cliente = clientes.find(c => c.name === clienteNome)
@@ -355,6 +360,113 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
           mount(body, el('p', { class: 'text-muted' }, 'Erro ao montar o recibo.'))
         })
       },
+    })
+  }
+
+  function abrirEditarVendaModal(venda) {
+    const produtoNomes = (produtosCatalogo || []).map(p => p.nome)
+    const clienteNomes = (clientes || []).map(c => c.name)
+
+    openModal({
+      title: 'Editar Venda',
+      size:  'md',
+      renderBody: (body, closeModal) => {
+        let produtoId = venda.produtoId || null
+
+        const produtoAc = createAutocomplete({
+          placeholder:  'Produto do catálogo',
+          items:        produtoNomes,
+          initialValue: venda.produto || '',
+          onSelect:     v => { produtoId = (produtosCatalogo || []).find(p => p.nome === v)?.id || null },
+        })
+        produtoAc.el.style.width = '100%'
+        produtoAc.el.addEventListener('input', () => {
+          produtoId = (produtosCatalogo || []).find(p => p.nome === produtoAc.getValue())?.id || null
+        })
+
+        const clienteAc = createAutocomplete({
+          placeholder:  'Nome do cliente',
+          items:        clienteNomes,
+          initialValue: venda.cliente || '',
+        })
+        clienteAc.el.style.width = '100%'
+
+        const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+        valorInp.value = venda.valorVenda || ''
+
+        const pagSel = el('select', {})
+        Object.entries(PAG_LABEL).forEach(([value, label]) => {
+          const opt = el('option', { value }, label)
+          if (value === venda.formaPagamento) opt.selected = true
+          pagSel.appendChild(opt)
+        })
+
+        const entregaSelEdit = el('select', {})
+        ENTREGA_ORDER.forEach(s => {
+          const opt = el('option', { value: s }, ENTREGA_META[s]?.label || s)
+          if (s === venda.statusEntrega) opt.selected = true
+          entregaSelEdit.appendChild(opt)
+        })
+        if (venda.pedidoId) { entregaSelEdit.disabled = true; entregaSelEdit.title = 'Segue a logística do pedido' }
+
+        const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+        cancelBtn.addEventListener('click', closeModal)
+        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Salvar')
+        okBtn.addEventListener('click', async () => {
+          const produto = produtoAc.getValue().trim()
+          if (!produto) { toastError('Selecione o produto.'); return }
+          okBtn.disabled = true
+          try {
+            await patchVenda(venda.id, {
+              produtoId, produto,
+              cliente:        clienteAc.getValue(),
+              valorVenda:     valorInp.value,
+              formaPagamento: pagSel.value,
+              ...(venda.pedidoId ? {} : { statusEntrega: entregaSelEdit.value }),
+            })
+            toastSuccess('Venda atualizada.'); closeModal()
+          } catch (err) {
+            console.error(err)
+            toastError('Erro ao salvar.')
+            okBtn.disabled = false
+          }
+        })
+
+        mount(body,
+          el('div', { class: 'form-grid' },
+            el('div', { class: 'field field-full' }, el('label', {}, 'Produto'), produtoAc.el),
+            el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteAc.el),
+            el('div', { class: 'field' }, el('label', {}, 'Valor R$'), valorInp),
+            el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagSel),
+            el('div', { class: 'field' }, el('label', {}, 'Entrega'), entregaSelEdit),
+          ),
+          el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
+        )
+      },
+    })
+  }
+
+  // ── Detalhes (consulta) ──────────────────────────────────────────────────
+  function abrirDetalhesVendaModal(v) {
+    const entregaMeta = ENTREGA_META[v.statusEntrega] || ENTREGA_META.aguardando
+    const pagLabel = PAG_LABEL[v.formaPagamento] || v.formaPagamento || '—'
+    const dateStr = v.criadoEm?.toDate ? shortDate(v.criadoEm.toDate().toISOString().slice(0, 10)) : '—'
+    const podeRecibo = v.statusEntrega === 'entregue'
+
+    abrirDetalhesModal({
+      title: 'Detalhes da Venda',
+      campos: [
+        ['Cliente', v.cliente],
+        ['Data', dateStr],
+        ['Produto', v.produto],
+        ['Valor', brl(v.valorVenda || 0)],
+        ['Forma de pagamento', pagLabel],
+        ['Entrega', entregaMeta.label],
+        ['Recibo', v.reciboEmitido ? 'Enviado' : 'Não enviado'],
+      ],
+      onEditar:   canEdit ? () => abrirEditarVendaModal(v) : null,
+      onImprimir: podeRecibo ? () => abrirReciboVendaModal(v, { autoImprimir: true }) : null,
+      onRecibo:   podeRecibo ? () => abrirReciboVendaModal(v) : null,
     })
   }
 
