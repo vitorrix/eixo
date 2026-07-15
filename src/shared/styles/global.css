@@ -602,7 +602,10 @@ html, body {
 .icon-btn:hover { background: var(--color-bg); }
 .icon-btn-edit:hover   { background: #ecfdf5; border-color: #a7f3d0; color: #059669; }
 .icon-btn-delete:hover { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
-.td-actions-inner { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
+/* Grade 2 colunas em vez de 1 linha só — a linha de Pedidos chega a ter 4
+   botões, e em fileira única espremia demais a coluna de Produtos ao lado. */
+.td-actions-inner { display: grid; grid-template-columns: repeat(2, auto); gap: 6px; justify-content: flex-end; align-items: center; }
+.td-actions-inner .btn { justify-content: center; }
 
 /* ── Badges ──────────────────────────────────── */
 .badge {
@@ -1294,7 +1297,7 @@ html, body {
 .money-margem { font-weight: 700; color: #10b981; }
 
 /* Produto rows in table */
-.td-produtos  { vertical-align: top; }
+.td-produtos  { vertical-align: top; min-width: 200px; }
 .pedido-produto-line {
   display: flex;
   align-items: baseline;
