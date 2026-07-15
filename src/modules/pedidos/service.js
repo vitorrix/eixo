@@ -59,16 +59,24 @@ export function produtoLabel(pr) {
     : [pr.nome, pr.cor].filter(Boolean).join(' · ')
 }
 
-// Confirma o pagamento do pedido e, no mesmo lote, gera a Compra (custo/fornecedor
-// informados agora) e a Venda (dados do próprio pedido) de cada item — produto ou
-// manutenção. Não mexe em estoqueAtual: esse fluxo é sempre compra-e-venda simultânea
-// (o produto nunca fica parado em estoque); só entra em estoque o que for lançado
-// direto no menu Compras.
-export async function confirmarPagamento(pedido, itensCompra) {
-  const batch = writeBatch(db)
+// Apaga Compra(s)/Venda(s) já vinculadas a esse pedido — usado antes de gerar
+// novas, pra nunca duplicar quando o pedido foi editado e reconfirmado (a
+// edição reseta o status pra negociando, mas não limpa o que já tinha sido
+// gerado; sem isso, cada reconfirmação criava um segundo par Compra+Venda).
+async function limparCompraEVenda(pedidoId, batch) {
+  const [comprasSnap, vendasSnap] = await Promise.all([
+    getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedidoId))),
+    getDocs(query(collection(db, 'vendas'),  where('pedidoId', '==', pedidoId))),
+  ])
+  comprasSnap.docs.forEach(d => batch.delete(d.ref))
+  vendasSnap.docs.forEach(d => batch.delete(d.ref))
+}
 
-  batch.update(doc(db, COL, pedido.id), { status: 'pago', atualizadoEm: serverTimestamp() })
-
+// Gera a Compra (custo/fornecedor informados agora) e a Venda (dados do próprio
+// pedido) de cada item — produto ou manutenção. Não mexe em estoqueAtual: esse
+// fluxo é sempre compra-e-venda simultânea (o produto nunca fica parado em
+// estoque); só entra em estoque o que for lançado direto no menu Compras.
+function criarCompraEVenda(batch, pedido, itensCompra) {
   pedido.produtos.forEach((p, i) => {
     const item  = itensCompra[i] || {}
     const label = produtoLabel(p)
@@ -97,7 +105,35 @@ export async function confirmarPagamento(pedido, itensCompra) {
       criadoEm:       serverTimestamp(),
     })
   })
+}
 
+// Confirma o pagamento e já efetua a compra (fluxo "Sim, efetuar compra agora").
+// Limpa qualquer Compra/Venda antiga desse pedido antes de gerar as novas —
+// cobre o caso de reconfirmação após edição, sem nunca duplicar.
+export async function confirmarPagamento(pedido, itensCompra) {
+  const batch = writeBatch(db)
+  await limparCompraEVenda(pedido.id, batch)
+  batch.update(doc(db, COL, pedido.id), { status: 'pago', compraFeita: true, atualizadoEm: serverTimestamp() })
+  criarCompraEVenda(batch, pedido, itensCompra)
+  return batch.commit()
+}
+
+// Confirma o pagamento sem efetuar a compra agora (fluxo "Não") — fica pendente
+// pra lançar depois em "Efetuar Compra". Também limpa Compra/Venda antigas do
+// pedido, já que uma edição pode ter tornado obsoletos os dados anteriores.
+export async function confirmarPagamentoSemCompra(pedido) {
+  const batch = writeBatch(db)
+  await limparCompraEVenda(pedido.id, batch)
+  batch.update(doc(db, COL, pedido.id), { status: 'pago', compraFeita: false, atualizadoEm: serverTimestamp() })
+  return batch.commit()
+}
+
+// Efetua a compra de um pedido que já está pago mas ficou pendente (respondeu
+// "Não" no prompt). Não mexe no status — só gera Compra + Venda.
+export async function efetuarCompra(pedido, itensCompra) {
+  const batch = writeBatch(db)
+  batch.update(doc(db, COL, pedido.id), { compraFeita: true, atualizadoEm: serverTimestamp() })
+  criarCompraEVenda(batch, pedido, itensCompra)
   return batch.commit()
 }
 

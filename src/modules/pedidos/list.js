@@ -6,7 +6,7 @@ import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
-  deletePedido, patchPedido, confirmarPagamento,
+  deletePedido, patchPedido, confirmarPagamento, confirmarPagamentoSemCompra, efetuarCompra,
   definirLogistica, salvarRoteiro, marcarEntregue, produtoLabel,
 } from './service.js'
 import { renderPedidoForm } from './form.js'
@@ -351,11 +351,14 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       }
 
       if (canEdit && p.status === 'aguardando_pagamento') {
-        actionsInner.appendChild(actionBtn('check', 'Confirmar Pgto', 'btn-success', () => abrirConfirmarPagamentoModal(p)))
+        actionsInner.appendChild(actionBtn('check', 'Confirmar Pgto', 'btn-success', () => abrirPerguntaCompraModal(p)))
         actionsInner.appendChild(actionBtn('x', 'Excluir', 'btn-danger-outline', () => cancelarPedido(p)))
       }
 
       if (canEdit && p.status === 'pago') {
+        if (!p.compraFeita) {
+          actionsInner.appendChild(actionBtn('check', 'Efetuar Compra', 'btn-success', () => abrirConfirmarPagamentoModal(p, { jaConfirmado: true })))
+        }
         actionsInner.appendChild(actionBtn('truck', 'Logística', 'btn-outline-blue', () => abrirLogisticaModal(p)))
       }
 
@@ -399,12 +402,49 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     catch { toastError('Erro ao atualizar status.') }
   }
 
+  // ── Pergunta pós-pagamento: efetuar compra agora ou deixar pra depois ─────
+  // "Sim" segue pro form de sempre (gera Compra + Venda junto com o pagamento).
+  // "Não" só marca o pedido como pago — sem Compra nem Venda ainda — e um botão
+  // "Efetuar Compra" fica disponível no pedido pra lançar isso depois. Existe
+  // pra parar de forçar o preenchimento de fornecedor/custo toda vez que um
+  // pedido já comprado precisa ser editado e o pagamento reconfirmado.
+  function abrirPerguntaCompraModal(pedido) {
+    openModal({
+      title: 'Confirmar Pagamento',
+      size:  'sm',
+      renderBody: (body, closeModal) => {
+        const p = el('p', { class: 'confirm-message' }, 'Deseja efetuar a compra agora?')
+
+        const naoBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Não, só confirmar pagamento')
+        naoBtn.addEventListener('click', async () => {
+          naoBtn.disabled = true; naoBtn.textContent = 'Aguarde...'
+          try {
+            await confirmarPagamentoSemCompra(pedido)
+            toastSuccess('Pagamento confirmado. Efetue a compra quando quiser.')
+            closeModal()
+          } catch (err) {
+            console.error(err)
+            toastError('Erro ao confirmar pagamento.')
+            naoBtn.disabled = false; naoBtn.textContent = 'Não, só confirmar pagamento'
+          }
+        })
+
+        const simBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Sim, efetuar compra agora')
+        simBtn.addEventListener('click', () => { closeModal(); abrirConfirmarPagamentoModal(pedido) })
+
+        mount(body, p, el('div', { class: 'modal-footer' }, naoBtn, simBtn))
+      },
+    })
+  }
+
   // ── Modal confirmar pagamento (gera Compra + Venda de cada item) ──────────
-  function abrirConfirmarPagamentoModal(pedido) {
+  // jaConfirmado=true: pedido já está pago (veio do botão "Efetuar Compra"),
+  // então só gera Compra+Venda, sem reconfirmar o pagamento.
+  function abrirConfirmarPagamentoModal(pedido, { jaConfirmado = false } = {}) {
     const fornecedorNomes = fornecedores.map(f => f.box ? `${f.name} - ${f.box}` : f.name)
 
     openModal({
-      title: 'Confirmar Pagamento',
+      title: jaConfirmado ? 'Efetuar Compra' : 'Confirmar Pagamento',
       size:  'lg',
       renderBody: (body, closeModal) => {
         const itens = pedido.produtos.map(() => ({ fornecedor: '', custo: '', observacoes: '' }))
@@ -443,19 +483,25 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
         const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelBtn.addEventListener('click', closeModal)
-        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Confirmar Pagamento')
+        const okLabel = jaConfirmado ? 'Efetuar Compra' : 'Confirmar Pagamento'
+        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, okLabel)
         okBtn.addEventListener('click', async () => {
           const faltando = itens.some(it => !it.fornecedor.trim() || it.custo === '')
           if (faltando) { toastError('Informe fornecedor e custo de cada item.'); return }
-          okBtn.disabled = true; okBtn.textContent = 'Confirmando...'
+          okBtn.disabled = true; okBtn.textContent = 'Aguarde...'
           try {
-            await confirmarPagamento(pedido, itens)
-            toastSuccess('Pagamento confirmado. Compra e venda geradas.')
+            if (jaConfirmado) {
+              await efetuarCompra(pedido, itens)
+              toastSuccess('Compra e venda geradas.')
+            } else {
+              await confirmarPagamento(pedido, itens)
+              toastSuccess('Pagamento confirmado. Compra e venda geradas.')
+            }
             closeModal()
           } catch (err) {
             console.error(err)
-            toastError('Erro ao confirmar pagamento.')
-            okBtn.disabled = false; okBtn.textContent = 'Confirmar Pagamento'
+            toastError('Erro ao salvar.')
+            okBtn.disabled = false; okBtn.textContent = okLabel
           }
         })
 
@@ -474,9 +520,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     const numero = await garantirNumeroRecibo(pedido, patchPedido)
     const cliente = clientes.find(c => c.name === pedido.cliente)
     const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
-    const comprasSnap = await getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
-    const comprasPedido = comprasSnap.docs.map(d => d.data())
-    return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome, comprasPedido })
+    return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome })
   }
 
   async function enviarReciboWhatsapp(pedido, dados) {
