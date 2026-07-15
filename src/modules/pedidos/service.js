@@ -72,12 +72,16 @@ async function limparCompraEVenda(pedidoId, batch) {
   vendasSnap.docs.forEach(d => batch.delete(d.ref))
 }
 
-// Gera a Compra (custo/fornecedor informados agora) e a Venda (dados do próprio
-// pedido) de cada item — produto ou manutenção. Não mexe em estoqueAtual: esse
-// fluxo é sempre compra-e-venda simultânea (o produto nunca fica parado em
-// estoque); só entra em estoque o que for lançado direto no menu Compras.
+// Gera a Compra (custo/fornecedor informados agora) de cada item — produto ou
+// manutenção — e UMA Venda pro pedido inteiro, com todos os itens dentro
+// (mesmo agrupamento do recibo). Compra continua uma por aparelho, já que
+// custo/fornecedor são rastreados por unidade; Venda é o registro da venda em
+// si, que é sempre do pedido como um todo, não de cada aparelho separado. Não
+// mexe em estoqueAtual: esse fluxo é sempre compra-e-venda simultânea (o
+// produto nunca fica parado em estoque); só entra em estoque o que for
+// lançado direto no menu Compras.
 function criarCompraEVenda(batch, pedido, itensCompra) {
-  pedido.produtos.forEach((p, i) => {
+  const itensVenda = pedido.produtos.map((p, i) => {
     const item  = itensCompra[i] || {}
     const label = produtoLabel(p)
 
@@ -93,17 +97,18 @@ function criarCompraEVenda(batch, pedido, itensCompra) {
       criadoEm:    serverTimestamp(),
     })
 
-    batch.set(doc(collection(db, 'vendas')), {
-      pedidoId:       pedido.id,
-      cliente:        pedido.cliente,
-      produto:        label,
-      tipo:           p.tipo || 'produto',
-      valorVenda:     p.valor || 0,
-      formaPagamento: (pedido.formasPagamento || [])[0] || '',
-      statusEntrega:  'aguardando',
-      reciboEmitido:  false,
-      criadoEm:       serverTimestamp(),
-    })
+    return { produto: label, tipo: p.tipo || 'produto', valor: p.valor || 0 }
+  })
+
+  batch.set(doc(collection(db, 'vendas')), {
+    pedidoId:       pedido.id,
+    cliente:        pedido.cliente,
+    itens:          itensVenda,
+    valorVenda:     itensVenda.reduce((s, it) => s + it.valor, 0),
+    formaPagamento: (pedido.formasPagamento || [])[0] || '',
+    statusEntrega:  'aguardando',
+    reciboEmitido:  false,
+    criadoEm:       serverTimestamp(),
   })
 }
 

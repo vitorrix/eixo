@@ -28,6 +28,21 @@ const ENTREGA_ORDER = ['aguardando', 'retirada', 'motoboy', 'correio', 'entregue
 
 const PAG_LABEL = { pix: '🏦 PIX', dinheiro: '💰 Dinheiro', cartao: '💳 Cartão', link: '🏪 Link' }
 
+// Venda vinda de pedido tem vários itens (v.itens); venda avulsa tem só um
+// produto (v.produto). Normaliza pra sempre trabalhar com uma lista.
+function vendaItens(v) {
+  if (Array.isArray(v.itens) && v.itens.length) return v.itens
+  return v.produto ? [{ produto: v.produto, valor: v.valorVenda || 0 }] : []
+}
+
+// Texto curto pra célula da tabela — só o primeiro item + quantos a mais.
+function vendaProdutoResumo(v) {
+  const itens = vendaItens(v)
+  if (!itens.length) return '—'
+  const [first, ...resto] = itens
+  return resto.length ? `${first.produto} +${resto.length}` : first.produto
+}
+
 function nowMonth() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -140,7 +155,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     let list = vendas.filter(v => monthKey(v.criadoEm) === currentMonth)
     if (q) list = list.filter(v =>
       (v.cliente || '').toLowerCase().includes(q) ||
-      (v.produto || '').toLowerCase().includes(q)
+      vendaItens(v).some(it => (it.produto || '').toLowerCase().includes(q))
     )
     return list
   }
@@ -220,7 +235,8 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       const pagLabel = PAG_LABEL[v.formaPagamento] || v.formaPagamento || '—'
 
       const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
-        canEdit, canDelete,
+        canEdit: canEdit && !v.pedidoId, // venda de pedido se edita pelo Pedido, não aqui
+        canDelete,
         onEdit: () => abrirEditarVendaModal(v),
         onDelete: () => confirmDelete(v),
       }))
@@ -228,7 +244,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
         el('td', { class: 'td-name' }, v.cliente || '—'),
-        el('td', {}, v.produto || '—'),
+        el('td', {}, vendaProdutoResumo(v)),
         el('td', { class: 'td-money' }, brl(v.valorVenda || 0)),
         el('td', {}, pagLabel),
         el('td', {}, entregaSel),
@@ -243,7 +259,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   function confirmDelete(v) {
     openConfirm({
       title:        'Excluir venda',
-      message:      `Excluir venda de "${v.produto}"${v.cliente ? ` para ${v.cliente}` : ''}?`,
+      message:      `Excluir venda de "${vendaProdutoResumo(v)}"${v.cliente ? ` para ${v.cliente}` : ''}?`,
       confirmLabel: 'Excluir',
       danger:       true,
       onConfirm:    async () => {
@@ -324,14 +340,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
                 pedidoId: tipo === 'pedido' ? entidade.id : null,
                 vendaId:  tipo === 'venda'  ? entidade.id : null,
               })
-              // marca "enviado" na venda atual e, se o recibo é de um pedido com
-              // várias linhas, em todas as vendas irmãs (o recibo cobre todas juntas).
-              if (tipo === 'venda') {
-                await patchVenda(venda.id, { reciboEmitido: true })
-              } else {
-                const snapIrmas = await getDocs(query(collection(db, 'vendas'), where('pedidoId', '==', entidade.id)))
-                await Promise.all(snapIrmas.docs.map(d => patchVenda(d.id, { reciboEmitido: true })))
-              }
+              await patchVenda(venda.id, { reciboEmitido: true })
               toastSuccess('Enviado para a fila — o bot manda pro cliente em instantes.')
               statusEl.textContent = FILA_STATUS_LABEL.pendente
               unsubFila = onSnapshot(ref, snap => {
@@ -453,18 +462,25 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     const dateStr = v.criadoEm?.toDate ? shortDate(v.criadoEm.toDate().toISOString().slice(0, 10)) : '—'
     const podeRecibo = v.statusEntrega === 'entregue'
 
+    // Venda de pedido pode ter vários itens — lista todos, um por linha, em
+    // vez do resumo curto que aparece na tabela.
+    const itens = vendaItens(v)
+    const produtoValor = itens.length > 1
+      ? el('div', {}, ...itens.map(it => el('div', {}, `${it.produto} — ${brl(it.valor || 0)}`)))
+      : (itens[0]?.produto || '—')
+
     abrirDetalhesModal({
       title: 'Detalhes da Venda',
       campos: [
         ['Cliente', v.cliente],
         ['Data', dateStr],
-        ['Produto', v.produto],
+        ['Produto', produtoValor],
         ['Valor', brl(v.valorVenda || 0)],
         ['Forma de pagamento', pagLabel],
         ['Entrega', entregaMeta.label],
         ['Recibo', v.reciboEmitido ? 'Enviado' : 'Não enviado'],
       ],
-      onEditar:   canEdit ? () => abrirEditarVendaModal(v) : null,
+      onEditar:   (canEdit && !v.pedidoId) ? () => abrirEditarVendaModal(v) : null,
       onImprimir: podeRecibo ? () => abrirReciboVendaModal(v, { autoImprimir: true }) : null,
       onRecibo:   podeRecibo ? () => abrirReciboVendaModal(v) : null,
     })
