@@ -2,10 +2,17 @@ import { monthKey } from '../../shared/utils/month.js'
 
 // Regime de caixa: só entra o que já foi liquidado (recebido/pago de fato) no
 // mês selecionado, pela data de liquidação — não pela data de vencimento.
-// Convenção usada em todos os relatórios financeiros (DRE, Fluxo Financeiro,
-// Fluxo de Caixa Periódico).
+// Usado pelo Fluxo de Caixa Periódico, que agrupa por mês.
 export function lancamentosDoMes(lancamentos, mes) {
   return lancamentos.filter(l => l.liquidado && monthKey(l.dataLiquidacao) === mes)
+}
+
+// Mesma regra de caixa, mas para um intervalo de datas [de, ate] inclusive —
+// usado pelos relatórios com filtro de período (DRE, Fluxo Financeiro).
+export function lancamentosNoPeriodo(lancamentos, de, ate) {
+  return lancamentos.filter(l =>
+    l.liquidado && l.dataLiquidacao && l.dataLiquidacao >= de && l.dataLiquidacao <= ate
+  )
 }
 
 export function somaCategoria(lancamentosMes, categoria) {

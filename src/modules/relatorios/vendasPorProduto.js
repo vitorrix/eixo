@@ -1,8 +1,9 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
-import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { subscribeVendas } from '../vendas/service.js'
 import { toastError } from '../../shared/components/Toast.js'
+import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { presetRange } from '../../shared/utils/periodo.js'
 
 export function renderVendasPorProduto(container) {
   mount(container, el('div', { class: 'loading' }, 'Carregando vendas...'))
@@ -11,27 +12,23 @@ export function renderVendasPorProduto(container) {
 
 function _init(container) {
   let vendas = []
-  let currentMonth = nowMonth()
+  let periodo = presetRange('este-mes')
   let firstLoad = true
 
-  const monthNavLabel = el('span', { class: 'month-nav-label' })
-  const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
-  const nextBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '›')
-  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); update() })
-  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); update() })
+  const picker = createPeriodoPicker({
+    initialPreset: 'este-mes',
+    onChange: p => { periodo = p; update() },
+  })
 
   const reportWrap = el('div', {})
 
   function update() {
-    monthNavLabel.textContent = monthLabel(currentMonth)
-    reportWrap.replaceChildren(buildRelatorio(vendas, currentMonth))
+    reportWrap.replaceChildren(buildRelatorio(vendas, periodo))
   }
 
   function renderScreen() {
     mount(container,
-      el('div', { class: 'relatorio-toolbar' },
-        el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
-      ),
+      el('div', { class: 'relatorio-toolbar' }, picker.el),
       reportWrap
     )
     update()
@@ -61,8 +58,11 @@ function dataVenda(v) {
   return v.criadoEm?.toDate ? v.criadoEm.toDate().toISOString().slice(0, 10) : null
 }
 
-function vendasDoMes(vendas, mes) {
-  return vendas.filter(v => monthKey(dataVenda(v)) === mes)
+function vendasNoPeriodo(vendas, de, ate) {
+  return vendas.filter(v => {
+    const d = dataVenda(v)
+    return d && d >= de && d <= ate
+  })
 }
 
 // Venda de pedido tem itens[] (um por aparelho/serviço do pedido); venda
@@ -88,8 +88,8 @@ function agruparPorProduto(vendasMes) {
   return [...mapa.values()].sort((a, b) => b.quantidade - a.quantidade || b.valor - a.valor)
 }
 
-function buildRelatorio(vendas, mes) {
-  const vendasMes = vendasDoMes(vendas, mes)
+function buildRelatorio(vendas, periodo) {
+  const vendasMes = vendasNoPeriodo(vendas, periodo.de, periodo.ate)
   const ranking = agruparPorProduto(vendasMes)
 
   const totalUnidades = ranking.reduce((s, r) => s + r.quantidade, 0)

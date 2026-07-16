@@ -1,10 +1,11 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl, fullDate } from '../../shared/utils/formatters.js'
-import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { subscribeVendas } from '../vendas/service.js'
 import { subscribeCompras } from '../compras/service.js'
 import { subscribeProdutos } from '../produtos/service.js'
 import { toastError } from '../../shared/components/Toast.js'
+import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { presetRange } from '../../shared/utils/periodo.js'
 
 const PAG_LABEL = { pix: 'PIX', dinheiro: 'Dinheiro', cartao: 'Cartão', link: 'Link' }
 
@@ -17,30 +18,26 @@ function _init(container) {
   let vendas = []
   let compras = []
   let produtos = []
-  let currentMonth = nowMonth()
+  let periodo = presetRange('este-mes')
   let rendered = false
 
-  const monthNavLabel = el('span', { class: 'month-nav-label' })
-  const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
-  const nextBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '›')
-  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); update() })
-  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); update() })
+  const picker = createPeriodoPicker({
+    initialPreset: 'este-mes',
+    onChange: p => { periodo = p; update() },
+  })
 
   const reportWrap = el('div', {})
 
   function update() {
     if (!rendered) return
-    monthNavLabel.textContent = monthLabel(currentMonth)
-    reportWrap.replaceChildren(buildRelatorio(vendas, compras, produtos, currentMonth))
+    reportWrap.replaceChildren(buildRelatorio(vendas, compras, produtos, periodo))
   }
 
   function renderScreen() {
     if (rendered) return
     rendered = true
     mount(container,
-      el('div', { class: 'relatorio-toolbar' },
-        el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
-      ),
+      el('div', { class: 'relatorio-toolbar' }, picker.el),
       reportWrap
     )
     update()
@@ -89,7 +86,7 @@ function itensComCusto(venda, comprasPorPedido, produtosPorId) {
   return [{ nome: venda.produto || '—', custo, venda: venda.valorVenda || 0 }]
 }
 
-function buildRelatorio(vendas, compras, produtos, mes) {
+function buildRelatorio(vendas, compras, produtos, periodo) {
   const comprasPorPedido = new Map()
   compras.forEach(c => {
     if (!c.pedidoId) return
@@ -99,7 +96,7 @@ function buildRelatorio(vendas, compras, produtos, mes) {
   const produtosPorId = new Map(produtos.map(p => [p.id, p]))
 
   const vendasMes = vendas
-    .filter(v => monthKey(dataVenda(v)) === mes)
+    .filter(v => { const d = dataVenda(v); return d && d >= periodo.de && d <= periodo.ate })
     .sort((a, b) => (dataVenda(a) || '').localeCompare(dataVenda(b) || ''))
 
   let totUnidades = 0, totCusto = 0, totVenda = 0
@@ -162,10 +159,24 @@ function buildRelatorio(vendas, compras, produtos, mes) {
   )
 
   if (!vendasMes.length) {
-    return el('div', {}, kpis, el('div', { class: 'empty-state' }, el('p', {}, 'Nenhuma venda neste mês.')))
+    return el('div', {}, kpis, el('div', { class: 'empty-state' }, el('p', {}, 'Nenhuma venda no período.')))
   }
 
-  return el('div', {}, kpis, el('div', { class: 'venda-det-list' }, ...cards))
+  // Total geral do período — mesmo fechamento do rodapé do relatório impresso.
+  const totalGeral = el('div', { class: 'table-wrapper venda-det-total-geral' },
+    el('table', { class: 'data-table venda-det-table' },
+      el('tbody', {},
+        el('tr', { class: 'dre-row-final' },
+          el('td', {}, `TOTAL GERAL (${vendasMes.length} ${vendasMes.length === 1 ? 'venda' : 'vendas'}, ${totUnidades} ${totUnidades === 1 ? 'item' : 'itens'})`),
+          el('td', { class: 'td-money' }, brl(totCusto)),
+          el('td', { class: 'td-money' }, brl(totVenda)),
+          el('td', { class: 'td-money' }, brl(totLucro)),
+        )
+      )
+    )
+  )
+
+  return el('div', {}, kpis, el('div', { class: 'venda-det-list' }, ...cards), totalGeral)
 }
 
 function kpiCard(label, value, cls) {

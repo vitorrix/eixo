@@ -1,11 +1,12 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
-import { nowMonth, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { getOperacoes } from '../configuracoes/service.js'
 import { GRUPOS_DRE } from '../configuracoes/tabCategorias.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
 import { toastError } from '../../shared/components/Toast.js'
-import { lancamentosDoMes, somaCategoria, categoriasDoGrupo, totalGrupo } from './financeiroCalc.js'
+import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { presetRange } from '../../shared/utils/periodo.js'
+import { lancamentosNoPeriodo, somaCategoria, categoriasDoGrupo, totalGrupo } from './financeiroCalc.js'
 
 export function renderDRE(container) {
   mount(container, el('div', { class: 'loading' }, 'Carregando DRE...'))
@@ -24,27 +25,23 @@ async function _init(container) {
   }
 
   let lancamentos = []
-  let currentMonth = nowMonth()
+  let periodo = presetRange('este-mes')
   let firstLoad = true
 
-  const monthNavLabel = el('span', { class: 'month-nav-label' })
-  const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
-  const nextBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '›')
-  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); update() })
-  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); update() })
+  const picker = createPeriodoPicker({
+    initialPreset: 'este-mes',
+    onChange: p => { periodo = p; update() },
+  })
 
   const reportWrap = el('div', {})
 
   function update() {
-    monthNavLabel.textContent = monthLabel(currentMonth)
-    reportWrap.replaceChildren(buildDRE(lancamentos, operacoes.categorias || [], currentMonth))
+    reportWrap.replaceChildren(buildDRE(lancamentos, operacoes.categorias || [], periodo))
   }
 
   function renderScreen() {
     mount(container,
-      el('div', { class: 'relatorio-toolbar' },
-        el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
-      ),
+      el('div', { class: 'relatorio-toolbar' }, picker.el),
       reportWrap
     )
     update()
@@ -71,8 +68,8 @@ async function _init(container) {
 }
 
 // ── Cálculo do DRE ──────────────────────────────────────────────────────────
-function buildDRE(lancamentos, categorias, mes) {
-  const lancamentosMes = lancamentosDoMes(lancamentos, mes)
+function buildDRE(lancamentos, categorias, periodo) {
+  const lancamentosMes = lancamentosNoPeriodo(lancamentos, periodo.de, periodo.ate)
 
   const receitaBruta = totalGrupo(lancamentosMes, categorias, 'Receita Bruta')
   const impostos = totalGrupo(lancamentosMes, categorias, 'Impostos')

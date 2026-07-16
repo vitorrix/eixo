@@ -3,6 +3,8 @@ import { getCurrentProfile } from '../../auth/session.js'
 import { maskPhone, brl } from '../../shared/utils/formatters.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { subscribeAniversariantes } from '../clientes/service.js'
+import { subscribeFinanceiro } from '../financeiro/service.js'
+import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { collection, query, where, getCountFromServer } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 
@@ -12,16 +14,6 @@ const MODULE_CARDS = [
   { label: 'Fornecedores', sub: 'Cadastro de fornecedores',path: '/fornecedores',  color: '#f59e0b', icon: 'fornecedores' },
   { label: 'Financeiro',   sub: 'Receitas e despesas',     path: '/financeiro',    color: '#3b82f6', icon: 'financeiro'   },
   { label: 'Produtos',     sub: 'Catálogo de produtos',    path: '/produtos',      color: '#ec4899', icon: 'produtos'     },
-]
-
-// Dados fictícios — sem lançamentos financeiros reais ainda
-const FAKE_REVENUE = [
-  { label: 'Fev', value: 18400 },
-  { label: 'Mar', value: 21200 },
-  { label: 'Abr', value: 19800 },
-  { label: 'Mai', value: 24500 },
-  { label: 'Jun', value: 27300 },
-  { label: 'Jul', value: 31200 },
 ]
 
 const STAT_CARDS = [
@@ -109,16 +101,38 @@ function buildMural(recados) {
   )
 }
 
-function buildRevenueChart() {
-  const max = Math.max(...FAKE_REVENUE.map(d => d.value))
-  const last = FAKE_REVENUE[FAKE_REVENUE.length - 1]
-  const prev = FAKE_REVENUE[FAKE_REVENUE.length - 2]
-  const deltaPct = Math.round(((last.value - prev.value) / prev.value) * 100)
+// Faturamento real dos últimos 6 meses: soma dos Recebimentos já liquidados
+// (regime de caixa) por mês da data de liquidação. Mesma convenção dos
+// relatórios financeiros.
+function calcularFaturamento(lancamentos) {
+  const meses = []
+  for (let i = 5; i >= 0; i--) {
+    const ym = shiftMonth(nowMonth(), -i)
+    meses.push({ ym, label: monthLabel(ym).split(' ')[0], value: 0 })
+  }
+  const porMes = new Map(meses.map(m => [m.ym, m]))
+  lancamentos.forEach(l => {
+    if (l.tipo !== 'receber' || !l.liquidado) return
+    const m = porMes.get(monthKey(l.dataLiquidacao))
+    if (m) m.value += l.valor || 0
+  })
+  return meses
+}
+
+function buildRevenueChart(lancamentos) {
+  const dados = calcularFaturamento(lancamentos)
+  const max = Math.max(...dados.map(d => d.value), 1)
+  const temDados = dados.some(d => d.value > 0)
+
+  const last = dados[dados.length - 1]
+  const prev = dados[dados.length - 2]
+  const deltaPct = prev.value > 0 ? Math.round(((last.value - prev.value) / prev.value) * 100) : null
 
   const headlineValue = el('span', { class: 'chart-headline-value' }, brl(last.value))
-  const headlineDelta = el('span', { class: `chart-headline-delta ${deltaPct >= 0 ? 'up' : 'down'}` },
-    `${deltaPct >= 0 ? '▲' : '▼'} ${Math.abs(deltaPct)}%`)
-  const headlineLabel = el('span', { class: 'chart-headline-label' }, `vs. ${prev.label}`)
+  const headlineDelta = deltaPct !== null
+    ? el('span', { class: `chart-headline-delta ${deltaPct >= 0 ? 'up' : 'down'}` }, `${deltaPct >= 0 ? '▲' : '▼'} ${Math.abs(deltaPct)}%`)
+    : el('span', {})
+  const headlineLabel = el('span', { class: 'chart-headline-label' }, last.label)
 
   function showMonth(d) {
     headlineValue.textContent = brl(d.value)
@@ -126,10 +140,10 @@ function buildRevenueChart() {
   }
   function resetHeadline() {
     headlineValue.textContent = brl(last.value)
-    headlineLabel.textContent = `vs. ${prev.label}`
+    headlineLabel.textContent = last.label
   }
 
-  const barCols = FAKE_REVENUE.map(d => {
+  const barCols = dados.map(d => {
     const fill = el('div', { class: 'chart-bar-fill' })
     fill.style.height = `${Math.round((d.value / max) * 100)}%`
     const bar = el('div', { class: 'chart-bar' }, fill)
@@ -139,17 +153,19 @@ function buildRevenueChart() {
     return col
   })
 
-  const axisLabels = FAKE_REVENUE.map(d => el('span', { class: 'chart-axis-label' }, d.label))
+  const axisLabels = dados.map(d => el('span', { class: 'chart-axis-label' }, d.label))
 
   return el('div', { class: 'chart-card' },
     el('div', { class: 'chart-header' },
       el('span', { class: 'chart-title' }, 'Faturamento'),
-      el('span', { class: 'chart-badge-mock' }, 'dados fictícios')
+      el('span', { class: 'chart-subtitle' }, 'últimos 6 meses')
     ),
     el('div', { class: 'chart-headline' }, headlineValue, headlineDelta, headlineLabel),
     el('div', { class: 'chart-plot' }, ...barCols),
     el('div', { class: 'chart-axis-row' }, ...axisLabels),
-    el('p', { class: 'chart-note' }, 'Gráfico ilustrativo — nenhum lançamento financeiro registrado ainda.')
+    temDados
+      ? null
+      : el('p', { class: 'chart-note' }, 'Nenhum recebimento liquidado nos últimos 6 meses.')
   )
 }
 
@@ -210,6 +226,8 @@ export function render(container) {
     return card
   })
 
+  const chartWrap = el('div', { class: 'chart-wrap' })
+
   mount(container,
     el('div', { class: 'page-header' }, greeting, sub),
     el('div', { class: 'dashboard-section' },
@@ -217,7 +235,12 @@ export function render(container) {
       el('div', { class: 'dashboard-cards' }, ...moduleCards),
     ),
     el('div', { class: 'dashboard-section stat-cards' }, ...statCards),
-    el('div', { class: 'dashboard-section dashboard-row' }, muralWrap, buildRevenueChart())
+    el('div', { class: 'dashboard-section dashboard-row' }, muralWrap, chartWrap)
+  )
+
+  const unsubFinanceiro = subscribeFinanceiro(
+    lancamentos => mount(chartWrap, buildRevenueChart(lancamentos)),
+    () => mount(chartWrap, buildRevenueChart([]))
   )
 
   const unsubBirthday = subscribeAniversariantes((aniversariantes) => {
@@ -238,5 +261,5 @@ export function render(container) {
     mount(muralWrap, buildMural(recados))
   })
 
-  return unsubBirthday
+  return () => { unsubBirthday?.(); unsubFinanceiro?.() }
 }
