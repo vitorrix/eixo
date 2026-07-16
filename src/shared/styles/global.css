@@ -2749,6 +2749,17 @@ html, body {
 
 /* ── Relatórios ──────────────────────────────────── */
 .relatorio-toolbar { margin-bottom: 16px; }
+.relatorio-duas-colunas {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.relatorio-duas-colunas > .table-wrapper { flex: 1; min-width: 0; }
+@media (max-width: 900px) {
+  .relatorio-duas-colunas { flex-direction: column; }
+}
+.relatorio-periodo-picker { display: flex; gap: 14px; align-items: flex-end; }
+.relatorio-periodo-picker .field input { width: 160px; }
 
 /* ── DRE ─────────────────────────────────── */
 .dre-table tbody tr:nth-child(even) td { background: transparent; }

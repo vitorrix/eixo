@@ -1,10 +1,11 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
-import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
+import { nowMonth, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { getOperacoes } from '../configuracoes/service.js'
 import { GRUPOS_DRE } from '../configuracoes/tabCategorias.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
 import { toastError } from '../../shared/components/Toast.js'
+import { lancamentosDoMes, somaCategoria, categoriasDoGrupo, totalGrupo } from './financeiroCalc.js'
 
 export function renderDRE(container) {
   mount(container, el('div', { class: 'loading' }, 'Carregando DRE...'))
@@ -70,30 +71,6 @@ async function _init(container) {
 }
 
 // ── Cálculo do DRE ──────────────────────────────────────────────────────────
-// Regime de caixa: só entra o que já foi liquidado (recebido/pago de fato) no
-// mês selecionado, pela data de liquidação — não pela data de vencimento.
-function lancamentosDoMes(lancamentos, mes) {
-  return lancamentos.filter(l => l.liquidado && monthKey(l.dataLiquidacao) === mes)
-}
-
-function somaCategoria(lancamentosMes, categoria) {
-  return lancamentosMes
-    .filter(l => l.categoria === categoria.nome && l.tipo === categoria.tipo)
-    .reduce((s, l) => s + (l.valor || 0), 0)
-}
-
-function categoriasDoGrupo(categorias, grupo, subgrupo) {
-  return categorias.filter(c => c.grupo === grupo && (subgrupo ? c.subgrupo === subgrupo : true))
-}
-
-// Soma de todas as categorias de um grupo (ou de um subgrupo específico
-// dentro de Despesas Operacionais), ignorando o sinal — quem decide se soma
-// ou subtrai é quem chama, conforme a posição do grupo no DRE.
-function totalGrupo(lancamentosMes, categorias, grupo, subgrupo) {
-  return categoriasDoGrupo(categorias, grupo, subgrupo)
-    .reduce((s, c) => s + somaCategoria(lancamentosMes, c), 0)
-}
-
 function buildDRE(lancamentos, categorias, mes) {
   const lancamentosMes = lancamentosDoMes(lancamentos, mes)
 
