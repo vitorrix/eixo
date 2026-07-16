@@ -57,6 +57,20 @@ export function moedaParaNumero(v) {
   return digits ? parseInt(digits, 10) : 0
 }
 
+// Endereço em linhas prontas pra documento impresso (recibo, cabeçalho de
+// relatório). Cada linha sai só se tiver conteúdo, pra não deixar buraco.
+export function linhasEndereco(addr, { comBairro = true } = {}) {
+  if (!addr) return []
+  const linhas = []
+  const l1 = [addr.logradouro, addr.numero].filter(Boolean).join(', ') + (addr.complemento ? ` - ${addr.complemento}` : '')
+  if (l1.trim()) linhas.push(l1)
+  if (comBairro && addr.bairro) linhas.push(addr.bairro)
+  const cidadeUf = [addr.cidade, addr.estado].filter(Boolean).join(' - ')
+  if (cidadeUf) linhas.push(addr.cep ? `${cidadeUf} - CEP ${maskCEP(addr.cep)}` : cidadeUf)
+  else if (addr.cep) linhas.push(`CEP ${maskCEP(addr.cep)}`)
+  return linhas
+}
+
 export function shortDate(iso) {
   if (!iso || iso.length < 10) return iso || '—'
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}`

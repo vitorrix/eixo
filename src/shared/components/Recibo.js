@@ -2,7 +2,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
 import { el, mount } from '../utils/dom.js'
-import { brl, fullDate, maskCEP, maskPhone } from '../utils/formatters.js'
+import { brl, fullDate, maskPhone, linhasEndereco } from '../utils/formatters.js'
 import { proximoNumeroRecibo } from '../../modules/configuracoes/service.js'
 import { produtoLabel } from '../../modules/pedidos/service.js'
 
@@ -51,18 +51,6 @@ export async function enviarReciboFila({ dados, telefone, pedidoId = null, venda
     criadoEm:  serverTimestamp(),
     criadoPor: uid,
   })
-}
-
-function linhasEndereco(addr, { comBairro = true } = {}) {
-  if (!addr) return []
-  const linhas = []
-  const l1 = [addr.logradouro, addr.numero].filter(Boolean).join(', ') + (addr.complemento ? ` - ${addr.complemento}` : '')
-  if (l1.trim()) linhas.push(l1)
-  if (comBairro && addr.bairro) linhas.push(addr.bairro)
-  const cidadeUf = [addr.cidade, addr.estado].filter(Boolean).join(' - ')
-  if (cidadeUf) linhas.push(addr.cep ? `${cidadeUf} - CEP ${maskCEP(addr.cep)}` : cidadeUf)
-  else if (addr.cep) linhas.push(`CEP ${maskCEP(addr.cep)}`)
-  return linhas
 }
 
 function montarEmpresa(empresa) {
