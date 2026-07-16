@@ -2,15 +2,17 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { renderDRE } from './dre.js'
 import { renderVendasDetalhadas } from './vendasDetalhadas.js'
 import { renderVendasPorProduto } from './vendasPorProduto.js'
+import { renderAbcProdutos } from './abcProdutos.js'
 import { renderFluxoFinanceiro } from './fluxoFinanceiro.js'
 import { renderFluxoCaixaPeriodico } from './fluxoCaixaPeriodico.js'
 
 // Lista de relatórios disponíveis — adicionar aqui conforme novos forem
-// entrando (ex: ABC de produtos vendidos, comissão por vendedor...).
+// entrando (ex: comissão por vendedor...).
 const RELATORIOS = [
   { key: 'vendas-detalhadas', label: 'Vendas Detalhadas',       render: renderVendasDetalhadas },
   { key: 'dre',               label: 'DRE',                     render: renderDRE },
   { key: 'vendas-produtos',   label: 'Vendas por Produto',      render: renderVendasPorProduto },
+  { key: 'abc-produtos',      label: 'ABC de Produtos',         render: renderAbcProdutos },
   { key: 'fluxo-financeiro',  label: 'Fluxo Financeiro',        render: renderFluxoFinanceiro },
   { key: 'fluxo-caixa',       label: 'Fluxo de Caixa Periódico', render: renderFluxoCaixaPeriodico },
 ]

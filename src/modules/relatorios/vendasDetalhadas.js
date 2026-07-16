@@ -6,6 +6,7 @@ import { subscribeProdutos } from '../produtos/service.js'
 import { toastError } from '../../shared/components/Toast.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { presetRange } from '../../shared/utils/periodo.js'
+import { dataVenda, vendasNoPeriodo, indexComprasPorPedido, itensComCusto } from './vendasCalc.js'
 
 const PAG_LABEL = { pix: 'PIX', dinheiro: 'Dinheiro', cartao: 'Cartão', link: 'Link' }
 
@@ -63,41 +64,10 @@ function _init(container) {
   return () => { unsubVendas?.(); unsubCompras?.(); unsubProdutos?.() }
 }
 
-function dataVenda(v) {
-  return v.criadoEm?.toDate ? v.criadoEm.toDate().toISOString().slice(0, 10) : null
-}
-
-// Casa cada item da venda de pedido com uma Compra do mesmo pedido pelo nome
-// do produto, consumindo a compra usada — cobre o caso de 2 unidades do mesmo
-// produto no pedido (cada uma tem sua Compra). Item sem compra correspondente
-// (ex: acessório lançado sem custo) fica com custo 0.
-function itensComCusto(venda, comprasPorPedido, produtosPorId) {
-  if (venda.pedidoId) {
-    const disponiveis = [...(comprasPorPedido.get(venda.pedidoId) || [])]
-    return (venda.itens || []).map(it => {
-      const idx = disponiveis.findIndex(c => c.produto === it.produto)
-      let custo = 0
-      if (idx >= 0) { custo = disponiveis[idx].custo || 0; disponiveis.splice(idx, 1) }
-      return { nome: it.produto, custo, venda: it.valor || 0 }
-    })
-  }
-  // Venda avulsa: item único, custo puxado do cadastro do produto.
-  const custo = venda.produtoId ? (produtosPorId.get(venda.produtoId)?.precoCusto || 0) : 0
-  return [{ nome: venda.produto || '—', custo, venda: venda.valorVenda || 0 }]
-}
-
 function buildRelatorio(vendas, compras, produtos, periodo) {
-  const comprasPorPedido = new Map()
-  compras.forEach(c => {
-    if (!c.pedidoId) return
-    if (!comprasPorPedido.has(c.pedidoId)) comprasPorPedido.set(c.pedidoId, [])
-    comprasPorPedido.get(c.pedidoId).push(c)
-  })
+  const comprasPorPedido = indexComprasPorPedido(compras)
   const produtosPorId = new Map(produtos.map(p => [p.id, p]))
-
-  const vendasMes = vendas
-    .filter(v => { const d = dataVenda(v); return d && d >= periodo.de && d <= periodo.ate })
-    .sort((a, b) => (dataVenda(a) || '').localeCompare(dataVenda(b) || ''))
+  const vendasMes = vendasNoPeriodo(vendas, periodo.de, periodo.ate)
 
   let totUnidades = 0, totCusto = 0, totVenda = 0
   const cards = []
