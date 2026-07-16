@@ -12,7 +12,6 @@ const routes = {
   '/produtos':      { module: 'produtos',      loader: () => import('../modules/produtos/index.js') },
   '/busca':         { module: 'busca',         loader: () => import('../modules/busca/index.js') },
   '/orcamentos':    { module: null,             loader: () => import('../modules/orcamentos/index.js') },
-  '/recibo':        { module: 'recibo',        loader: () => import('../modules/recibo/index.js') },
   '/relatorios':    { module: 'relatorios',    loader: () => import('../modules/relatorios/index.js') },
   '/financeiro':    { module: 'financeiro',    loader: () => import('../modules/financeiro/index.js') },
   '/configuracoes': { module: 'configuracoes', loader: () => import('../modules/configuracoes/index.js') },

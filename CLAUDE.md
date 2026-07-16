@@ -43,9 +43,8 @@ Contrato obrigatório: exportar `render(container)`. O container é `#module-con
 | produtos | `#/produtos` | Completo — cadastro, list com busca, estoque; sem imagem |
 | configuracoes | `#/configuracoes` | Funcional — abas Empresa, Formas de Pagamento, Contas, Categorias |
 | usuarios | `#/usuarios` | Funcional |
-| recibo | `#/recibo` | Placeholder |
-| relatorios | `#/relatorios` | Placeholder |
-| financeiro | `#/financeiro` | Funcional — Recebimentos/Pagamentos manuais + gerados automaticamente pelo Pedido; recorrência simples (data inicial/final); DRE ainda não tem relatório visual |
+| relatorios | `#/relatorios` | Funcional — DRE (regime de caixa, categorias com Grupo/Subgrupo, indicadores de margem) |
+| financeiro | `#/financeiro` | Funcional — Recebimentos/Pagamentos manuais + gerados automaticamente pelo Pedido; recorrência simples (data inicial/final) |
 
 ### Auth & Permissões (`src/auth/session.js`)
 - `onSessionReady(cb)` — observador de boot; carrega perfil do Firestore
@@ -101,7 +100,6 @@ Segurança declarada no servidor — não confiar só no JS. Toda coleção tem 
 /compras/{id}          ← uma por aparelho, origem.pedidoId liga ao Pedido
 /vendas/{id}           ← uma por pedido (itens[] dentro) ou avulsa (produto único)
 /orcamentos/{id}
-/recibos/{id}
 /relatorios/{id}
 /financeiro/{id}        ← tipo: 'receber'|'pagar'; origem.pedidoId liga ao Pedido quando automático
 /configuracoes/{docId} ← operacoes: formasPagamento[], contas[], categorias[]

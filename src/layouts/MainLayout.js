@@ -13,7 +13,6 @@ const PAGE_LABELS = {
   '/fornecedores':  'Fornecedores',
   '/produtos':      'Produtos',
   '/busca':         'Busca',
-  '/recibo':        'Notas de Venda',
   '/orcamentos':    'Orçamentos',
   '/relatorios':    'Relatórios',
   '/financeiro':    'Financeiro',
@@ -47,11 +46,6 @@ const NAV_ICONS = {
     'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2',
     'M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
     'M12 11v6M9 14h6',
-  ],
-  recibo: [
-    'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2',
-    'M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-    'M9 12h6M9 16h4'
   ],
   relatorios: [
     'M18 20V10M12 20V4M6 20v-6'
@@ -96,7 +90,6 @@ const NAV_ITEMS = [
   { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores' },
   { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos' },
   { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro' },
-  { path: '/recibo',        label: 'Notas de Venda', module: 'recibo',        iconKey: 'recibo',        wip: true },
   { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios' },
   { path: '/configuracoes', label: 'Configurações',  module: 'configuracoes', iconKey: 'configuracoes' },
   { path: '/usuarios',      label: 'Usuários',       module: 'usuarios',      iconKey: 'usuarios' },

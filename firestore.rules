@@ -110,14 +110,6 @@ service cloud.firestore {
       allow delete: if hasPermission('orcamento', 'delete');
     }
 
-    // ── /recibos ──────────────────────────────────────────────────────────
-    match /recibos/{id} {
-      allow read:   if hasPermission('recibo', 'view');
-      allow create: if hasPermission('recibo', 'create');
-      allow update: if hasPermission('recibo', 'edit');
-      allow delete: if hasPermission('recibo', 'delete');
-    }
-
     // ── /relatorios (coleção gerada por aggregações — somente leitura) ────
     match /relatorios/{id} {
       allow read:   if hasPermission('relatorios', 'view');
