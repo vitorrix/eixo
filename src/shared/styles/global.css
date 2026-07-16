@@ -1179,7 +1179,7 @@ html, body {
 }
 
 .config-list-header span:first-child { flex: 1; }
-.config-list-header span:nth-child(2) { flex: 0 0 220px; }
+.config-list-header span:not(:first-child):not(:last-child) { flex: 0 0 220px; }
 .config-list-header span:last-child   { flex: 0 0 36px; }
 
 /* ── Pedidos ─────────────────────────────────── */
@@ -2745,5 +2745,41 @@ html, body {
   .modal-header, .no-print { display: none !important; }
   .recibo-doc { border: none !important; }
   @page { size: A4; margin: 14mm; }
+}
+
+/* ── DRE ─────────────────────────────────── */
+.dre-table tbody tr:nth-child(even) td { background: transparent; }
+
+.dre-row-bloco td {
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  color: var(--color-muted);
+  background: var(--color-bg);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.dre-row-indent td:first-child { padding-left: 32px; }
+.dre-row-subgrupo td {
+  font-weight: 600;
+  padding-left: 20px;
+  color: var(--color-text);
+}
+.dre-row-subtotal td {
+  font-weight: 600;
+  border-top: 1px solid var(--color-border);
+}
+.dre-row-total td {
+  font-weight: 700;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}
+.dre-row-final td {
+  font-weight: 800;
+  font-size: 15px;
+  background: #10b98122;
+  border-top: 2px solid var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
 }
 .recibo-footer strong { color: #123c43; }

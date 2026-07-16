@@ -94,7 +94,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
   const formaPag = (pedido.formasPagamento || [])[0] || ''
   const contaPadrao = operacoes.formasPagamento?.find(f => f.nome === formaPag)?.contaPadrao || ''
   const categoriaReceber = operacoes.categorias?.find(c => c.tipo === 'receber')?.nome || ''
-  const categoriaPagar = operacoes.categorias?.find(c => c.tipo === 'pagar' && c.grupoDRE === 'Custo dos produtos (CMV)')?.nome
+  const categoriaPagar = operacoes.categorias?.find(c => c.tipo === 'pagar' && c.grupo === 'Custo dos Produtos Vendidos (CMV)')?.nome
     || operacoes.categorias?.find(c => c.tipo === 'pagar')?.nome || ''
 
   const itensVenda = []

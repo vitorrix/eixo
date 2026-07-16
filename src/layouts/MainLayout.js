@@ -97,7 +97,7 @@ const NAV_ITEMS = [
   { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos' },
   { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro' },
   { path: '/recibo',        label: 'Notas de Venda', module: 'recibo',        iconKey: 'recibo',        wip: true },
-  { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios',    wip: true },
+  { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios' },
   { path: '/configuracoes', label: 'Configurações',  module: 'configuracoes', iconKey: 'configuracoes' },
   { path: '/usuarios',      label: 'Usuários',       module: 'usuarios',      iconKey: 'usuarios' },
   { path: '/ajuda',         label: 'Ajuda',          module: null,            iconKey: 'ajuda' },
