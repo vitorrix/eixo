@@ -259,7 +259,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   function confirmDelete(v) {
     openConfirm({
       title:        'Excluir venda',
-      message:      `Excluir venda de "${vendaProdutoResumo(v)}"${v.cliente ? ` para ${v.cliente}` : ''}?`,
+      message:      `Excluir venda de "${vendaProdutoResumo(v)}"${v.cliente ? ` para ${v.cliente}` : ''}?${v.pedidoId ? ' O lançamento financeiro (Recebimento) vinculado também será excluído.' : ''}`,
       confirmLabel: 'Excluir',
       danger:       true,
       onConfirm:    async () => {

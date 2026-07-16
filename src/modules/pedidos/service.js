@@ -1,5 +1,5 @@
 import {
-  collection, addDoc, updateDoc, deleteDoc, doc,
+  collection, addDoc, updateDoc, doc,
   onSnapshot, query, orderBy, where, getDocs, serverTimestamp, deleteField, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
@@ -50,8 +50,13 @@ export async function patchPedido(id, fields) {
   return updateDoc(doc(db, COL, id), { ...fields, atualizadoEm: serverTimestamp() })
 }
 
+// Apaga o Pedido junto com Compra(s)/Venda/Financeiro gerados por ele —
+// mesma limpeza de limparCompraEVenda, só que sem regenerar nada depois.
 export async function deletePedido(id) {
-  return deleteDoc(doc(db, COL, id))
+  const batch = writeBatch(db)
+  await limparCompraEVenda(id, batch)
+  batch.delete(doc(db, COL, id))
+  return batch.commit()
 }
 
 export function produtoLabel(pr) {

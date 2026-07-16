@@ -645,7 +645,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   function confirmDelete(p) {
     openConfirm({
       title: 'Excluir pedido',
-      message: `Excluir pedido de "${p.cliente || p.clienteNome}"? Não pode ser desfeito.`,
+      message: `Excluir pedido de "${p.cliente || p.clienteNome}"? Compra(s), Venda e lançamentos financeiros vinculados também são excluídos. Não pode ser desfeito.`,
       confirmLabel: 'Excluir',
       danger: true,
       onConfirm: async () => {

@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc, deleteDoc,
-  doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch, increment,
+  doc, onSnapshot, query, orderBy, where, getDocs, serverTimestamp, writeBatch, increment,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 
@@ -73,6 +73,17 @@ export async function updateCompra(id, data) {
   })
 }
 
+// Apaga a Compra e, se ela veio de um Pedido, o Pagamento gerado junto no
+// Financeiro — sem isso o lançamento ficava órfão (sem Compra por trás) e
+// preso, já que o Financeiro só deixa excluir lançamento avulso.
 export async function deleteCompra(id) {
-  return deleteDoc(doc(db, COL, id))
+  const financeiroSnap = await getDocs(query(
+    collection(db, 'financeiro'),
+    where('origem.tipo', '==', 'compra'),
+    where('origem.id', '==', id)
+  ))
+  const batch = writeBatch(db)
+  batch.delete(doc(db, COL, id))
+  financeiroSnap.docs.forEach(d => batch.delete(d.ref))
+  return batch.commit()
 }

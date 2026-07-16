@@ -338,7 +338,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   function confirmDelete(c) {
     openConfirm({
       title:        'Excluir compra',
-      message:      `Excluir compra de "${c.produto}"?`,
+      message:      `Excluir compra de "${c.produto}"?${c.pedidoId ? ' O lançamento financeiro (Pagamento) vinculado também será excluído.' : ''}`,
       confirmLabel: 'Excluir',
       danger:       true,
       onConfirm:    async () => {

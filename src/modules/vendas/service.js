@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc,
-  doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch, increment,
+  doc, onSnapshot, query, orderBy, where, getDocs, serverTimestamp, writeBatch, increment,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -44,10 +44,19 @@ export async function patchVenda(id, fields) {
 }
 
 // Desfaz a entrada de estoque se a venda avulsa tinha descontado 1 na criação —
-// venda vinda de pedido nunca mexeu em estoque, então não devolve nada.
+// venda vinda de pedido nunca mexeu em estoque, então não devolve nada. Se a
+// venda veio de um Pedido, também apaga o Recebimento gerado junto no
+// Financeiro — mesmo motivo do deleteCompra: sem isso o lançamento ficava
+// órfão e preso (Financeiro só deixa excluir lançamento avulso).
 export async function deleteVenda(venda) {
+  const financeiroSnap = await getDocs(query(
+    collection(db, 'financeiro'),
+    where('origem.tipo', '==', 'venda'),
+    where('origem.id', '==', venda.id)
+  ))
   const batch = writeBatch(db)
   batch.delete(doc(db, COL, venda.id))
+  financeiroSnap.docs.forEach(d => batch.delete(d.ref))
   if (!venda.pedidoId && venda.produtoId) {
     batch.update(doc(db, 'produtos', venda.produtoId), { estoqueAtual: increment(1) })
   }
