@@ -2761,6 +2761,27 @@ html, body {
 .relatorio-periodo-picker { display: flex; gap: 14px; align-items: flex-end; }
 .relatorio-periodo-picker .field input { width: 160px; }
 
+.venda-det-list { display: flex; flex-direction: column; gap: 16px; }
+.venda-det-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+.venda-det-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+.venda-det-cliente { font-weight: 700; }
+.venda-det-meta { font-size: 13px; color: var(--color-muted); }
+.venda-det-card .table-wrapper { border: none; border-radius: 0; }
+.venda-det-table tbody tr:nth-child(even) td { background: transparent; }
+
 /* ── DRE ─────────────────────────────────── */
 .dre-table tbody tr:nth-child(even) td { background: transparent; }
 
