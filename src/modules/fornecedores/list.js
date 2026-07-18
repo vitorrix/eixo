@@ -177,8 +177,9 @@ export function renderFornecedorList(container, fornecedores) {
       (f.box || '').toLowerCase().includes(q) ||
       (f.email || '').toLowerCase().includes(q) ||
       (f.vendedor || '').toLowerCase().includes(q) ||
-      (f.document || '').includes(qDigits) ||
-      (f.phone || '').includes(qDigits)
+      // só casa por documento/telefone quando a busca tem dígitos — senão
+      // qDigits vazio faz includes('') dar true e retorna todo mundo.
+      (qDigits && ((f.document || '').includes(qDigits) || (f.phone || '').includes(qDigits)))
     )
     filtered.sort((a, b) => {
       const va = sortValue(a, sortCol)
