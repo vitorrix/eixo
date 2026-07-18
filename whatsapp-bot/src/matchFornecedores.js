@@ -56,6 +56,7 @@ export async function syncGroupsWithFornecedores(sock, db, { log = console.log }
       phone: (f.phone || '').replace(/\D/g, ''),
       phoneCountry: f.phoneCountry || '55',
       categorias: f.categorias || [],
+      condicao: f.condicao || 'misto',
       verified: isValidado(f.lastValidatedAt),
       box: f.box || '',
       fotoUrl,

@@ -131,14 +131,28 @@ export function buildDocId({ fornecedorKey, produtoNome, variante, seminovo }) {
   ].join('__')
 }
 
-// groupMeta vem de config/groups.json (fornecedorId, fornecedorNome, phone, phoneCountry, categorias, verified)
+// A condição cadastrada do fornecedor manda na classificação novo/semi-novo:
+// - 'novo'     → tudo lacrado (ignora a IA)
+// - 'seminovo' → tudo semi-novo (ignora a IA)
+// - 'misto'    → a IA decide item a item (fornecedor que manda lacrado e
+//                semi-novo na mesma lista)
+// Sem condicao no groupMeta (cadastro antigo), cai em 'misto' pra não mudar o
+// comportamento de quem ainda não foi migrado.
+function resolverSeminovo(condicao, seminovoIA) {
+  if (condicao === 'novo') return false
+  if (condicao === 'seminovo') return true
+  return seminovoIA === true
+}
+
+// groupMeta vem de config/groups.json (fornecedorId, fornecedorNome, phone, phoneCountry, categorias, condicao, verified)
 export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
   const candidatos = await parseMessageWithAI(text)
 
-  // categorias do fornecedor = marca/tipo (apple/android/acessorios), fixo no cadastro.
-  // "seminovo" NÃO entra aqui — é uma condição por produto, decidida pela IA a partir
-  // do texto de cada item (um mesmo fornecedor pode vender lacrado e seminovo juntos).
+  // categorias do fornecedor = marca/tipo (apple/android/acessorios), fixo no
+  // cadastro. Mantém o filtro de 'seminovo' por segurança com cadastro antigo,
+  // já que condição virou dimensão própria (groupMeta.condicao).
   const categorias = (groupMeta.categorias || []).filter(c => c !== 'seminovo')
+  const condicao = groupMeta.condicao || 'misto'
 
   return candidatos.map(c => {
     const { produtoNome, capacidade, ram, tamanho } = extractProdutoAtributos(c.produtoBruto)
@@ -149,9 +163,10 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
     // pra não colidir duas configs de RAM com a mesma capacidade de SSD (ex: MacBook
     // Pro 14" 1TB com 16GB ou 24GB de RAM são ofertas/preços distintos).
     const variante = [capacidade, ram, tamanho, origem, cor].filter(Boolean).join(' ')
+    const seminovo = resolverSeminovo(condicao, c.seminovo)
 
     const fornecedorKey = groupMeta.fornecedorId || `raw:${groupMeta.phone || 'desconhecido'}`
-    const docId = buildDocId({ fornecedorKey, produtoNome, variante, seminovo: c.seminovo })
+    const docId = buildDocId({ fornecedorKey, produtoNome, variante, seminovo })
 
     return {
       docId,
@@ -171,7 +186,7 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
         origem,
         variante,
         categorias,
-        seminovo: c.seminovo === true,
+        seminovo,
         preco: c.preco,
         quotedAt,
         sourceText: c.textoOriginal,

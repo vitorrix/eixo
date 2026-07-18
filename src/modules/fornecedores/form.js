@@ -7,11 +7,22 @@ import { createFornecedor, updateFornecedor, validarFornecedor } from './service
 import { validationStatus, VALIDATION_LABELS } from './validation.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
+// Marca/tipo do que o fornecedor vende. "Semi-Novo" saiu daqui: condição
+// (novo/usado) é outra dimensão, controlada pelo seletor CONDICOES abaixo — um
+// fornecedor pode vender Apple novo E Apple semi-novo.
 const CATEGORIAS = [
   { value: 'apple',      label: 'Apple' },
   { value: 'android',    label: 'Android' },
-  { value: 'seminovo',   label: 'Semi-Novo' },
   { value: 'acessorios', label: 'Acessórios' },
+]
+
+// Condição da lista do fornecedor. Manda na classificação novo/semi-novo das
+// ofertas: 'novo'/'seminovo' forçam todos os itens; 'misto' deixa a IA decidir
+// item a item (fornecedor que manda lacrados e semi-novos na mesma mensagem).
+const CONDICOES = [
+  { value: 'novo',     label: 'Só novo / lacrado' },
+  { value: 'seminovo', label: 'Só semi-novo' },
+  { value: 'misto',    label: 'Misto (novo e semi-novo na mesma lista)' },
 ]
 
 const UFs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
@@ -112,6 +123,16 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
     el('div', { class: 'checkbox-row' }, ...categoriaChecks.map(c => c.label))
   )
 
+  // ── Condição da lista (novo / semi-novo / misto) ─────────────────────────
+  const condicaoSelect = el('select', { id: 'ff-condicao', class: 'field-select' },
+    ...CONDICOES.map(c => el('option', { value: c.value }, c.label))
+  )
+  const condicaoField = el('div', { class: 'field field-full' },
+    el('label', { for: 'ff-condicao' }, 'Condição dos aparelhos'),
+    condicaoSelect,
+    el('span', { class: 'field-hint' }, 'Só semi-novo ou só novo classifica tudo do fornecedor de uma vez. Misto deixa o sistema decidir item a item.')
+  )
+
   // ── Comunidade (grupo que envia lista diária de aparelhos/preços) ────────
   const comunidadeBtnSim = el('button', { type: 'button', class: 'type-btn type-btn-sm' }, 'Sim')
   const comunidadeBtnNao = el('button', { type: 'button', class: 'type-btn type-btn-sm' }, 'Não')
@@ -150,7 +171,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   const sectionDados = el('div', { class: 'form-section' },
     el('p', { class: 'form-section-title' }, 'Dados'),
     el('div', { class: 'form-grid' },
-      nameField, docField, phoneField, vendedorField, emailField, boxField, categoriasField, comunidadeField
+      nameField, docField, phoneField, vendedorField, emailField, boxField, categoriasField, condicaoField, comunidadeField
     )
   )
 
@@ -303,6 +324,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
     docInput.value       = f.type === 'pf' ? maskCPF(f.document || '') : maskCNPJ(f.document || '')
     const categoriasSet  = new Set(f.categorias || [])
     categoriaChecks.forEach(c => { c.checkbox.checked = categoriasSet.has(c.value) })
+    condicaoSelect.value = CONDICOES.some(c => c.value === f.condicao) ? f.condicao : 'misto'
     const a = f.address || {}
     cepInput.value    = maskCEP(a.cep || '')
     logradInput.value = a.logradouro  || ''
@@ -332,6 +354,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
         email:      emailInput.value,
         box:        boxInput.value,
         categorias: categoriaChecks.filter(c => c.checkbox.checked).map(c => c.value),
+        condicao:   condicaoSelect.value,
         comunidade,
         notes:      notesInput.value,
         address: {

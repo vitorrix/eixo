@@ -58,6 +58,7 @@ function sanitize(data) {
     box:        (data.box || '').trim(),
     vendedor:   (data.vendedor || '').trim(),
     categorias: Array.isArray(data.categorias) ? data.categorias : [],
+    condicao:   ['novo', 'seminovo', 'misto'].includes(data.condicao) ? data.condicao : 'misto',
     comunidade: data.comunidade === true,
     address: {
       cep:         (data.address?.cep || '').replace(/\D/g, ''),

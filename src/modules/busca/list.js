@@ -312,10 +312,14 @@ export function renderBuscaList(container, ofertas) {
     const dataMinima = dataInput.value ? new Date(`${dataInput.value}T00:00:00`) : null
 
     return allOfertas.filter(o => {
+      // Semi-novo e as marcas (Apple/Android/Acessórios) são listas que nunca
+      // se misturam: a pill Semi-novo mostra só usados; as de marca, só
+      // novos/lacrados daquela marca.
       if (categoriaAtiva === 'seminovo') {
         if (!o.seminovo) return false
-      } else if (categoriaAtiva !== ALL && !(o.categorias || []).includes(categoriaAtiva)) {
-        return false
+      } else if (categoriaAtiva !== ALL) {
+        if (o.seminovo) return false
+        if (!(o.categorias || []).includes(categoriaAtiva)) return false
       }
       if (capacidades.length && !capacidades.includes(o.capacidade)) return false
       if (rams.length && !rams.includes(o.ram)) return false
