@@ -13,7 +13,10 @@ const logger = pino({ level: 'silent' })
 // quando o `sock` antigo é descartado e um novo é criado internamente.
 // Por isso quem precisa do socket ativo deve usar esse callback, nunca
 // guardar a referência retornada por connect() direto.
-export async function connect(onMessages, onOpen) {
+// onClose({ statusCode, shouldReconnect }) dispara a cada queda — quem quiser
+// reagir (registrar status, alertar) passa esse callback, mantendo o
+// connection.js sem saber nada de Firestore.
+export async function connect(onMessages, onOpen, onClose) {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR)
   const { version } = await fetchLatestBaileysVersion()
 
@@ -43,7 +46,8 @@ export async function connect(onMessages, onOpen) {
         : null
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut
       console.log('Conexão encerrada.', { statusCode, shouldReconnect })
-      if (shouldReconnect) connect(onMessages, onOpen)
+      onClose?.({ statusCode, shouldReconnect })
+      if (shouldReconnect) connect(onMessages, onOpen, onClose)
     } else if (connection === 'open') {
       console.log('Conectado ao WhatsApp.')
       onOpen?.(sock)

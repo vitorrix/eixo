@@ -9,6 +9,7 @@ dist/
 # whatsapp-bot (serviço separado, roda fora do build do Vite)
 whatsapp-bot/node_modules/
 whatsapp-bot/auth/
+whatsapp-bot/auth-backup-*/
 whatsapp-bot/serviceAccountKey.json
 whatsapp-bot/qr.png
 

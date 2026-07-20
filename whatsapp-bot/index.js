@@ -5,9 +5,13 @@ import { mapMessageToOfertas } from './src/mapper.js'
 import { upsertOferta, db } from './src/firestoreWriter.js'
 import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
 import { watchRecibosFila } from './src/reciboWatcher.js'
+import { registrarStatus, notificarMac } from './src/botStatus.js'
 
 const GROUPS_PATH = new URL('./config/groups.json', import.meta.url)
 const SYNC_INTERVAL_MS = 60 * 60 * 1000 // 1h — cobre "cadastrou fornecedor novo" sem precisar de deploy/restart
+// Bem mais curto que o sync: é o "estou vivo" que o Dashboard usa pra acusar
+// queda. O front considera o bot fora do ar se o sinal passar de 15min.
+const HEARTBEAT_MS = 5 * 60 * 1000 // 5min
 
 let groups = JSON.parse(readFileSync(GROUPS_PATH))
 function reloadGroups() {
@@ -67,12 +71,18 @@ async function handleMessages(sock, messages) {
 let currentSock = null
 let intervalStarted = false
 let filaWatcherStarted = false
+let heartbeatStarted = false
 
 // onOpen dispara a cada (re)conexão — inclusive após restarts forçados pelo
 // WhatsApp — então guardamos o sock mais recente e só armamos o setInterval
 // e o listener da fila de recibos uma vez, pra não duplicar.
 async function onOpen(sock) {
   currentSock = sock
+  registrarStatus({ conectado: true })
+  if (!heartbeatStarted) {
+    heartbeatStarted = true
+    setInterval(() => registrarStatus({ conectado: true }), HEARTBEAT_MS)
+  }
   await syncAndReload(sock)
   if (!intervalStarted) {
     intervalStarted = true
@@ -86,4 +96,14 @@ async function onOpen(sock) {
   }
 }
 
-connect(handleMessages, onOpen)
+// Só o logout (401) exige ação humana — reparear pelo QR. As outras quedas o
+// Baileys reconecta sozinho, então não viram alerta pra não virar ruído.
+function onClose({ statusCode, shouldReconnect }) {
+  if (shouldReconnect) return
+  const motivo = `Sessão do WhatsApp desconectada (código ${statusCode}). Precisa parear de novo pelo QR code.`
+  registrarStatus({ conectado: false, motivo })
+  notificarMac('EIXO Bot fora do ar', motivo)
+  console.error(`[status] ${motivo}`)
+}
+
+connect(handleMessages, onOpen, onClose)

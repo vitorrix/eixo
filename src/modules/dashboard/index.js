@@ -1,8 +1,9 @@
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { getCurrentProfile } from '../../auth/session.js'
-import { maskPhone, brl } from '../../shared/utils/formatters.js'
+import { maskPhone, brl, relativeTime } from '../../shared/utils/formatters.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { subscribeAniversariantes } from '../clientes/service.js'
+import { subscribeBotStatus } from '../configuracoes/service.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
 import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { collection, query, where, getCountFromServer } from 'firebase/firestore'
@@ -51,6 +52,7 @@ const RECADO_TIPOS = {
   recebimento: { color: '#10B981', paths: ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M8 12l4 4 4-4', 'M12 8v8'] },
   pagamento:   { color: '#d93025', paths: ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M16 12l-4-4-4 4', 'M12 16V8'] },
   aviso:       { color: '#3b82f6', paths: ['M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 01-3.46 0'] },
+  alerta:      { color: '#d93025', paths: ['M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z', 'M12 9v4', 'M12 17h.01'] },
 }
 
 function buildRecadoIcon(tipo) {
@@ -85,6 +87,38 @@ function buildMuralEmptyIcon() {
   svg.appendChild(svgEl('path', { d: 'M22 11.08V12a10 10 0 11-5.93-9.14' }))
   svg.appendChild(svgEl('path', { d: 'M22 4L12 14.01l-3-3' }))
   return svg
+}
+
+// O bot grava um "estou vivo" a cada 5min. Passou de 15min sem sinal, tratamos
+// como fora do ar — cobre os casos em que ele não conseguiria avisar nada
+// (processo morto, máquina desligada, internet caída).
+const BOT_SEM_SINAL_MS = 15 * 60 * 1000
+
+// Vira um recado de alerta, ou null quando está tudo certo. Status ausente
+// (bot nunca gravou) também não alerta — evita alarme falso antes do primeiro
+// deploy do heartbeat.
+function recadoBotStatus(status) {
+  if (!status) return null
+
+  const atualizadoEm = status.atualizadoEm?.toDate?.()
+
+  if (status.conectado === false) {
+    return {
+      tipo: 'alerta',
+      titulo: 'Bot do WhatsApp fora do ar',
+      detalhe: status.motivo || 'Precisa parear de novo pelo QR code.',
+    }
+  }
+
+  if (atualizadoEm && Date.now() - atualizadoEm.getTime() > BOT_SEM_SINAL_MS) {
+    return {
+      tipo: 'alerta',
+      titulo: 'Bot do WhatsApp sem sinal',
+      detalhe: `Último sinal ${relativeTime(atualizadoEm)}. As listas dos fornecedores podem não estar entrando.`,
+    }
+  }
+
+  return null
 }
 
 function buildMural(recados) {
@@ -243,23 +277,54 @@ export function render(container) {
     () => mount(chartWrap, buildRevenueChart([]))
   )
 
-  const unsubBirthday = subscribeAniversariantes((aniversariantes) => {
-    const recados = aniversariantes.map(c => {
+  // O Mural junta duas fontes assíncronas (aniversariantes + status do bot);
+  // cada uma guarda seu estado e redesenha o conjunto quando muda. Alerta do
+  // bot vem primeiro — é operacional e urgente, aniversário não.
+  let aniversariantes = []
+  let botStatus = null
+
+  function renderMural() {
+    const recados = []
+    const alertaBot = recadoBotStatus(botStatus)
+    if (alertaBot) recados.push(alertaBot)
+
+    aniversariantes.forEach(c => {
       const phone = c.phone || ''
       const primeiroNome = (c.name || '').split(' ')[0]
       const link = whatsappLink(phone, c.phoneCountry, `Feliz aniversário, ${primeiroNome}! 🎉 Um abraço da equipe Baruk Technology.`)
       const action = link
         ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title: 'Parabenizar no WhatsApp' }, whatsappIcon())
         : null
-      return {
+      recados.push({
         tipo: 'aniversario',
         titulo: c.name,
         detalhe: `Aniversário hoje${phone ? ' · ' + maskPhone(phone) : ''}`,
         action,
-      }
+      })
     })
+
     mount(muralWrap, buildMural(recados))
+  }
+
+  const unsubBirthday = subscribeAniversariantes(lista => {
+    aniversariantes = lista
+    renderMural()
   })
 
-  return () => { unsubBirthday?.(); unsubFinanceiro?.() }
+  const unsubBotStatus = subscribeBotStatus(
+    status => { botStatus = status; renderMural() },
+    err => console.error('Erro ao acompanhar o status do bot:', err)
+  )
+
+  // O alerta é por tempo decorrido ("sem sinal há 15min"), então precisa ser
+  // reavaliado mesmo sem evento novo do Firestore — senão a tela fica dizendo
+  // que está tudo bem enquanto o sinal envelhece.
+  const revisaoStatus = setInterval(renderMural, 60 * 1000)
+
+  return () => {
+    unsubBirthday?.()
+    unsubFinanceiro?.()
+    unsubBotStatus?.()
+    clearInterval(revisaoStatus)
+  }
 }

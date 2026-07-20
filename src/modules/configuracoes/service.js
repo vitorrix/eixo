@@ -1,5 +1,15 @@
-import { doc, getDoc, setDoc, runTransaction } from 'firebase/firestore'
+import { doc, getDoc, setDoc, onSnapshot, runTransaction } from 'firebase/firestore'
 import { db } from '../../firebase.js'
+
+// Sinal de vida do bot do WhatsApp (gravado por whatsapp-bot/src/botStatus.js).
+// Em tempo real porque é alerta operacional: se o bot cair, o Mural do
+// Dashboard precisa acusar sem depender de recarregar a página.
+export function subscribeBotStatus(callback, onError) {
+  return onSnapshot(doc(db, 'configuracoes', 'botStatus'),
+    snap => callback(snap.exists() ? snap.data() : null),
+    onError
+  )
+}
 
 export async function getEmpresa() {
   const snap = await getDoc(doc(db, 'configuracoes', 'empresa'))
