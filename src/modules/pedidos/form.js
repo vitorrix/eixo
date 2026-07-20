@@ -308,6 +308,12 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   const trocaCreditoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
   trocaCreditoInp.value = pedido?.troca?.valorCredito || ''
 
+  // Vai junto pra Compra gerada do aparelho da troca — é lá que interessa
+  // registrar estado do aparelho, serial, marcas de uso etc.
+  const trocaObsInp = el('textarea', { rows: '2', class: 'field-textarea',
+    placeholder: 'Estado do aparelho, serial, IMEI, marcas de uso...' })
+  trocaObsInp.value = pedido?.troca?.observacoes || ''
+
   const trocaSection = el('div', { class: 'troca-section' })
   function renderTroca() {
     trocaSection.replaceChildren()
@@ -316,6 +322,11 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
         el('div', { class: 'form-grid' },
           el('div', { class: 'field' }, el('label', {}, 'Produto da troca'), trocaAc.el),
           el('div', { class: 'field' }, el('label', {}, 'Crédito R$'), trocaCreditoInp),
+          el('div', { class: 'field field-full' },
+            el('label', {}, 'Observações da troca'),
+            trocaObsInp,
+            el('span', { class: 'field-hint' }, 'Vai junto para a Compra deste aparelho.')
+          ),
         )
       )
     }
@@ -345,7 +356,11 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     if (!dataInp.value) { toastError('Informe a data.'); return }
 
     const troca = trocaAtiva
-      ? { produto: trocaAc.getValue().trim(), valorCredito: parseFloat(trocaCreditoInp.value) || 0 }
+      ? {
+          produto:      trocaAc.getValue().trim(),
+          valorCredito: parseFloat(trocaCreditoInp.value) || 0,
+          observacoes:  trocaObsInp.value.trim(),
+        }
       : null
 
     submitBtn.disabled = true

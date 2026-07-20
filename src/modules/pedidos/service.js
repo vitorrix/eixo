@@ -89,10 +89,14 @@ async function limparCompraEVenda(pedidoId, batch) {
 // produto nunca fica parado em estoque); só entra em estoque o que for
 // lançado direto no menu Compras.
 //
+// Se o pedido inclui troca, gera também a Compra do aparelho usado — a Baruk
+// compra do próprio cliente, então fornecedor = cliente e custo = crédito dado.
+//
 // Junto, já lança no Financeiro: 1 Pagamento por item com custo informado
-// (vinculado à Compra) e 1 Recebimento pro pedido inteiro (vinculado à Venda)
-// — ambos marcados como já liquidados, já que "confirmar pagamento"/"efetuar
-// compra" representa o dinheiro já ter saído/entrado nesse momento.
+// (vinculado à Compra), 1 Pagamento da troca quando houver, e 1 Recebimento pro
+// pedido inteiro (vinculado à Venda) — todos marcados como já liquidados, já
+// que "confirmar pagamento"/"efetuar compra" representa o dinheiro já ter
+// saído/entrado nesse momento.
 async function criarCompraEVenda(batch, pedido, itensCompra) {
   const hoje = new Date().toISOString().slice(0, 10)
   const operacoes = await getOperacoes()
@@ -146,6 +150,52 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
     }
 
     itensVenda.push({ produto: label, tipo: p.tipo || 'produto', valor: p.valor || 0 })
+  }
+
+  // Troca: a Baruk COMPRA o aparelho usado do próprio cliente do pedido, então
+  // vira uma Compra com fornecedor = cliente e custo = crédito concedido. O
+  // Recebimento da venda é lançado pelo valor cheio (sem descontar a troca),
+  // então esse Pagamento é o que fecha o caixa no líquido — e de quebra joga o
+  // custo do aparelho usado no CMV, como qualquer outra compra.
+  if (pedido.troca?.produto) {
+    const troca = pedido.troca
+    const creditoTroca = parseFloat(troca.valorCredito) || 0
+
+    const compraTrocaRef = doc(collection(db, 'compras'))
+    batch.set(compraTrocaRef, {
+      pedidoId:    pedido.id,
+      cliente:     pedido.cliente,
+      produto:     troca.produto,
+      tipo:        'produto',
+      fornecedor:  pedido.cliente,
+      custo:       creditoTroca,
+      status:      'comprado',
+      origemTroca: true,
+      observacoes: (troca.observacoes || '').trim(),
+      criadoEm:    serverTimestamp(),
+    })
+
+    if (creditoTroca > 0) {
+      const numeroTroca = await proximoNumeroFinanceiro()
+      batch.set(doc(collection(db, 'financeiro')), {
+        numero: numeroTroca, tipo: 'pagar',
+        descricao:       `Troca: ${troca.produto}`,
+        valor:           creditoTroca,
+        contato:         pedido.cliente,
+        categoria:       categoriaPagar,
+        conta:           '',
+        formaPagamento:  '',
+        liquidado:       true,
+        dataVencimento:  hoje,
+        dataLiquidacao:  hoje,
+        numeroDocumento: '',
+        observacoes:     (troca.observacoes || '').trim(),
+        parcela:         { numero: 1, total: 1 },
+        origem:          { tipo: 'compra', id: compraTrocaRef.id, pedidoId: pedido.id },
+        recorrencia:     null,
+        criadoEm:        serverTimestamp(),
+      })
+    }
   }
 
   const vendaRef = doc(collection(db, 'vendas'))
@@ -241,6 +291,18 @@ export async function marcarEntregue(id) {
   return syncVendasEntrega(id, 'entregue')
 }
 
+// Troca sem produto informado não é troca — vira null pra não gerar Compra
+// vazia lá na confirmação do pagamento.
+function sanitizeTroca(troca) {
+  const produto = (troca?.produto || '').trim()
+  if (!produto) return null
+  return {
+    produto,
+    valorCredito: parseFloat(troca.valorCredito) || 0,
+    observacoes:  (troca.observacoes || '').trim(),
+  }
+}
+
 function sanitize(d) {
   const produtos = (d.produtos || [])
     .map(p => {
@@ -278,7 +340,7 @@ function sanitize(d) {
     valorNegociado,
     temManutencao,
     formasPagamento,
-    troca:          d.troca       || null,
+    troca:          sanitizeTroca(d.troca),
     observacoes:    (d.observacoes || '').trim(),
   }
 }
