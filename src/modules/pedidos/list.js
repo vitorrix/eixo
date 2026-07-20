@@ -355,10 +355,16 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         actionsInner.appendChild(actionBtn('x', 'Excluir', 'btn-danger-outline', () => cancelarPedido(p)))
       }
 
+      // A compra pendente segue disponível em qualquer status já pago, não só
+      // em "pago": o pedido confirmado com "efetuar compra depois" costuma
+      // avançar pra logística antes de alguém lançar o custo, e se o botão
+      // sumisse aí a compra ficaria sem registro pra sempre — venda sem custo,
+      // furo no CMV e no lucro do DRE.
+      if (canEdit && PAID_STATUSES.has(p.status) && !p.compraFeita) {
+        actionsInner.appendChild(actionBtn('check', 'Efetuar Compra', 'btn-success', () => abrirConfirmarPagamentoModal(p, { jaConfirmado: true })))
+      }
+
       if (canEdit && p.status === 'pago') {
-        if (!p.compraFeita) {
-          actionsInner.appendChild(actionBtn('check', 'Efetuar Compra', 'btn-success', () => abrirConfirmarPagamentoModal(p, { jaConfirmado: true })))
-        }
         actionsInner.appendChild(actionBtn('truck', 'Logística', 'btn-outline-blue', () => abrirLogisticaModal(p)))
       }
 
