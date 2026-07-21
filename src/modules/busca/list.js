@@ -3,9 +3,11 @@ import { brl, relativeTime } from '../../shared/utils/formatters.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { createMultiSelect } from '../../shared/components/MultiSelect.js'
 
+// 'android' fora por enquanto: a ingestão do bot só extrai Apple (aiParser.js
+// ignora Android de propósito) — reintroduzir aqui exige a IA aprender a
+// extrair Android também, senão a pill fica lá sem nunca ter conteúdo real.
 const CATEGORIA_PILLS = [
   { key: 'apple', label: 'Apple', emoji: '🍎' },
-  { key: 'android', label: 'Android', emoji: '🤖' },
   { key: 'seminovo', label: 'Semi-novo', emoji: '♻️' },
   { key: 'acessorios', label: 'Acessórios', emoji: '🔧' },
 ]

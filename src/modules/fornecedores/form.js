@@ -10,9 +10,15 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 // Marca/tipo do que o fornecedor vende. "Semi-Novo" saiu daqui: condição
 // (novo/usado) é outra dimensão, controlada pelo seletor CONDICOES abaixo — um
 // fornecedor pode vender Apple novo E Apple semi-novo.
+//
+// "Android" fora por enquanto: a marcação aqui é o que o bot cola em CADA
+// item que ele lê desse fornecedor (ver mapper.js) — não distingue produto
+// por produto. Fornecedor marcado Apple+Android tinha iPhone aparecendo
+// também na busca de Android, porque a IA só extrai Apple mesmo (o Android
+// dele nunca é lido) e a etiqueta vinha inteira do cadastro. Volta quando a
+// ingestão de Android existir de verdade.
 const CATEGORIAS = [
   { value: 'apple',      label: 'Apple' },
-  { value: 'android',    label: 'Android' },
   { value: 'acessorios', label: 'Acessórios' },
 ]
 
