@@ -10,11 +10,17 @@ import { db } from './firestoreWriter.js'
 
 const STATUS_REF = () => db.collection('configuracoes').doc('botStatus')
 
-export async function registrarStatus({ conectado, motivo = '' }) {
+// `quedasRecentes`/`instavel` cobrem o caso que o heartbeat sozinho não vê: o
+// bot vivo, conectando e caindo em loop, gravando "estou bem" a cada pulso
+// enquanto não ingere nada. Silêncio pega processo morto; contagem de quedas
+// pega processo inútil.
+export async function registrarStatus({ conectado, motivo = '', quedasRecentes = 0, instavel = false }) {
   try {
     await STATUS_REF().set({
       conectado,
       motivo,
+      quedasRecentes,
+      instavel,
       atualizadoEm: FieldValue.serverTimestamp(),
     }, { merge: true })
   } catch (err) {

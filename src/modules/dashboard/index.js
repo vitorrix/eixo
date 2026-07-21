@@ -118,6 +118,17 @@ function recadoBotStatus(status) {
     }
   }
 
+  // Conectado e pulsando, mas caindo demais. É o caso que passou despercebido
+  // até 21/07/26: pelos dois testes acima o bot parecia saudável enquanto
+  // reconectava sem parar e perdia lista.
+  if (status.instavel) {
+    return {
+      tipo: 'alerta',
+      titulo: 'Bot do WhatsApp instável',
+      detalhe: `${status.quedasRecentes} quedas na última hora. Está conectado, mas as listas podem estar entrando pela metade.`,
+    }
+  }
+
   return null
 }
 

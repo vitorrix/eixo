@@ -74,15 +74,61 @@ let filaWatcherStarted = false
 let heartbeatStarted = false
 let syncedOnce = false
 
+// Estado real da conexão. O heartbeat antigo gravava `conectado: true` fixo, sem
+// nunca olhar o socket: na madrugada de 21/07/26 o bot flapou a noite toda e o
+// Dashboard ficou verde, então a queda só foi descoberta pelas listas que
+// faltaram. O pulso agora reporta o que está acontecendo de fato.
+let conectado = false
+let motivoDesconexao = ''
+
+// Janela móvel de quedas. Distingue "caiu e voltou" (normal, o backoff resolve)
+// de "está flapando e perdendo listas" (precisa de gente).
+const JANELA_QUEDAS_MS = 60 * 60 * 1000
+const QUEDAS_PARA_INSTAVEL = 5
+let quedas = []
+let avisouInstavel = false
+
+function quedasNaJanela() {
+  const agora = Date.now()
+  quedas = quedas.filter(t => agora - t < JANELA_QUEDAS_MS)
+  return quedas.length
+}
+
+// Um pulso reflete o socket agora. Não gravamos `conectado: false` no próprio
+// evento de queda de propósito: com o backoff, quedas de segundos são rotina e
+// pintariam o Mural de vermelho à toa. Amostrar a cada 5min faz a queda curta
+// passar batida e a queda real aparecer.
+function pulsar() {
+  const recentes = quedasNaJanela()
+  const instavel = recentes >= QUEDAS_PARA_INSTAVEL
+  registrarStatus({
+    conectado,
+    motivo: conectado ? '' : motivoDesconexao,
+    quedasRecentes: recentes,
+    instavel,
+  })
+  // Avisa uma vez por episódio: o alerta é sobre entrar em instabilidade, e
+  // repetir a cada pulso enquanto dura viraria o ruído que faz ignorar alerta.
+  if (instavel && !avisouInstavel) {
+    avisouInstavel = true
+    const msg = `${recentes} quedas na última hora. As listas podem estar entrando pela metade.`
+    notificarMac('EIXO Bot instável', msg)
+    console.error(`[status] ${msg}`)
+  }
+  if (!instavel) avisouInstavel = false
+}
+
 // onOpen dispara a cada (re)conexão — inclusive após restarts forçados pelo
 // WhatsApp — então guardamos o sock mais recente e só armamos o setInterval
 // e o listener da fila de recibos uma vez, pra não duplicar.
 async function onOpen(sock) {
   currentSock = sock
-  registrarStatus({ conectado: true })
+  conectado = true
+  motivoDesconexao = ''
+  pulsar()
   if (!heartbeatStarted) {
     heartbeatStarted = true
-    setInterval(() => registrarStatus({ conectado: true }), HEARTBEAT_MS)
+    setInterval(pulsar, HEARTBEAT_MS)
   }
   // Só no primeiro open. O sync é caro (groupFetchAllParticipating + uma
   // profilePictureUrl por fornecedor) e rodá-lo a cada reconexão inunda o
@@ -105,12 +151,20 @@ async function onOpen(sock) {
   }
 }
 
-// Só o logout (401) exige ação humana — reparear pelo QR. As outras quedas o
-// Baileys reconecta sozinho, então não viram alerta pra não virar ruído.
+// Toda queda conta pra janela de instabilidade. O logout (401) é o único caso
+// que exige gente na hora — reparear pelo QR; as outras quedas o backoff
+// resolve sozinho, e só viram alerta se passarem a se repetir.
 function onClose({ statusCode, shouldReconnect }) {
-  if (shouldReconnect) return
+  conectado = false
+  quedas.push(Date.now())
+  if (shouldReconnect) {
+    motivoDesconexao = `Conexão caiu (código ${statusCode}); reconectando.`
+    return
+  }
   const motivo = `Sessão do WhatsApp desconectada (código ${statusCode}). Precisa parear de novo pelo QR code.`
-  registrarStatus({ conectado: false, motivo })
+  motivoDesconexao = motivo
+  // Terminal: não espera o próximo pulso, ninguém vai reconectar sozinho.
+  registrarStatus({ conectado: false, motivo, quedasRecentes: quedasNaJanela(), instavel: false })
   notificarMac('EIXO Bot fora do ar', motivo)
   console.error(`[status] ${motivo}`)
 }
