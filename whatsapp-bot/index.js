@@ -72,6 +72,7 @@ let currentSock = null
 let intervalStarted = false
 let filaWatcherStarted = false
 let heartbeatStarted = false
+let syncedOnce = false
 
 // onOpen dispara a cada (re)conexão — inclusive após restarts forçados pelo
 // WhatsApp — então guardamos o sock mais recente e só armamos o setInterval
@@ -83,7 +84,15 @@ async function onOpen(sock) {
     heartbeatStarted = true
     setInterval(() => registrarStatus({ conectado: true }), HEARTBEAT_MS)
   }
-  await syncAndReload(sock)
+  // Só no primeiro open. O sync é caro (groupFetchAllParticipating + uma
+  // profilePictureUrl por fornecedor) e rodá-lo a cada reconexão inunda o
+  // WhatsApp de queries, que responde com timeout e derruba a conexão de
+  // novo — o sync vira causa da queda seguinte. Nas reconexões o groups.json
+  // já está em memória, e o setInterval abaixo cobre fornecedor novo.
+  if (!syncedOnce) {
+    syncedOnce = true
+    await syncAndReload(sock)
+  }
   if (!intervalStarted) {
     intervalStarted = true
     setInterval(() => {
