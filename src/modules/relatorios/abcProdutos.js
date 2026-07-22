@@ -1,5 +1,5 @@
 import { el, mount } from '../../shared/utils/dom.js'
-import { brl } from '../../shared/utils/formatters.js'
+import { brl, toNumero } from '../../shared/utils/formatters.js'
 import { subscribeVendas } from '../vendas/service.js'
 import { subscribeCompras } from '../compras/service.js'
 import { subscribeProdutos } from '../produtos/service.js'
@@ -93,8 +93,8 @@ function buildRelatorio(vendas, compras, produtos, periodo) {
       const prods = porCategoria.get(cat)
       const atual = prods.get(nome) || { nome, quantidade: 0, venda: 0, custo: 0 }
       atual.quantidade += 1
-      atual.venda += item.venda
-      atual.custo += item.custo
+      atual.venda += toNumero(item.venda)
+      atual.custo += toNumero(item.custo)
       prods.set(nome, atual)
     })
   })

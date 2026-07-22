@@ -1,5 +1,5 @@
 import { el, mount } from '../../shared/utils/dom.js'
-import { brl } from '../../shared/utils/formatters.js'
+import { brl, toNumero } from '../../shared/utils/formatters.js'
 import { nowMonth, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { getOperacoes } from '../configuracoes/service.js'
 import { GRUPOS_DRE } from '../configuracoes/tabCategorias.js'
@@ -91,7 +91,7 @@ function mesesNoIntervalo(de, ate) {
 function saldoAntesDe(lancamentos, primeiroMes) {
   return lancamentos
     .filter(l => l.liquidado && (l.dataLiquidacao || '') < `${primeiroMes}-01`)
-    .reduce((s, l) => s + (l.tipo === 'receber' ? (l.valor || 0) : -(l.valor || 0)), 0)
+    .reduce((s, l) => s + (l.tipo === 'receber' ? toNumero(l.valor) : -toNumero(l.valor)), 0)
 }
 
 function totalTipoNoMes(lancamentosMes, categorias, tipo) {

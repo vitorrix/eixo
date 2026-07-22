@@ -1,7 +1,7 @@
 import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
-import { brl, shortDate, maskMoeda, moedaParaNumero } from '../../shared/utils/formatters.js'
+import { brl, shortDate, maskMoeda, moedaParaNumero, toNumero } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
@@ -130,7 +130,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   const subLabel = el('span', {})
 
   function updateKpis(list, periodo) {
-    const valor = list.reduce((s, p) => s + (p.valorNegociado || p.totalVenda || 0), 0)
+    const valor = list.reduce((s, p) => s + (toNumero(p.valorNegociado) || toNumero(p.totalVenda)), 0)
     const pagos = list.filter(p => PAID_STATUSES.has(p.status)).length
     const pend  = list.filter(p => ACTIVE_STATUSES.has(p.status)).length
     totalEl.textContent = list.length

@@ -40,7 +40,9 @@ export async function createVenda(data) {
 }
 
 export async function patchVenda(id, fields) {
-  return updateDoc(doc(db, COL, id), { ...fields })
+  const patch = { ...fields }
+  if (patch.valorVenda !== undefined) patch.valorVenda = parseFloat(patch.valorVenda) || 0
+  return updateDoc(doc(db, COL, id), patch)
 }
 
 // Desfaz a entrada de estoque se a venda avulsa tinha descontado 1 na criação —

@@ -2,7 +2,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
 import { el, mount } from '../utils/dom.js'
-import { brl, fullDate, maskPhone, linhasEndereco } from '../utils/formatters.js'
+import { brl, fullDate, maskPhone, linhasEndereco, toNumero } from '../utils/formatters.js'
 import { proximoNumeroRecibo } from '../../modules/configuracoes/service.js'
 import { produtoLabel } from '../../modules/pedidos/service.js'
 
@@ -134,7 +134,7 @@ function montarObservacoesPedido(pedido, comprasPedido) {
 // puxar os dados do aparelho de cada item pro campo de observações.
 export function montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome, comprasPedido = [] }) {
   const itens = montarItensPedido(pedido)
-  const totalValor = itens.reduce((s, i) => s + i.total, 0)
+  const totalValor = itens.reduce((s, i) => s + toNumero(i.total), 0)
   const pago = PAID_STATUSES.has(pedido.status)
 
   return {
@@ -246,8 +246,8 @@ export function renderReciboPreview(container, dados) {
     el('tfoot', {}, el('tr', {},
       el('td', { colspan: '2' }, 'Total'),
       el('td', {}, ''),
-      el('td', {}, String(dados.itens.reduce((s, i) => s + i.quant, 0))),
-      el('td', {}, brl(dados.itens.reduce((s, i) => s + i.desconto, 0))),
+      el('td', {}, String(dados.itens.reduce((s, i) => s + toNumero(i.quant), 0))),
+      el('td', {}, brl(dados.itens.reduce((s, i) => s + toNumero(i.desconto), 0))),
       el('td', {}, brl(dados.totalValor)),
     )),
   )

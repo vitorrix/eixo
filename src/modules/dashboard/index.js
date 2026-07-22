@@ -1,6 +1,6 @@
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { getCurrentProfile } from '../../auth/session.js'
-import { maskPhone, brl, relativeTime } from '../../shared/utils/formatters.js'
+import { maskPhone, brl, relativeTime, toNumero } from '../../shared/utils/formatters.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { subscribeAniversariantes } from '../clientes/service.js'
 import { subscribeBotStatus } from '../configuracoes/service.js'
@@ -159,7 +159,7 @@ function calcularFaturamento(lancamentos) {
   lancamentos.forEach(l => {
     if (l.tipo !== 'receber' || !l.liquidado) return
     const m = porMes.get(monthKey(l.dataLiquidacao))
-    if (m) m.value += l.valor || 0
+    if (m) m.value += toNumero(l.valor)
   })
   return meses
 }

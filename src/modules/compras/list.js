@@ -1,5 +1,5 @@
 import { el, mount } from '../../shared/utils/dom.js'
-import { brl, shortDate } from '../../shared/utils/formatters.js'
+import { brl, shortDate, toNumero } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
@@ -46,7 +46,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
 
   function updateKpis(list) {
     totalEl.textContent    = list.length
-    custoEl.textContent    = brl(list.reduce((s, c) => s + (c.custo || 0), 0))
+    custoEl.textContent    = brl(list.reduce((s, c) => s + toNumero(c.custo), 0))
     pendEl.textContent     = list.filter(c => c.status === 'pendente').length
     recebidoEl.textContent = list.filter(c => c.status === 'recebido').length
     pendEl.className       = 'pedido-stat-value ' + (pendEl.textContent > 0 ? 'red' : 'green')
@@ -195,7 +195,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         el('td', {}, c.cliente || '—'),
         el('td', { class: 'td-name' }, c.produto || '—'),
         el('td', {}, c.fornecedor || '—'),
-        el('td', { class: 'td-money' }, brl(c.custo || 0)),
+        el('td', { class: 'td-money' }, brl(toNumero(c.custo))),
         el('td', {}, statusSel),
         ...(canEdit || canDelete ? [actionsCell] : []),
       )
@@ -213,7 +213,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         ['Cliente', c.cliente],
         ['Produto', c.produto],
         ['Fornecedor', c.fornecedor],
-        ['Custo', brl(c.custo || 0)],
+        ['Custo', brl(toNumero(c.custo))],
         ['Status', meta.label],
         c.observacoes ? ['Dados do aparelho', c.observacoes] : null,
       ],

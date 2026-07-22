@@ -1,4 +1,5 @@
 import { monthKey } from '../../shared/utils/month.js'
+import { toNumero } from '../../shared/utils/formatters.js'
 
 // Regime de caixa: só entra o que já foi liquidado (recebido/pago de fato) no
 // mês selecionado, pela data de liquidação — não pela data de vencimento.
@@ -18,7 +19,7 @@ export function lancamentosNoPeriodo(lancamentos, de, ate) {
 export function somaCategoria(lancamentosMes, categoria) {
   return lancamentosMes
     .filter(l => l.categoria === categoria.nome && l.tipo === categoria.tipo)
-    .reduce((s, l) => s + (l.valor || 0), 0)
+    .reduce((s, l) => s + toNumero(l.valor), 0)
 }
 
 export function categoriasDoGrupo(categorias, grupo, subgrupo) {

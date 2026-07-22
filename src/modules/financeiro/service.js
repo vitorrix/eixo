@@ -88,7 +88,9 @@ export async function createLancamento(data) {
 }
 
 export async function updateLancamento(id, fields) {
-  return updateDoc(doc(db, COL, id), { ...fields })
+  const patch = { ...fields }
+  if (patch.valor !== undefined) patch.valor = parseFloat(patch.valor) || 0
+  return updateDoc(doc(db, COL, id), patch)
 }
 
 export async function marcarLiquidado(id, liquidado) {

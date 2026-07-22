@@ -1,5 +1,5 @@
 import { el, mount } from '../../shared/utils/dom.js'
-import { brl, shortDate } from '../../shared/utils/formatters.js'
+import { brl, shortDate, toNumero } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
@@ -47,12 +47,12 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
 
   function updateKpis(list) {
     const meta = TIPO_META[activeTipo]
-    const total = list.reduce((s, l) => s + (l.valor || 0), 0)
+    const total = list.reduce((s, l) => s + toNumero(l.valor), 0)
     const pend  = list.filter(l => !l.liquidado)
     totalEl.textContent = list.length
     valorEl.textContent = brl(total)
-    okEl.textContent    = brl(list.filter(l => l.liquidado).reduce((s, l) => s + (l.valor || 0), 0))
-    pendEl.textContent  = brl(pend.reduce((s, l) => s + (l.valor || 0), 0))
+    okEl.textContent    = brl(list.filter(l => l.liquidado).reduce((s, l) => s + toNumero(l.valor), 0))
+    pendEl.textContent  = brl(pend.reduce((s, l) => s + toNumero(l.valor), 0))
     pendEl.className    = 'pedido-stat-value ' + (pend.length > 0 ? 'red' : '')
     void meta
   }
@@ -200,7 +200,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
         el('td', {}, l.conta || '—'),
         el('td', { class: 'td-date' }, dateStr),
         el('td', {}, situacaoCell(l)),
-        el('td', { class: 'td-money' }, brl(l.valor || 0)),
+        el('td', { class: 'td-money' }, brl(toNumero(l.valor))),
         ...(canEdit || canDelete ? [actionsCell] : []),
       )
       tornarLinhaClicavel(row, () => abrirDetalhesLancamentoModal(l))
@@ -231,7 +231,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
         ['Cód', String(l.numero || '—')],
         ['Descrição', l.descricao],
         [meta.contatoLabel, l.contato],
-        ['Valor', brl(l.valor || 0)],
+        ['Valor', brl(toNumero(l.valor))],
         ['Categoria', l.categoria],
         ['Conta', l.conta],
         ['Forma de pagamento', PAG_LABEL[l.formaPagamento] || l.formaPagamento],

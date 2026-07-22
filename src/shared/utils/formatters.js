@@ -57,6 +57,14 @@ export function moedaParaNumero(v) {
   return digits ? parseInt(digits, 10) : 0
 }
 
+// Coage qualquer valor vindo do Firestore pra número antes de somar — sem
+// isso, um único doc legado com campo numérico salvo como string (bug já
+// visto mais de uma vez) faz `total += valor` virar concatenação de texto a
+// partir dali, estourando o total inteiro em vez de só aquele item.
+export function toNumero(v) {
+  return Number(v) || 0
+}
+
 // Endereço em linhas prontas pra documento impresso (recibo, cabeçalho de
 // relatório). Cada linha sai só se tiver conteúdo, pra não deixar buraco.
 export function linhasEndereco(addr, { comBairro = true } = {}) {

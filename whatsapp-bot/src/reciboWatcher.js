@@ -171,8 +171,8 @@ function gerarPdf(dados) {
       doc.moveTo(MARGIN, y - 3).lineTo(MARGIN + CONTENT_W, y - 3).lineWidth(0.5).strokeColor(LINE).stroke()
     })
 
-    const totalQtd      = dados.itens.reduce((s, i) => s + i.quant, 0)
-    const totalDesconto = dados.itens.reduce((s, i) => s + i.desconto, 0)
+    const totalQtd      = dados.itens.reduce((s, i) => s + (Number(i.quant) || 0), 0)
+    const totalDesconto = dados.itens.reduce((s, i) => s + (Number(i.desconto) || 0), 0)
     doc.rect(MARGIN, y, CONTENT_W, 22).fill(TABLE_BG)
     doc.font('Helvetica-Bold').fontSize(9)
     doc.fillColor('#374151').text('TOTAL', cols[1].x, y + 6, { width: cols[1].w, align: 'left', characterSpacing: 0.4 })

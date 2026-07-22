@@ -1,7 +1,7 @@
 import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
-import { brl, shortDate } from '../../shared/utils/formatters.js'
+import { brl, shortDate, toNumero } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
@@ -32,7 +32,7 @@ const PAG_LABEL = { pix: '🏦 PIX', dinheiro: '💰 Dinheiro', cartao: '💳 Ca
 // produto (v.produto). Normaliza pra sempre trabalhar com uma lista.
 function vendaItens(v) {
   if (Array.isArray(v.itens) && v.itens.length) return v.itens
-  return v.produto ? [{ produto: v.produto, valor: v.valorVenda || 0 }] : []
+  return v.produto ? [{ produto: v.produto, valor: toNumero(v.valorVenda) }] : []
 }
 
 // Texto curto pra célula da tabela — só o primeiro item + quantos a mais.
@@ -67,7 +67,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   const pendEl    = el('div', { class: 'pedido-stat-value' })
 
   function updateKpis(list) {
-    const fat  = list.reduce((s, v) => s + (v.valorVenda || 0), 0)
+    const fat  = list.reduce((s, v) => s + toNumero(v.valorVenda), 0)
     const pend = list.filter(v => v.statusEntrega !== 'entregue').length
     totalEl.textContent  = list.length
     fatEl.textContent    = brl(fat)
@@ -245,7 +245,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         el('td', { class: 'td-date' }, dateStr),
         el('td', { class: 'td-name' }, v.cliente || '—'),
         el('td', {}, vendaProdutoResumo(v)),
-        el('td', { class: 'td-money' }, brl(v.valorVenda || 0)),
+        el('td', { class: 'td-money' }, brl(toNumero(v.valorVenda))),
         el('td', {}, pagLabel),
         el('td', {}, entregaSel),
         reciboCell,
@@ -475,7 +475,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         ['Cliente', v.cliente],
         ['Data', dateStr],
         ['Produto', produtoValor],
-        ['Valor', brl(v.valorVenda || 0)],
+        ['Valor', brl(toNumero(v.valorVenda))],
         ['Forma de pagamento', pagLabel],
         ['Entrega', entregaMeta.label],
         ['Recibo', v.reciboEmitido ? 'Enviado' : 'Não enviado'],

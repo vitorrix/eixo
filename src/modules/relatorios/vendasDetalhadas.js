@@ -1,5 +1,5 @@
 import { el, mount } from '../../shared/utils/dom.js'
-import { brl, fullDate } from '../../shared/utils/formatters.js'
+import { brl, fullDate, toNumero } from '../../shared/utils/formatters.js'
 import { subscribeVendas } from '../vendas/service.js'
 import { subscribeCompras } from '../compras/service.js'
 import { subscribeProdutos } from '../produtos/service.js'
@@ -74,8 +74,8 @@ function buildRelatorio(vendas, compras, produtos, periodo) {
 
   vendasMes.forEach(v => {
     const itens = itensComCusto(v, comprasPorPedido, produtosPorId)
-    const custoVenda = itens.reduce((s, it) => s + it.custo, 0)
-    const valorVenda = itens.reduce((s, it) => s + it.venda, 0)
+    const custoVenda = itens.reduce((s, it) => s + toNumero(it.custo), 0)
+    const valorVenda = itens.reduce((s, it) => s + toNumero(it.venda), 0)
     const lucroVenda = valorVenda - custoVenda
     totUnidades += itens.length
     totCusto += custoVenda
