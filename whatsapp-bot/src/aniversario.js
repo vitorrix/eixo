@@ -8,10 +8,7 @@ import { createCanvas, loadImage, GlobalFonts } from '@napi-rs/canvas'
 
 const ASSETS_DIR = fileURLToPath(new URL('../assets/aniversario/', import.meta.url))
 const FONT_PATH  = ASSETS_DIR + 'nome-font.ttf'
-const FUNDOS = [
-  { arquivo: ASSETS_DIR + 'fundo-cinza.png',   corTexto: '#1a1a1a' },
-  { arquivo: ASSETS_DIR + 'fundo-laranja.png', corTexto: '#ffffff' },
-]
+const FUNDO = { arquivo: ASSETS_DIR + 'fundo.png', corTexto: '#ffffff' }
 
 const FONT_FAMILY = 'AniversarioNome'
 let fontRegistrada = false
@@ -21,38 +18,58 @@ function garantirFonte() {
   fontRegistrada = true
 }
 
-// Posição/tamanho do nome como fração da arte — ajustar aqui depois de ver
-// os PNGs reais exportados do Canva (a área em branco deixada no lugar do
-// nome removido).
-const NOME_Y_FRACAO      = 0.52
-const NOME_MAX_W_FRACAO  = 0.8
-const NOME_FONTE_MAX_PX  = 90
-const NOME_FONTE_MIN_PX  = 36
+// Posição/tamanho do nome como fração da arte (fundo.png, 941×1672) — o
+// espaço vazio deixado entre "ANIVERSÁRIO" (~47% da altura) e a linha fina
+// acima do parágrafo (~68%). Tamanho de fonte em fração da largura pra
+// escalar certo se o arquivo de fundo for trocado por um de outra resolução.
+const NOME_Y_FRACAO         = 0.58
+const NOME_MAX_W_FRACAO     = 0.85
+const NOME_FONTE_MAX_FRACAO = 0.17
+const NOME_FONTE_MIN_FRACAO = 0.08
 
-async function gerarArte(nome, fundo) {
+async function gerarArte(nome) {
   garantirFonte()
-  const img = await loadImage(fundo.arquivo)
+  const img = await loadImage(FUNDO.arquivo)
   const canvas = createCanvas(img.width, img.height)
   const ctx = canvas.getContext('2d')
   ctx.drawImage(img, 0, 0)
 
   const maxWidth = img.width * NOME_MAX_W_FRACAO
-  let fontSize = NOME_FONTE_MAX_PX
+  const fontMaxPx = img.width * NOME_FONTE_MAX_FRACAO
+  const fontMinPx = img.width * NOME_FONTE_MIN_FRACAO
+  let fontSize = fontMaxPx
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   do {
     ctx.font = `${fontSize}px "${FONT_FAMILY}"`
-    if (ctx.measureText(nome).width <= maxWidth || fontSize <= NOME_FONTE_MIN_PX) break
+    if (ctx.measureText(nome).width <= maxWidth || fontSize <= fontMinPx) break
     fontSize -= 2
   } while (true)
 
-  ctx.fillStyle = fundo.corTexto
+  ctx.fillStyle = FUNDO.corTexto
   ctx.fillText(nome, img.width / 2, img.height * NOME_Y_FRACAO)
 
   return canvas.encode('png')
 }
 
-const primeiroNome = nomeCompleto => (nomeCompleto || '').trim().split(/\s+/)[0] || ''
+// Primeiro nome + último sobrenome (ex: "Maria Jandira Mendes de Oliveira" →
+// "Maria Oliveira") — nome completo de família não cabe bem na arte nem soa
+// natural na mensagem.
+const nomeCurto = nomeCompleto => {
+  const partes = (nomeCompleto || '').trim().split(/\s+/).filter(Boolean)
+  if (partes.length <= 1) return partes[0] || ''
+  return `${partes[0]} ${partes[partes.length - 1]}`
+}
+
+const mensagemAniversario = nome => `Parabéns, ${nome}! 🎉
+
+Hoje é o seu dia, e é com muita alegria que viemos desejar um feliz aniversário cheio de realizações e momentos especiais! 🥳🎂
+
+Esperamos que esse novo ciclo seja marcado por muito sucesso, saúde e felicidade.
+
+Com carinho,
+Equipe Baruk`
+
 const rawDigits = v => (v || '').replace(/\D/g, '')
 const hojeISO = () => new Date().toISOString().slice(0, 10)
 const hojeMD = () => {
@@ -65,12 +82,11 @@ const hojeMD = () => {
 // jid já pronto (ex: "5511999999999@s.whatsapp.net") — usado tanto pelo
 // checkAndSendAniversarios quanto pelo script de teste manual.
 export async function enviarAniversario(sock, { nome, jid }) {
-  const nome1 = primeiroNome(nome)
-  const fundo = FUNDOS[Math.floor(Math.random() * FUNDOS.length)]
-  const buffer = await gerarArte(nome || nome1, fundo)
+  const exibicao = nomeCurto(nome)
+  const buffer = await gerarArte(exibicao)
   await sock.sendMessage(jid, {
     image: buffer,
-    caption: `Feliz aniversário, ${nome1}! 🎉 Um abraço da equipe Baruk Technology.`,
+    caption: mensagemAniversario(exibicao),
   })
 }
 
