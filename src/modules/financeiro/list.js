@@ -1,3 +1,5 @@
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate, toNumero } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
@@ -7,6 +9,8 @@ import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createLancamento, updateLancamento, deleteLancamento, marcarLiquidado } from './service.js'
+import { deleteVenda } from '../vendas/service.js'
+import { deleteCompra } from '../compras/service.js'
 
 const TIPO_META = {
   receber: { label: 'Recebimentos', novo: '+ Novo Recebimento', situacaoOk: 'Recebida', contatoLabel: 'Recebido de' },
@@ -188,7 +192,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
 
       const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
         canEdit: canEdit && l.origem?.tipo === 'avulso',
-        canDelete: canDelete && l.origem?.tipo === 'avulso',
+        canDelete,
         onEdit: () => abrirFormModal(l),
         onDelete: () => confirmDelete(l),
       }))
@@ -208,7 +212,48 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
     }
   }
 
-  function confirmDelete(l) {
+  // Lançamento avulso só apaga a si mesmo. Lançamento gerado por Venda ou
+  // Compra reusa a exclusão em cascata que já existe nesses módulos (mesmo
+  // padrão do deletePedido) — sem isso, apagar só o Financeiro deixava a
+  // Venda/Compra por trás órfã, sem nenhum registro de pagamento.
+  async function confirmDelete(l) {
+    const origemTipo = l.origem?.tipo
+
+    if (origemTipo === 'venda') {
+      const vendaSnap = await getDoc(doc(db, 'vendas', l.origem.id))
+      if (!vendaSnap.exists()) { confirmDeleteAvulso(l); return }
+      const venda = { id: vendaSnap.id, ...vendaSnap.data() }
+      openConfirm({
+        title:        'Excluir lançamento vinculado',
+        message:      `Excluir "${l.descricao}"? A Venda vinculada e os demais lançamentos financeiros dela também são excluídos. Não pode ser desfeito.`,
+        confirmLabel: 'Excluir tudo',
+        danger:       true,
+        onConfirm:    async () => {
+          try { await deleteVenda(venda); toastSuccess('Venda e lançamentos vinculados excluídos.') }
+          catch { toastError('Erro ao excluir.') }
+        },
+      })
+      return
+    }
+
+    if (origemTipo === 'compra') {
+      openConfirm({
+        title:        'Excluir lançamento vinculado',
+        message:      `Excluir "${l.descricao}"? A Compra vinculada e os demais lançamentos financeiros dela também são excluídos. Não pode ser desfeito.`,
+        confirmLabel: 'Excluir tudo',
+        danger:       true,
+        onConfirm:    async () => {
+          try { await deleteCompra(l.origem.id); toastSuccess('Compra e lançamentos vinculados excluídos.') }
+          catch { toastError('Erro ao excluir.') }
+        },
+      })
+      return
+    }
+
+    confirmDeleteAvulso(l)
+  }
+
+  function confirmDeleteAvulso(l) {
     openConfirm({
       title:        'Excluir lançamento',
       message:      `Excluir "${l.descricao}"${l.contato ? ` de ${l.contato}` : ''}?`,
