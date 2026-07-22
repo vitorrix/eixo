@@ -7,6 +7,16 @@ import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
 import { watchRecibosFila } from './src/reciboWatcher.js'
 import { registrarStatus, notificarMac } from './src/botStatus.js'
 
+// Uma promise rejeitada sem .catch() em qualquer lugar (inclusive dentro do
+// Baileys) derruba o processo inteiro por padrão — já aconteceu 2x num único
+// dia (motivo "1006", fechamento anormal do socket). Isso não passa pela
+// reconexão em 1-2s de connection.js: o launchd mata e sobe o processo do
+// zero, reautenticando — bem mais tempo fora do ar que uma queda normal.
+// Melhor logar e seguir vivo do que derrubar o bot inteiro por causa disso.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection] Promise rejeitada sem catch — seguindo vivo:', reason)
+})
+
 const GROUPS_PATH = new URL('./config/groups.json', import.meta.url)
 const SYNC_INTERVAL_MS = 60 * 60 * 1000 // 1h — cobre "cadastrou fornecedor novo" sem precisar de deploy/restart
 // Bem mais curto que o sync: é o "estou vivo" que o Dashboard usa pra acusar
@@ -19,6 +29,14 @@ function reloadGroups() {
 }
 
 async function syncAndReload(sock) {
+  // O sync é uma varredura pesada (groupFetchAllParticipating + foto por
+  // fornecedor). Rodá-lo com a conexão já capenga é jogar lenha numa fogueira:
+  // o próprio sync vira a causa da próxima queda. Pula e tenta de novo no
+  // próximo ciclo (1h) ou na próxima reconexão estável.
+  if (quedasNaJanela() >= QUEDAS_PARA_INSTAVEL) {
+    console.log('[sync] Pulado — conexão instável no momento.')
+    return
+  }
   try {
     const atualizados = await syncGroupsWithFornecedores(sock, db)
     if (atualizados > 0) reloadGroups()
