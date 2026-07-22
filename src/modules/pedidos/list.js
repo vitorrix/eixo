@@ -446,6 +446,20 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   // ── Modal confirmar pagamento (gera Compra + Venda de cada item) ──────────
   // jaConfirmado=true: pedido já está pago (veio do botão "Efetuar Compra"),
   // então só gera Compra+Venda, sem reconfirmar o pagamento.
+  // Compras avulsas ainda livres (unidade física em estoque, esperando
+  // comprador) — inclui também as já vinculadas a ESSE pedido, pra reabrir o
+  // modal num pedido que já tinha item de estoque continuar mostrando ele
+  // (só volta a ficar livre de fato quando o formulário é reenviado).
+  async function buscarEstoqueDisponivel(pedidoId) {
+    const snap = await getDocs(collection(db, 'compras'))
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(c => c.produtoId
+        && ['recebido', 'orcamento'].includes(c.status)
+        && (c.pedidoId === null || c.pedidoId === undefined || c.pedidoId === pedidoId))
+      .sort((a, b) => (a.produto || '').localeCompare(b.produto || ''))
+  }
+
   function abrirConfirmarPagamentoModal(pedido, { jaConfirmado = false } = {}) {
     const fornecedorNomes = fornecedores.map(f => f.box ? `${f.name} - ${f.box}` : f.name)
 
@@ -453,70 +467,106 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       title: jaConfirmado ? 'Efetuar Compra' : 'Confirmar Pagamento',
       size:  'lg',
       renderBody: (body, closeModal) => {
-        const itens = pedido.produtos.map(() => ({ fornecedor: '', custo: '', observacoes: '' }))
+        mount(body, el('div', { class: 'loading' }, 'Carregando estoque...'))
 
-        const itemBlocks = pedido.produtos.map((p, i) => {
-          const fornAc = createAutocomplete({
-            placeholder: 'Fornecedor',
-            items:       fornecedorNomes,
-            onSelect:    v => { itens[i].fornecedor = v },
-          })
-          fornAc.el.style.width = '100%'
-          fornAc.el.addEventListener('input', () => { itens[i].fornecedor = fornAc.getValue() })
+        buscarEstoqueDisponivel(pedido.id).then(estoqueDisponivel => {
+          const itens = pedido.produtos.map(() => ({ fornecedor: '', custo: '', observacoes: '', estoqueCompraId: null }))
 
-          const custoInp = el('input', { type: 'text', inputmode: 'numeric', placeholder: 'R$ 0' })
-          custoInp.addEventListener('input', () => {
-            custoInp.value = maskMoeda(custoInp.value)
-            itens[i].custo = moedaParaNumero(custoInp.value)
-          })
+          const itemBlocks = pedido.produtos.map((p, i) => {
+            const fornAc = createAutocomplete({
+              placeholder: 'Fornecedor',
+              items:       fornecedorNomes,
+              onSelect:    v => { itens[i].fornecedor = v },
+            })
+            fornAc.el.style.width = '100%'
+            fornAc.el.addEventListener('input', () => { itens[i].fornecedor = fornAc.getValue() })
 
-          const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
-            placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente)' })
-          aparelhoInp.addEventListener('input', () => { itens[i].observacoes = aparelhoInp.value })
+            const custoInp = el('input', { type: 'text', inputmode: 'numeric', placeholder: 'R$ 0' })
+            custoInp.addEventListener('input', () => {
+              custoInp.value = maskMoeda(custoInp.value)
+              itens[i].custo = moedaParaNumero(custoInp.value)
+            })
 
-          return el('div', { class: 'form-produto-block' },
-            el('div', { class: 'form-produto-header' },
-              el('span', { class: 'form-produto-label' }, produtoLabel(p) || `Item ${i + 1}`),
-              el('span', { class: 'text-muted' }, `Venda: ${brl(p.valor || 0)}`),
-            ),
-            el('div', { class: 'form-grid' },
+            const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
+              placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente)' })
+            aparelhoInp.addEventListener('input', () => { itens[i].observacoes = aparelhoInp.value })
+
+            const compraNovaFields = el('div', { class: 'form-grid' },
               el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornAc.el),
               el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
               el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
             )
-          )
-        })
 
-        const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
-        cancelBtn.addEventListener('click', closeModal)
-        const okLabel = jaConfirmado ? 'Efetuar Compra' : 'Confirmar Pagamento'
-        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, okLabel)
-        okBtn.addEventListener('click', async () => {
-          const faltando = itens.some(it => !it.fornecedor.trim() || it.custo === '')
-          if (faltando) { toastError('Informe fornecedor e custo de cada item.'); return }
-          okBtn.disabled = true; okBtn.textContent = 'Aguarde...'
-          try {
-            if (jaConfirmado) {
-              await efetuarCompra(pedido, itens)
-              toastSuccess('Compra e venda geradas.')
-            } else {
-              await confirmarPagamento(pedido, itens)
-              toastSuccess('Pagamento confirmado. Compra e venda geradas.')
+            const estoqueSel = el('select', { class: 'field-select' },
+              el('option', { value: '' }, '— Selecione o aparelho —'),
+              ...estoqueDisponivel.map(c => el('option', { value: c.id },
+                `${c.produto} — ${brl(c.custo || 0)}${c.observacoes ? ' · ' + c.observacoes.slice(0, 40) : ''}`
+              ))
+            )
+            estoqueSel.addEventListener('change', () => { itens[i].estoqueCompraId = estoqueSel.value || null })
+            const estoqueFields = el('div', { class: 'field field-full' },
+              el('label', {}, 'Aparelho em estoque'), estoqueSel,
+              !estoqueDisponivel.length
+                ? el('span', { class: 'field-hint' }, 'Nenhuma compra avulsa disponível em estoque no momento.')
+                : null,
+            )
+            estoqueFields.style.display = 'none'
+
+            const toggleCheckbox = el('input', { type: 'checkbox' })
+            const toggleRow = el('label', { class: 'troca-toggle-row' }, toggleCheckbox,
+              el('span', {}, '📦 Já em estoque (não vou comprar agora)'))
+            toggleCheckbox.addEventListener('change', () => {
+              const emEstoque = toggleCheckbox.checked
+              compraNovaFields.style.display = emEstoque ? 'none' : ''
+              estoqueFields.style.display    = emEstoque ? '' : 'none'
+              if (!emEstoque) { itens[i].estoqueCompraId = null; estoqueSel.value = '' }
+            })
+
+            return el('div', { class: 'form-produto-block' },
+              el('div', { class: 'form-produto-header' },
+                el('span', { class: 'form-produto-label' }, produtoLabel(p) || `Item ${i + 1}`),
+                el('span', { class: 'text-muted' }, `Venda: ${brl(p.valor || 0)}`),
+              ),
+              toggleRow,
+              compraNovaFields,
+              estoqueFields,
+            )
+          })
+
+          const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+          cancelBtn.addEventListener('click', closeModal)
+          const okLabel = jaConfirmado ? 'Efetuar Compra' : 'Confirmar Pagamento'
+          const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, okLabel)
+          okBtn.addEventListener('click', async () => {
+            const faltando = itens.some(it => it.estoqueCompraId ? false : (!it.fornecedor.trim() || it.custo === ''))
+            if (faltando) { toastError('Informe fornecedor e custo de cada item (ou marque "Já em estoque" e selecione o aparelho).'); return }
+            okBtn.disabled = true; okBtn.textContent = 'Aguarde...'
+            try {
+              if (jaConfirmado) {
+                await efetuarCompra(pedido, itens)
+                toastSuccess('Compra e venda geradas.')
+              } else {
+                await confirmarPagamento(pedido, itens)
+                toastSuccess('Pagamento confirmado. Compra e venda geradas.')
+              }
+              closeModal()
+            } catch (err) {
+              console.error(err)
+              toastError('Erro ao salvar.')
+              okBtn.disabled = false; okBtn.textContent = okLabel
             }
-            closeModal()
-          } catch (err) {
-            console.error(err)
-            toastError('Erro ao salvar.')
-            okBtn.disabled = false; okBtn.textContent = okLabel
-          }
-        })
+          })
 
-        mount(body,
-          el('p', { class: 'text-muted', style: 'margin-bottom:12px;font-size:13px' },
-            'Informe o fornecedor e o custo de cada item — a compra e a venda são geradas automaticamente.'),
-          ...itemBlocks,
-          el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
-        )
+          mount(body,
+            el('p', { class: 'text-muted', style: 'margin-bottom:12px;font-size:13px' },
+              'Informe o fornecedor e o custo de cada item — a compra e a venda são geradas automaticamente. Se o aparelho já estava em estoque (comprado antes, ex: direto de um cliente), marque "Já em estoque" e selecione-o em vez de lançar uma compra nova.'),
+            ...itemBlocks,
+            el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
+          )
+        }).catch(err => {
+          console.error(err)
+          mount(body, el('p', { class: 'text-muted' }, 'Erro ao carregar estoque.'))
+        })
       },
     })
   }

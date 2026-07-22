@@ -1,6 +1,6 @@
 import {
-  collection, addDoc, updateDoc, doc,
-  onSnapshot, query, orderBy, where, getDocs, serverTimestamp, deleteField, writeBatch,
+  collection, addDoc, updateDoc, doc, getDoc,
+  onSnapshot, query, orderBy, where, getDocs, serverTimestamp, deleteField, writeBatch, increment,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -69,13 +69,27 @@ export function produtoLabel(pr) {
 // usado antes de gerar novos, pra nunca duplicar quando o pedido foi editado e
 // reconfirmado (a edição reseta o status pra negociando, mas não limpa o que
 // já tinha sido gerado; sem isso, cada reconfirmação criava registros extras).
+//
+// Compra com estoqueAplicado=true não nasceu desse fluxo — é uma unidade que
+// já estava em estoque (lançada avulsa em Compras) e só foi vinculada aqui.
+// Apagar destruiria o registro real da compra; em vez disso desvincula e
+// devolve a unidade pro estoque, pra reconfirmar/editar/excluir o pedido
+// nunca fazer sumir uma compra de verdade.
 async function limparCompraEVenda(pedidoId, batch) {
   const [comprasSnap, vendasSnap, financeiroSnap] = await Promise.all([
     getDocs(query(collection(db, 'compras'),   where('pedidoId', '==', pedidoId))),
     getDocs(query(collection(db, 'vendas'),    where('pedidoId', '==', pedidoId))),
     getDocs(query(collection(db, 'financeiro'), where('origem.pedidoId', '==', pedidoId))),
   ])
-  comprasSnap.docs.forEach(d => batch.delete(d.ref))
+  comprasSnap.docs.forEach(d => {
+    const c = d.data()
+    if (c.estoqueAplicado) {
+      batch.update(d.ref, { pedidoId: null, cliente: '' })
+      if (c.produtoId) batch.update(doc(db, 'produtos', c.produtoId), { estoqueAtual: increment(1) })
+    } else {
+      batch.delete(d.ref)
+    }
+  })
   vendasSnap.docs.forEach(d => batch.delete(d.ref))
   financeiroSnap.docs.forEach(d => batch.delete(d.ref))
 }
@@ -110,6 +124,24 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
   for (let i = 0; i < pedido.produtos.length; i++) {
     const p     = pedido.produtos[i]
     const item  = itensCompra[i] || {}
+
+    // Aparelho já estava em estoque (comprado avulso, ex: direto de um
+    // cliente) — só vincula a Compra existente ao pedido, sem criar Compra
+    // nem Pagamento novos: o custo já foi pago quando a compra original foi
+    // lançada. O label da Venda usa o produto da Compra (não o texto livre do
+    // item), pra bater exato com o que relatorios/vendasCalc.js espera.
+    if (item.estoqueCompraId) {
+      const compraRef = doc(db, 'compras', item.estoqueCompraId)
+      const compraSnap = await getDoc(compraRef)
+      const compraData = compraSnap.data() || {}
+      batch.update(compraRef, { pedidoId: pedido.id, cliente: pedido.cliente })
+      if (compraData.produtoId) {
+        batch.update(doc(db, 'produtos', compraData.produtoId), { estoqueAtual: increment(-1) })
+      }
+      itensVenda.push({ produto: compraData.produto || produtoLabel(p), tipo: p.tipo || 'produto', valor: p.valor || 0 })
+      continue
+    }
+
     const label = produtoLabel(p)
     const custo = parseFloat(item.custo) || 0
     const fornecedor = (item.fornecedor || '').trim()
