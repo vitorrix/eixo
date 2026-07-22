@@ -6,6 +6,7 @@ import { upsertOferta, db } from './src/firestoreWriter.js'
 import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
 import { watchRecibosFila } from './src/reciboWatcher.js'
 import { registrarStatus, notificarMac } from './src/botStatus.js'
+import { checkAndSendAniversarios } from './src/aniversario.js'
 
 // Uma promise rejeitada sem .catch() em qualquer lugar (inclusive dentro do
 // Baileys) derruba o processo inteiro por padrão — já aconteceu 2x num único
@@ -22,6 +23,11 @@ const SYNC_INTERVAL_MS = 60 * 60 * 1000 // 1h — cobre "cadastrou fornecedor no
 // Bem mais curto que o sync: é o "estou vivo" que o Dashboard usa pra acusar
 // queda. O front considera o bot fora do ar se o sinal passar de 15min.
 const HEARTBEAT_MS = 5 * 60 * 1000 // 5min
+// Checagem de aniversário: sem cron externo, só um intervalo curto que
+// dispara o envio real assim que a hora-alvo bate. Cobre o bot cair e voltar
+// depois das 10h — pega no próximo tick em vez de esperar o dia seguinte.
+const ANIVERSARIO_CHECK_MS = 10 * 60 * 1000 // 10min
+const ANIVERSARIO_HORA = 10
 
 let groups = JSON.parse(readFileSync(GROUPS_PATH))
 function reloadGroups() {
@@ -91,6 +97,8 @@ let intervalStarted = false
 let filaWatcherStarted = false
 let heartbeatStarted = false
 let syncedOnce = false
+let aniversarioCheckStarted = false
+let ultimoDiaAniversario = ''
 
 // Estado real da conexão. O heartbeat antigo gravava `conectado: true` fixo, sem
 // nunca olhar o socket: na madrugada de 21/07/26 o bot flapou a noite toda e o
@@ -167,6 +175,25 @@ async function onOpen(sock) {
     filaWatcherStarted = true
     watchRecibosFila(() => currentSock, db)
   }
+  if (!aniversarioCheckStarted) {
+    aniversarioCheckStarted = true
+    setInterval(checarAniversarios, ANIVERSARIO_CHECK_MS)
+    checarAniversarios() // cobre o boot já acontecendo depois das 10h
+  }
+}
+
+// Dispara uma vez por dia, assim que a hora local bate ANIVERSARIO_HORA.
+// Sem cron: um tick a cada 10min é suficiente e sobrevive a bot caindo e
+// voltando depois do horário — não precisa estar de pé bem às 10h.
+function checarAniversarios() {
+  const agora = new Date()
+  const hojeISO = agora.toISOString().slice(0, 10)
+  if (ultimoDiaAniversario === hojeISO) return
+  if (agora.getHours() < ANIVERSARIO_HORA) return
+  ultimoDiaAniversario = hojeISO
+  checkAndSendAniversarios(() => currentSock, db).catch(err => {
+    console.error('[aniversario] erro ao checar/enviar:', err)
+  })
 }
 
 // Toda queda conta pra janela de instabilidade. O logout (401) é o único caso

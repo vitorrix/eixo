@@ -7,11 +7,13 @@
     "start": "node --env-file=.env index.js",
     "list-groups": "node src/discoverGroups.js",
     "match-fornecedores": "node src/matchFornecedores.js",
-    "ingest": "node --env-file=.env src/ingestManual.js"
+    "ingest": "node --env-file=.env src/ingestManual.js",
+    "test-aniversario": "node --env-file=.env src/testAniversario.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
     "@hapi/boom": "^10.0.1",
+    "@napi-rs/canvas": "^1.0.2",
     "@whiskeysockets/baileys": "^6.7.9",
     "firebase-admin": "^12.6.0",
     "pdfkit": "^0.15.2",
