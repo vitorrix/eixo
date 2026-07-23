@@ -31,6 +31,7 @@ export async function updatePedido(id, data) {
   return updateDoc(doc(db, COL, id), {
     ...sanitize(data),
     formaPagamento: deleteField(),
+    troca:          deleteField(),
     atualizadoEm:   serverTimestamp(),
   })
 }
@@ -40,6 +41,7 @@ export async function editarPedido(id, data) {
   return updateDoc(doc(db, COL, id), {
     ...sanitize(data),
     formaPagamento: deleteField(),
+    troca:          deleteField(),
     status:         'negociando',
     logistica:      deleteField(),
     atualizadoEm:   serverTimestamp(),
@@ -184,13 +186,13 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
     itensVenda.push({ produto: label, tipo: p.tipo || 'produto', valor: p.valor || 0 })
   }
 
-  // Troca: a Baruk COMPRA o aparelho usado do próprio cliente do pedido, então
-  // vira uma Compra com fornecedor = cliente e custo = crédito concedido. O
-  // Recebimento da venda é lançado pelo valor cheio (sem descontar a troca),
-  // então esse Pagamento é o que fecha o caixa no líquido — e de quebra joga o
-  // custo do aparelho usado no CMV, como qualquer outra compra.
-  if (pedido.troca?.produto) {
-    const troca = pedido.troca
+  // Troca: a Baruk COMPRA o(s) aparelho(s) usado(s) do próprio cliente do pedido,
+  // então cada troca vira uma Compra com fornecedor = cliente e custo = crédito
+  // concedido. O Recebimento da venda é lançado pelo valor cheio (sem descontar
+  // a troca), então esse Pagamento é o que fecha o caixa no líquido — e de
+  // quebra joga o custo do aparelho usado no CMV, como qualquer outra compra.
+  // Cliente pode dar mais de um aparelho na troca — por isso é um loop.
+  for (const troca of normalizarTrocasPedido(pedido)) {
     const creditoTroca = parseFloat(troca.valorCredito) || 0
 
     const compraTrocaRef = doc(collection(db, 'compras'))
@@ -323,16 +325,24 @@ export async function marcarEntregue(id) {
   return syncVendasEntrega(id, 'entregue')
 }
 
-// Troca sem produto informado não é troca — vira null pra não gerar Compra
-// vazia lá na confirmação do pagamento.
-function sanitizeTroca(troca) {
-  const produto = (troca?.produto || '').trim()
-  if (!produto) return null
-  return {
-    produto,
-    valorCredito: parseFloat(troca.valorCredito) || 0,
-    observacoes:  (troca.observacoes || '').trim(),
-  }
+// Troca sem produto informado não é troca — filtra fora pra não gerar Compra
+// vazia lá na confirmação do pagamento. Cliente pode dar mais de um aparelho.
+function sanitizeTrocas(trocas) {
+  return (trocas || [])
+    .map(t => ({
+      produto:      (t?.produto || '').trim(),
+      valorCredito: parseFloat(t?.valorCredito) || 0,
+      observacoes:  (t?.observacoes || '').trim(),
+    }))
+    .filter(t => t.produto)
+}
+
+// Lê as trocas do pedido aceitando os dois formatos: array novo (trocas) ou
+// objeto único legado (troca), de pedidos criados antes de suportar mais de uma.
+export function normalizarTrocasPedido(pedido) {
+  if (Array.isArray(pedido.trocas)) return pedido.trocas.filter(t => t?.produto)
+  if (pedido.troca?.produto) return [pedido.troca]
+  return []
 }
 
 function sanitize(d) {
@@ -372,7 +382,7 @@ function sanitize(d) {
     valorNegociado,
     temManutencao,
     formasPagamento,
-    troca:          sanitizeTroca(d.troca),
+    trocas:         sanitizeTrocas(d.trocas),
     observacoes:    (d.observacoes || '').trim(),
   }
 }

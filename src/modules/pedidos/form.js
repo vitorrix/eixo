@@ -1,6 +1,6 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl } from '../../shared/utils/formatters.js'
-import { createPedido, editarPedido } from './service.js'
+import { createPedido, editarPedido, normalizarTrocasPedido } from './service.js'
 import { createClienteRapido } from '../clientes/service.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { createEntityPeek } from '../../shared/components/EntityPeek.js'
@@ -35,7 +35,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   let formasPagamento = Array.isArray(pedido?.formasPagamento)
     ? [...pedido.formasPagamento]
     : (pedido?.formaPagamento ? [pedido.formaPagamento] : [])
-  let trocaAtiva = !!pedido?.troca
+  let trocaAtiva = normalizarTrocasPedido(pedido || {}).length > 0
 
   const produtoNomes     = produtosCatalogo.map(p => p.nome)
   const produtoNomesSN   = produtosCatalogo.map(p => p.nome).filter(n => n.trim().toUpperCase().endsWith('S/N'))
@@ -298,46 +298,86 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   }
 
   // ── Troca ─────────────────────────────────────────────────────────────────
-  const trocaAc = createAutocomplete({
-    placeholder:  'ex: iPhone 16 Pro 128GB S/N',
-    items:        produtoNomesSN,
-    initialValue: pedido?.troca?.produto || '',
-  })
-  trocaAc.el.style.width = '100%'
+  // Cliente pode dar mais de um aparelho na troca — lista igual à de produtos,
+  // com item repetível e botão de remover (cada troca vira uma Compra própria).
+  let trocas = normalizarTrocasPedido(pedido || {}).map(t => ({
+    produto:      t.produto || '',
+    valorCredito: t.valorCredito !== undefined && t.valorCredito !== '' ? t.valorCredito : '',
+    observacoes:  t.observacoes || '',
+  }))
+  if (!trocas.length) trocas = [{ produto: '', valorCredito: '', observacoes: '' }]
 
-  const trocaCreditoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
-  trocaCreditoInp.value = pedido?.troca?.valorCredito || ''
+  const trocasWrap = el('div', { class: 'trocas-wrap' })
 
-  // Vai junto pra Compra gerada do aparelho da troca — é lá que interessa
-  // registrar estado do aparelho, serial, marcas de uso etc.
-  const trocaObsInp = el('textarea', { rows: '2', class: 'field-textarea',
-    placeholder: 'Estado do aparelho, serial, IMEI, marcas de uso...' })
-  trocaObsInp.value = pedido?.troca?.observacoes || ''
+  function renderTrocas() {
+    trocasWrap.replaceChildren()
 
-  const trocaSection = el('div', { class: 'troca-section' })
-  function renderTroca() {
-    trocaSection.replaceChildren()
-    if (trocaAtiva) {
-      mount(trocaSection,
-        el('div', { class: 'form-grid' },
-          el('div', { class: 'field' }, el('label', {}, 'Produto da troca'), trocaAc.el),
-          el('div', { class: 'field' }, el('label', {}, 'Crédito R$'), trocaCreditoInp),
-          el('div', { class: 'field field-full' },
-            el('label', {}, 'Observações da troca'),
-            trocaObsInp,
-            el('span', { class: 'field-hint' }, 'Vai junto para a Compra deste aparelho.')
+    trocas.forEach((t, i) => {
+      const trocaAc = createAutocomplete({
+        placeholder:  'ex: iPhone 16 Pro 128GB S/N',
+        items:        produtoNomesSN,
+        initialValue: t.produto,
+        onSelect:     v => { trocas[i].produto = v },
+      })
+      trocaAc.el.style.width = '100%'
+      trocaAc.el.addEventListener('input', () => { trocas[i].produto = trocaAc.getValue() })
+
+      const creditoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+      creditoInp.value = t.valorCredito
+      creditoInp.addEventListener('input', () => { trocas[i].valorCredito = creditoInp.value })
+
+      // Vai junto pra Compra gerada do aparelho da troca — é lá que interessa
+      // registrar estado do aparelho, serial, marcas de uso etc.
+      const obsInpTroca = el('textarea', { rows: '2', class: 'field-textarea',
+        placeholder: 'Estado do aparelho, serial, IMEI, marcas de uso...' })
+      obsInpTroca.value = t.observacoes
+      obsInpTroca.addEventListener('input', () => { trocas[i].observacoes = obsInpTroca.value })
+
+      const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
+      delBtn.addEventListener('click', () => {
+        if (trocas.length === 1) return
+        trocas.splice(i, 1); renderTrocas()
+      })
+
+      trocasWrap.appendChild(
+        el('div', { class: 'form-produto-block' },
+          el('div', { class: 'form-produto-header' },
+            el('span', { class: 'form-produto-label' }, `Troca ${i + 1}`),
+            delBtn
           ),
+          el('div', { class: 'form-grid' },
+            el('div', { class: 'field' }, el('label', {}, 'Produto da troca'), trocaAc.el),
+            el('div', { class: 'field' }, el('label', {}, 'Crédito R$'), creditoInp),
+            el('div', { class: 'field field-full' },
+              el('label', {}, 'Observações da troca'),
+              obsInpTroca,
+              el('span', { class: 'field-hint' }, 'Vai junto para a Compra deste aparelho.')
+            ),
+          )
         )
       )
-    }
+    })
+  }
+  renderTrocas()
+
+  const addTrocaBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Adicionar troca')
+  addTrocaBtn.addEventListener('click', () => {
+    trocas.push({ produto: '', valorCredito: '', observacoes: '' })
+    renderTrocas()
+  })
+
+  const trocaSection = el('div', { class: 'troca-section' })
+  function renderTrocaSection() {
+    trocaSection.replaceChildren()
+    if (trocaAtiva) mount(trocaSection, trocasWrap, addTrocaBtn)
   }
 
   const trocaCheckbox = el('input', { type: 'checkbox', class: 'troca-checkbox' })
   trocaCheckbox.checked = trocaAtiva
-  trocaCheckbox.addEventListener('change', () => { trocaAtiva = trocaCheckbox.checked; renderTroca() })
+  trocaCheckbox.addEventListener('change', () => { trocaAtiva = trocaCheckbox.checked; renderTrocaSection() })
   const trocaToggleRow = el('label', { class: 'troca-toggle-row' }, trocaCheckbox,
     el('span', {}, '↔ Inclui troca'))
-  renderTroca()
+  renderTrocaSection()
 
   // ── Observações ───────────────────────────────────────────────────────────
   const obsInp = el('textarea', { rows: '2', class: 'field-textarea',
@@ -355,19 +395,21 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     if (!cliente) { toastError('Informe o nome do cliente.'); return }
     if (!dataInp.value) { toastError('Informe a data.'); return }
 
-    const troca = trocaAtiva
-      ? {
-          produto:      trocaAc.getValue().trim(),
-          valorCredito: parseFloat(trocaCreditoInp.value) || 0,
-          observacoes:  trocaObsInp.value.trim(),
-        }
-      : null
+    const trocasFinal = trocaAtiva
+      ? trocas
+          .map(t => ({
+            produto:      (t.produto || '').trim(),
+            valorCredito: parseFloat(t.valorCredito) || 0,
+            observacoes:  (t.observacoes || '').trim(),
+          }))
+          .filter(t => t.produto)
+      : []
 
     submitBtn.disabled = true
     submitBtn.textContent = 'Salvando...'
 
     try {
-      const data = { dataContato: dataInp.value, cliente, produtos, formasPagamento, troca, observacoes: obsInp.value }
+      const data = { dataContato: dataInp.value, cliente, produtos, formasPagamento, trocas: trocasFinal, observacoes: obsInp.value }
       if (isEdit) {
         await editarPedido(pedido.id, data)
         const voltou = pedido.status && pedido.status !== 'negociando'
