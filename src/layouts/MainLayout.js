@@ -3,6 +3,7 @@ import { navigate } from '../router/index.js'
 import { el, svgEl, mount } from '../shared/utils/dom.js'
 import { createCotacaoWidget } from '../shared/components/CotacaoDolar.js'
 import { openHelp } from '../shared/components/HelpPanel.js'
+import { valoresOcultosAtivos, alternarValoresOcultos } from '../shared/utils/valoresOcultos.js'
 
 const PAGE_LABELS = {
   '/':              'Painel Inicial',
@@ -194,6 +195,36 @@ export function renderLayout(container, profile) {
     window.location.reload()
   })
 
+  // Ocultar valores: borra todo "R$ ..." da tela (compartilhamento de tela,
+  // computador visível a terceiros etc.) — vale pra qualquer módulo, já que a
+  // varredura roda no DOM inteiro, não só na tela atual.
+  function eyeIconPaths(off) {
+    return off
+      ? ['M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a19.16 19.16 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a19.2 19.2 0 01-2.16 3.19',
+         'M14.12 14.12a3 3 0 11-4.24-4.24', 'M1 1l22 22']
+      : ['M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z', 'M15 12a3 3 0 11-6 0 3 3 0 016 0z']
+  }
+  function buildEyeIcon(off) {
+    const svg = svgEl('svg', {
+      viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+      'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      width: '17', height: '17',
+    })
+    for (const d of eyeIconPaths(off)) svg.appendChild(svgEl('path', { d }))
+    return svg
+  }
+  const valoresBtn = el('button', {
+    type: 'button', class: 'icon-btn icon-btn-edit header-valores-toggle',
+    title: valoresOcultosAtivos() ? 'Mostrar valores' : 'Ocultar valores',
+  }, buildEyeIcon(valoresOcultosAtivos()))
+  valoresBtn.addEventListener('click', () => {
+    const ativos = alternarValoresOcultos()
+    valoresBtn.replaceChildren(buildEyeIcon(ativos))
+    valoresBtn.title = ativos ? 'Mostrar valores' : 'Ocultar valores'
+    valoresBtn.classList.toggle('active', ativos)
+  })
+  valoresBtn.classList.toggle('active', valoresOcultosAtivos())
+
   const topHeader = el('header', { class: 'top-header' },
     el('h1', { class: 'top-header-title' }, pageTitle),
     el('div', { class: 'top-header-user' },
@@ -201,6 +232,7 @@ export function renderLayout(container, profile) {
         el('span', { class: 'top-header-name' }, `Olá, ${(profile.name || profile.email).split(' ')[0]}!`),
         el('span', { class: 'top-header-company' }, 'Baruk Technology & Consulting')
       ),
+      valoresBtn,
       logoutBtn
     )
   )

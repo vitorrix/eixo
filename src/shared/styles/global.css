@@ -281,6 +281,21 @@ html, body {
   color: var(--color-danger);
 }
 
+.header-valores-toggle.active {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #059669;
+}
+
+/* Modo "ocultar valores" — cada "R$ ..." vira um span (valoresOcultos.js) que
+   borra quando o modo está ativo; passar o mouse revela na hora. */
+.valor-money-wrap { transition: filter .15s ease; }
+:root.valores-ocultos .valor-money-wrap {
+  filter: blur(5px);
+  user-select: none;
+}
+:root.valores-ocultos .valor-money-wrap:hover { filter: none; }
+
 /* ── Page header ─────────────────────────────── */
 .page-header { margin-bottom: 24px; }
 .page-header h2 { font-size: 20px; font-weight: 700; }
