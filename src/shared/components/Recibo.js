@@ -193,6 +193,41 @@ export function montarDadosReciboVendaAvulsa(venda, { numero, empresa, cliente, 
   }
 }
 
+// Monta o recibo de uma venda histórica importada do sistema anterior
+// (E-gestor) — sem Pedido/Compra por trás, então sem "dados do aparelho" nas
+// observações. Número prefixado com "E-" (não consome a numeração sequencial
+// de recibo do Eixo, que é só pra vendas de verdade daqui pra frente) e usa o
+// código da venda no sistema antigo como referência, pra bater com o que o
+// cliente tem no comprovante em papel se ele ligar perguntando.
+export function montarDadosReciboHistorico(vendaHistorica, { empresa, cliente }) {
+  const itens = (vendaHistorica.itens || []).map(it => ({
+    descricao: it.produto || '—',
+    precoUnit: it.quant ? it.vendaTotal / it.quant : it.vendaTotal,
+    quant:     it.quant || 1,
+    desconto:  0,
+    total:     it.vendaTotal,
+  }))
+  const data = fullDate(vendaHistorica.dataConfirmacao || vendaHistorica.dataCriacao)
+
+  return {
+    numero: `E-${vendaHistorica.codigoOriginal}`,
+    data,
+    empresa: montarEmpresa(empresa),
+    cliente: montarCliente(vendaHistorica.cliente, cliente),
+    itens,
+    totalItens: itens.length,
+    totalValor: vendaHistorica.totalVenda || 0,
+    financeiro: [{
+      numParcela:     '1/1',
+      valor:          vendaHistorica.totalVenda || 0,
+      dataPgto:       data,
+      formaPagamento: '—',
+      situacao:       'Já pago',
+    }],
+    observacoes: '',
+  }
+}
+
 function situacaoCell(texto) {
   return texto === 'Já pago'
     ? el('span', { class: 'recibo-badge-pago' }, texto)

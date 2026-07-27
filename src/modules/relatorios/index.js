@@ -8,6 +8,7 @@ import { renderVendasPorProduto } from './vendasPorProduto.js'
 import { renderAbcProdutos } from './abcProdutos.js'
 import { renderFluxoFinanceiro } from './fluxoFinanceiro.js'
 import { renderFluxoCaixaPeriodico } from './fluxoCaixaPeriodico.js'
+import { renderEgestor } from './egestor.js'
 
 // Lista de relatórios disponíveis — adicionar aqui conforme novos forem
 // entrando (ex: comissão por vendedor...).
@@ -18,6 +19,7 @@ const RELATORIOS = [
   { key: 'abc-produtos',      label: 'ABC de Produtos',         render: renderAbcProdutos },
   { key: 'fluxo-financeiro',  label: 'Fluxo Financeiro',        render: renderFluxoFinanceiro },
   { key: 'fluxo-caixa',       label: 'Fluxo de Caixa Periódico', render: renderFluxoCaixaPeriodico },
+  { key: 'egestor',           label: 'E-gestor',                render: renderEgestor },
 ]
 
 // Cabeçalho que só aparece na impressão: identifica a empresa, qual relatório é

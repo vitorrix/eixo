@@ -130,6 +130,12 @@ service cloud.firestore {
       allow write: if false; // escrita só via Admin SDK do robô, nunca pelo app
     }
 
+    // ── /vendasHistoricas (importado do sistema anterior — só consulta/recibo) ──
+    match /vendasHistoricas/{id} {
+      allow read:  if hasPermission('relatorios', 'view');
+      allow write: if false; // importação única via Admin SDK, nunca pelo app
+    }
+
     // Bloqueia todo o resto por padrão
     match /{document=**} {
       allow read, write: if false;
