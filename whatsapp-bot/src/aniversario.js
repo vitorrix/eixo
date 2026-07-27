@@ -71,7 +71,14 @@ Com carinho,
 Equipe Baruk`
 
 const rawDigits = v => (v || '').replace(/\D/g, '')
-const hojeISO = () => new Date().toISOString().slice(0, 10)
+// Data local, não UTC — toISOString() já vira o dia seguinte a partir das 21h
+// no horário de Brasília, o que faria o dedup de "já mandei hoje" falhar.
+const hojeISO = () => {
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
+}
 const hojeMD = () => {
   const d = new Date()
   const mm = String(d.getMonth() + 1).padStart(2, '0')

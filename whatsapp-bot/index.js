@@ -182,18 +182,29 @@ async function onOpen(sock) {
   }
 }
 
+function hojeLocalISO(d = new Date()) {
+  const yyyy = d.getFullYear()
+  const mm   = String(d.getMonth() + 1).padStart(2, '0')
+  const dd   = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 // Dispara uma vez por dia, assim que a hora local bate ANIVERSARIO_HORA.
 // Sem cron: um tick a cada 10min é suficiente e sobrevive a bot caindo e
 // voltando depois do horário — não precisa estar de pé bem às 10h.
+// Só marca o dia como "feito" quando o envio realmente termina com sucesso —
+// se falhar (ex: instabilidade de rede/DNS pro Firestore), o próximo tick de
+// 10min tenta de novo, em vez de pular o dia inteiro silenciosamente.
 function checarAniversarios() {
   const agora = new Date()
-  const hojeISO = agora.toISOString().slice(0, 10)
+  const hojeISO = hojeLocalISO(agora)
   if (ultimoDiaAniversario === hojeISO) return
   if (agora.getHours() < ANIVERSARIO_HORA) return
-  ultimoDiaAniversario = hojeISO
-  checkAndSendAniversarios(() => currentSock, db).catch(err => {
-    console.error('[aniversario] erro ao checar/enviar:', err)
-  })
+  checkAndSendAniversarios(() => currentSock, db)
+    .then(() => { ultimoDiaAniversario = hojeISO })
+    .catch(err => {
+      console.error('[aniversario] erro ao checar/enviar — tenta de novo no próximo ciclo:', err)
+    })
 }
 
 // Toda queda conta pra janela de instabilidade. O logout (401) é o único caso
