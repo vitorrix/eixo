@@ -446,17 +446,25 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   // ── Modal confirmar pagamento (gera Compra + Venda de cada item) ──────────
   // jaConfirmado=true: pedido já está pago (veio do botão "Efetuar Compra"),
   // então só gera Compra+Venda, sem reconfirmar o pagamento.
-  // Compras avulsas ainda livres (unidade física em estoque, esperando
+  // Compras ainda disponíveis (unidade física em estoque, esperando
   // comprador) — inclui também as já vinculadas a ESSE pedido, pra reabrir o
   // modal num pedido que já tinha item de estoque continuar mostrando ele
   // (só volta a ficar livre de fato quando o formulário é reenviado).
+  // Não exige produtoId: Compra gerada por Pedido/troca nunca tem esse campo
+  // (só quem é lançada direto no menu Compras, puxando do catálogo) — exigir
+  // isso deixava a lista praticamente vazia mesmo com aparelho fisicamente em
+  // estoque. O código que consome a seleção já tolera produtoId ausente.
+  // "vendida" (não pedidoId) é quem diz se já foi escolhida por outro pedido:
+  // aparelho de troca já nasce com pedidoId (o pedido de ONDE veio, não pra
+  // quem foi vendido), então usar pedidoId como sinal de "reservado" deixava
+  // todo aparelho de troca permanentemente indisponível pra outro pedido.
   async function buscarEstoqueDisponivel(pedidoId) {
     const snap = await getDocs(collection(db, 'compras'))
     return snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(c => c.produtoId
-        && ['recebido', 'orcamento'].includes(c.status)
-        && (c.pedidoId === null || c.pedidoId === undefined || c.pedidoId === pedidoId))
+      .filter(c => ['recebido', 'orcamento', 'compra_realizada'].includes(c.status)
+        && !c.vendida
+        && (c.origemTroca || c.pedidoId === null || c.pedidoId === undefined || c.pedidoId === pedidoId))
       .sort((a, b) => (a.produto || '').localeCompare(b.produto || ''))
   }
 

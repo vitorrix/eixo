@@ -36,6 +36,7 @@ export async function createCompra(data) {
     observacoes:     (data.observacoes || '').trim(), // dados do aparelho — mesmos que vão pro recibo
     cliente:         '',
     pedidoId:        null,
+    vendida:         false,
     estoqueAplicado: !!jaRecebida,
     criadoEm:        serverTimestamp(),
   })

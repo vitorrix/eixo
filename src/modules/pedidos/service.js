@@ -85,8 +85,8 @@ async function limparCompraEVenda(pedidoId, batch) {
   ])
   comprasSnap.docs.forEach(d => {
     const c = d.data()
-    if (c.estoqueAplicado) {
-      batch.update(d.ref, { pedidoId: null, cliente: '' })
+    if (c.estoqueAplicado || c.vendida) {
+      batch.update(d.ref, { pedidoId: null, cliente: '', vendida: false })
       if (c.produtoId) batch.update(doc(db, 'produtos', c.produtoId), { estoqueAtual: increment(1) })
     } else {
       batch.delete(d.ref)
@@ -136,7 +136,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
       const compraRef = doc(db, 'compras', item.estoqueCompraId)
       const compraSnap = await getDoc(compraRef)
       const compraData = compraSnap.data() || {}
-      batch.update(compraRef, { pedidoId: pedido.id, cliente: pedido.cliente })
+      batch.update(compraRef, { pedidoId: pedido.id, cliente: pedido.cliente, vendida: true })
       if (compraData.produtoId) {
         batch.update(doc(db, 'produtos', compraData.produtoId), { estoqueAtual: increment(-1) })
       }
@@ -157,6 +157,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
       fornecedor,
       custo,
       status:      'comprado',
+      vendida:     false,
       observacoes: (item.observacoes || '').trim(),
       criadoEm:    serverTimestamp(),
     })
@@ -205,6 +206,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
       custo:       creditoTroca,
       status:      'comprado',
       origemTroca: true,
+      vendida:     false,
       observacoes: (troca.observacoes || '').trim(),
       criadoEm:    serverTimestamp(),
     })
