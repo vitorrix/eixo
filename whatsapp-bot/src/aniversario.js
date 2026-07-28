@@ -52,13 +52,18 @@ async function gerarArte(nome) {
   return canvas.encode('png')
 }
 
-// Primeiro nome + último sobrenome (ex: "Maria Jandira Mendes de Oliveira" →
-// "Maria Oliveira") — nome completo de família não cabe bem na arte nem soa
-// natural na mensagem.
+// Primeiro nome + primeiro sobrenome de verdade — pula iniciais soltas (ex:
+// "B", "C") e preposições (de/da/do/dos/das), pega o primeiro nome de família
+// que sobra. Ex: "Miriam B C dos Santos" → "Miriam Santos"; "Diogo Marinho de
+// Melo" → "Diogo Marinho" (não "Diogo Melo" — o sobrenome mais usado costuma
+// vir logo depois do primeiro nome, não no fim). Nome completo de família não
+// cabe bem na arte nem soa natural na mensagem.
+const PREPOSICOES_NOME = new Set(['de', 'da', 'do', 'das', 'dos', 'e'])
 const nomeCurto = nomeCompleto => {
   const partes = (nomeCompleto || '').trim().split(/\s+/).filter(Boolean)
   if (partes.length <= 1) return partes[0] || ''
-  return `${partes[0]} ${partes[partes.length - 1]}`
+  const sobrenome = partes.slice(1).find(p => p.length > 1 && !PREPOSICOES_NOME.has(p.toLowerCase()))
+  return sobrenome ? `${partes[0]} ${sobrenome}` : partes[0]
 }
 
 const mensagemAniversario = nome => `Parabéns, ${nome}! 🎉
