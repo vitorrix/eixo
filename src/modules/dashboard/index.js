@@ -302,6 +302,10 @@ export function render(container) {
     aniversariantes.forEach(c => {
       const phone = c.phone || ''
       const primeiroNome = (c.name || '').split(' ')[0]
+      // Data de nascimento é opcional (cliente pode ter só o dia/mês salvo,
+      // sem ano) — sem ela não dá pra calcular idade, só mostra "Aniversário hoje".
+      const anoNascimento = c.birthdate ? parseInt(c.birthdate.slice(0, 4), 10) : null
+      const idade = anoNascimento ? new Date().getFullYear() - anoNascimento : null
       const link = whatsappLink(phone, c.phoneCountry, `Feliz aniversário, ${primeiroNome}! 🎉 Um abraço da equipe Baruk Technology.`)
       const action = link
         ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title: 'Parabenizar no WhatsApp' }, whatsappIcon())
@@ -309,7 +313,7 @@ export function render(container) {
       recados.push({
         tipo: 'aniversario',
         titulo: c.name,
-        detalhe: `Aniversário hoje${phone ? ' · ' + maskPhone(phone) : ''}`,
+        detalhe: `${idade ? `Faz ${idade} anos hoje` : 'Aniversário hoje'}${phone ? ' · ' + maskPhone(phone) : ''}`,
         action,
       })
     })
