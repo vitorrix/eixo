@@ -2858,6 +2858,27 @@ html, body {
 .venda-det-table tbody tr:nth-child(even) td { background: transparent; }
 .venda-det-total-geral { margin-top: 16px; }
 
+/* ── E-gestor ────────────────────────────────── */
+/* Referência do sistema anterior — estilo "ficha de arquivo", útil quando o
+   cliente liga citando o número do recibo antigo em vez do nome. */
+.egestor-codigo {
+  font-size: 11px;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  letter-spacing: .3px;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+.egestor-pagamento {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-bg);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
 /* ── DRE ─────────────────────────────────── */
 .dre-table tbody tr:nth-child(even) td { background: transparent; }
 
