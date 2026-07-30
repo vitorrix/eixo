@@ -74,6 +74,15 @@ function montarCliente(nome, cliente) {
   }
 }
 
+// Igual montarCliente, mas com fallback pro endereço em texto livre importado
+// do sistema anterior — só usado quando o cliente não bate com nenhum cadastro
+// do Eixo (senão o endereço estruturado do cadastro tem prioridade).
+function montarClienteHistorico(nome, cliente, enderecoTexto) {
+  const base = montarCliente(nome, cliente)
+  if (!base.enderecoLinhas.length && enderecoTexto) base.enderecoLinhas = [enderecoTexto]
+  return base
+}
+
 // Garante um número sequencial de recibo pra qualquer entidade (Pedido ou Venda
 // avulsa) — se já tem, não gera outro; se não, pega o próximo do contador
 // compartilhado (configuracoes/contadores) e grava de volta via patchFn.
@@ -213,7 +222,7 @@ export function montarDadosReciboHistorico(vendaHistorica, { empresa, cliente })
     numero: `E-${vendaHistorica.codigoOriginal}`,
     data,
     empresa: montarEmpresa(empresa),
-    cliente: montarCliente(vendaHistorica.cliente, cliente),
+    cliente: montarClienteHistorico(vendaHistorica.cliente, cliente, vendaHistorica.endereco),
     itens,
     totalItens: itens.length,
     totalValor: vendaHistorica.totalVenda || 0,
@@ -221,10 +230,10 @@ export function montarDadosReciboHistorico(vendaHistorica, { empresa, cliente })
       numParcela:     '1/1',
       valor:          vendaHistorica.totalVenda || 0,
       dataPgto:       data,
-      formaPagamento: '—',
+      formaPagamento: vendaHistorica.formaPagamento || '—',
       situacao:       'Já pago',
     }],
-    observacoes: '',
+    observacoes: vendaHistorica.observacoes || '',
   }
 }
 
