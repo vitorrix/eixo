@@ -34,7 +34,7 @@ export async function createCompra(data) {
     custo:           parseFloat(data.custo) || 0,
     status,
     observacoes:     (data.observacoes || '').trim(), // dados do aparelho — mesmos que vão pro recibo
-    cliente:         '',
+    cliente:         (data.cliente || '').trim(),
     pedidoId:        null,
     vendida:         false,
     estoqueAplicado: !!jaRecebida,

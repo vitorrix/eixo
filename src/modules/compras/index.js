@@ -11,14 +11,16 @@ export function render(container) {
 }
 
 async function _init(container) {
-  let fornecedores = [], produtosCatalogo = []
+  let fornecedores = [], produtosCatalogo = [], clientes = []
   try {
-    const [fSnap, pSnap] = await Promise.all([
+    const [fSnap, pSnap, cSnap] = await Promise.all([
       getDocs(query(collection(db, 'fornecedores'), orderBy('nameLower'))),
       getDocs(query(collection(db, 'produtos'),     orderBy('nameLower'))),
+      getDocs(query(collection(db, 'clientes'),     orderBy('nameLower'))),
     ])
     fornecedores     = fSnap.docs.map(d => ({ id: d.id, ...d.data() }))
     produtosCatalogo = pSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    clientes         = cSnap.docs.map(d => ({ id: d.id, ...d.data() }))
   } catch (err) {
     console.error(err)
   }
@@ -30,7 +32,7 @@ async function _init(container) {
     compras => {
       if (firstLoad) {
         firstLoad = false
-        listController = renderComprasList(container, compras, { fornecedores, produtosCatalogo })
+        listController = renderComprasList(container, compras, { fornecedores, produtosCatalogo, clientes })
       } else {
         listController?.update(compras)
       }

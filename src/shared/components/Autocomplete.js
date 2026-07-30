@@ -46,7 +46,11 @@ export function createAutocomplete({
 
     if (extraOption && q.trim()) {
       const opt = el('div', { class: 'ac-opt ac-opt-extra' }, extraOption.getLabel(q))
-      opt.addEventListener('mousedown', e => { e.preventDefault(); hide(); extraOption.action(q) })
+      // action() normalmente abre um modal (cadastro rápido) — adiado pro próximo
+      // tick pra não abrir ainda dentro do mesmo clique que está em andamento.
+      // Sem isso, o mouseup/click desse mesmo gesto cai no backdrop do modal
+      // recém-criado (que cobre a tela toda) e fecha ele na hora, instantaneamente.
+      opt.addEventListener('mousedown', e => { e.preventDefault(); hide(); setTimeout(() => extraOption.action(q), 0) })
       dropdown.appendChild(opt)
     }
 

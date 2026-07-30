@@ -6,6 +6,7 @@ import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { createCompra, patchCompra, atualizarStatusCompra, updateCompra, deleteCompra } from './service.js'
+import { createClienteRapido } from '../clientes/service.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 
 const STATUS_META = {
@@ -31,7 +32,8 @@ function monthKey(ts) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-export function renderComprasList(container, compras, { fornecedores, produtosCatalogo }) {
+export function renderComprasList(container, compras, { fornecedores, produtosCatalogo, clientes }) {
+  let clientesList = [...clientes]
   const canCreate = can('compras', 'create')
   const canEdit   = can('compras', 'edit')
   const canDelete = can('compras', 'delete')
@@ -240,11 +242,84 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           produtoId = produtosCatalogo.find(p => p.nome === produtoAc.getValue())?.id || null
         })
 
+        // Fornecedor OU cliente — muitas compras (principalmente semi-novo) são
+        // feitas direto de um cliente, não de um fornecedor cadastrado. Se o
+        // texto bater com um cliente da lista, a compra grava em "cliente" em
+        // vez de "fornecedor"; se não achar ninguém, o cadastro rápido sempre
+        // cria um CLIENTE (fornecedor já teria que estar cadastrado no menu
+        // Fornecedores antes de aparecer aqui).
+        function nomesFornecedorOuCliente() {
+          return [
+            ...fornecedores.map(f => f.box ? `${f.name} - ${f.box}` : f.name),
+            ...clientesList.map(c => c.name),
+          ]
+        }
+
+        let clienteSelecionado = null
+        function atualizarClienteSelecionado() {
+          clienteSelecionado = clientesList.find(c => c.name === fornAc.getValue()) || null
+        }
+
+        function abrirCadastroRapidoCliente(nomeInicial) {
+          openModal({
+            title: 'Novo cliente',
+            size: 'sm',
+            renderBody: (body2, closeModal2) => {
+              let tipo = 'PF'
+              const pfBtn = el('button', { type: 'button', class: 'type-btn active' }, 'PF')
+              const pjBtn = el('button', { type: 'button', class: 'type-btn' }, 'PJ')
+              pfBtn.addEventListener('click', () => { tipo = 'PF'; pfBtn.classList.add('active'); pjBtn.classList.remove('active') })
+              pjBtn.addEventListener('click', () => { tipo = 'PJ'; pjBtn.classList.add('active'); pfBtn.classList.remove('active') })
+
+              const nomeInp = el('input', { type: 'text', placeholder: 'Nome completo' })
+              nomeInp.value = nomeInicial
+              const foneInp = el('input', { type: 'tel', placeholder: '(00) 00000-0000' })
+              const cancelarBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+              cancelarBtn.addEventListener('click', closeModal2)
+
+              const salvarBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Cadastrar')
+              salvarBtn.addEventListener('click', async () => {
+                const nome = nomeInp.value.trim()
+                if (!nome) { toastError('Informe o nome do cliente.'); return }
+                salvarBtn.disabled = true; salvarBtn.textContent = 'Salvando...'
+                try {
+                  const docRef = await createClienteRapido(nome, foneInp.value, tipo)
+                  clientesList.push({ id: docRef.id, name: nome, nameLower: nome.toLowerCase() })
+                  clientesList.sort((a, b) => a.nameLower.localeCompare(b.nameLower))
+                  fornAc.setItems(nomesFornecedorOuCliente())
+                  fornAc.setValue(nome)
+                  atualizarClienteSelecionado()
+                  toastSuccess(`"${nome}" cadastrado.`)
+                  closeModal2()
+                } catch (err) {
+                  console.error(err)
+                  toastError('Erro ao cadastrar cliente.')
+                  salvarBtn.disabled = false; salvarBtn.textContent = 'Cadastrar'
+                }
+              })
+
+              body2.append(
+                el('div', { class: 'type-toggle', style: 'margin-bottom:16px' }, pfBtn, pjBtn),
+                el('div', { class: 'field', style: 'margin-bottom:12px' }, el('label', {}, 'Nome'), nomeInp),
+                el('div', { class: 'field', style: 'margin-bottom:20px' }, el('label', {}, 'Telefone'), foneInp),
+                el('div', { style: 'display:flex;gap:8px;justify-content:flex-end' }, cancelarBtn, salvarBtn)
+              )
+              setTimeout(() => nomeInp.focus(), 50)
+            },
+          })
+        }
+
         const fornAc = createAutocomplete({
-          placeholder: 'Fornecedor',
-          items:       fornecedores.map(f => f.box ? `${f.name} - ${f.box}` : f.name),
+          placeholder: 'Fornecedor ou cliente',
+          items:       nomesFornecedorOuCliente(),
+          onSelect:    atualizarClienteSelecionado,
+          extraOption: {
+            getLabel: q => `+ Cadastrar "${q}" como novo cliente`,
+            action:   q => abrirCadastroRapidoCliente(q),
+          },
         })
         fornAc.el.style.width = '100%'
+        fornAc.el.addEventListener('input', atualizarClienteSelecionado)
 
         const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
 
@@ -264,7 +339,8 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           try {
             await createCompra({
               produtoId, produto,
-              fornecedor:  fornAc.getValue(),
+              fornecedor:  clienteSelecionado ? '' : fornAc.getValue(),
+              cliente:     clienteSelecionado ? clienteSelecionado.name : '',
               custo:       custoInp.value,
               status:      statusSelNew.value,
               observacoes: aparelhoInp.value,
@@ -280,7 +356,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         mount(body,
           el('div', { class: 'form-grid' },
             el('div', { class: 'field field-full' }, el('label', {}, 'Produto'), produtoAc.el),
-            el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornAc.el),
+            el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor ou cliente'), fornAc.el),
             el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
             el('div', { class: 'field' }, el('label', {}, 'Status'), statusSelNew),
             el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
