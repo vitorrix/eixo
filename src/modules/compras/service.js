@@ -1,5 +1,5 @@
 import {
-  collection, addDoc, updateDoc, deleteDoc,
+  collection, addDoc, updateDoc, deleteDoc, deleteField,
   doc, onSnapshot, query, orderBy, where, getDocs, serverTimestamp, writeBatch, increment,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
@@ -143,6 +143,61 @@ export async function updateCompra(id, data) {
     custo:       parseFloat(data.custo) || 0,
     observacoes: (data.observacoes || '').trim(),
   })
+}
+
+// Edita uma compra lançada direto no menu (sem pedidoId) com o mesmo editor de
+// itens da Nova Compra — dá pra corrigir produto/custo/quantidade errados sem
+// excluir e relançar. Se a compra já tinha entrado em estoque (estoqueAplicado),
+// reconcilia a diferença de quantidade por produto ao salvar, senão o estoque
+// fica desalinhado quando a correção muda a quantidade ou troca o produto.
+// Some pra 1 item (formato plano) ou vira itens[] (2+), igual createComprasEmLote.
+export async function updateCompraItens(compra, itens, { fornecedor, observacoes }) {
+  const novos = itens.map(it => ({
+    produtoId:  it.produtoId || null,
+    produto:    (it.produto || '').trim(),
+    quantidade: parseInt(it.quantidade) || 1,
+    custo:      parseFloat(it.custo) || 0,
+  })).filter(it => it.produto)
+
+  const antigos = Array.isArray(compra.itens) && compra.itens.length
+    ? compra.itens
+    : [{ produtoId: compra.produtoId || null, produto: compra.produto || '', quantidade: compra.quantidade || 1, custo: compra.custo || 0 }]
+
+  const batch = writeBatch(db)
+
+  if (compra.estoqueAplicado) {
+    const deltaPorProduto = new Map()
+    antigos.forEach(i => { if (i.produtoId) deltaPorProduto.set(i.produtoId, (deltaPorProduto.get(i.produtoId) || 0) - (i.quantidade || 1)) })
+    novos.forEach(i => { if (i.produtoId) deltaPorProduto.set(i.produtoId, (deltaPorProduto.get(i.produtoId) || 0) + i.quantidade) })
+    deltaPorProduto.forEach((delta, produtoId) => {
+      if (delta !== 0) batch.update(doc(db, 'produtos', produtoId), { estoqueAtual: increment(delta) })
+    })
+  }
+
+  const fields = {
+    fornecedor:  (fornecedor  || '').trim(),
+    observacoes: (observacoes || '').trim(),
+  }
+  if (novos.length > 1) {
+    Object.assign(fields, {
+      produtoId:  null,
+      produto:    novos.map(i => i.produto).join(', '),
+      itens:      novos,
+      custo:      novos.reduce((s, i) => s + i.custo, 0),
+      quantidade: deleteField(),
+    })
+  } else {
+    const l = novos[0] || { produtoId: null, produto: '', quantidade: 1, custo: 0 }
+    Object.assign(fields, {
+      produtoId:  l.produtoId,
+      produto:    l.produto,
+      custo:      l.custo,
+      quantidade: l.quantidade,
+      itens:      deleteField(),
+    })
+  }
+  batch.update(doc(db, COL, compra.id), fields)
+  return batch.commit()
 }
 
 // Apaga a Compra e, se ela veio de um Pedido, o Pagamento gerado junto no

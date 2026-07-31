@@ -5,7 +5,7 @@ import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { createComprasEmLote, patchCompra, atualizarStatusCompra, updateCompra, deleteCompra } from './service.js'
+import { createComprasEmLote, atualizarStatusCompra, updateCompra, updateCompraItens, deleteCompra } from './service.js'
 import { createClienteRapido } from '../clientes/service.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 
@@ -41,6 +41,82 @@ function compraProdutoResumo(c) {
     return resto.length ? `${first.produto} +${resto.length}` : first.produto
   }
   return c.produto || '—'
+}
+
+// Editor de itens (Produto/Custo unitário/Quantidade/Total, com + Adicionar
+// item e × por linha) — usado igual na Nova Compra e na Editar Compra, pra
+// corrigir produto/custo/quantidade sem precisar excluir e relançar.
+// "custoUnit" no estado é o preço unitário; quem grava (createComprasEmLote/
+// updateCompraItens) espera o total da linha (unitário × quantidade).
+function criarEditorItens(produtoNomes, produtosCatalogo, itensIniciais) {
+  let itens = itensIniciais.map(it => ({ ...it }))
+  const itensWrap = el('div', { class: 'produtos-wrap' })
+
+  function renderItens() {
+    itensWrap.replaceChildren()
+
+    itens.forEach((it, i) => {
+      const itemProdutoAc = createAutocomplete({
+        placeholder:  'Produto do catálogo',
+        items:        produtoNomes,
+        initialValue: it.produto,
+        onSelect:     v => {
+          itens[i].produto = v
+          itens[i].produtoId = produtosCatalogo.find(p => p.nome === v)?.id || null
+        },
+      })
+      itemProdutoAc.el.style.width = '100%'
+      itemProdutoAc.el.addEventListener('input', () => {
+        itens[i].produto = itemProdutoAc.getValue()
+        itens[i].produtoId = produtosCatalogo.find(p => p.nome === itemProdutoAc.getValue())?.id || null
+      })
+
+      const custoUnitInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+      custoUnitInp.value = it.custoUnit
+      const qtdInp = el('input', { type: 'number', step: '1', min: '1', placeholder: '1' })
+      qtdInp.value = it.quantidade
+      const totalSpan = el('span', {}, brl(0))
+
+      function updateRowTotal() {
+        const total = (parseFloat(custoUnitInp.value) || 0) * (parseInt(qtdInp.value) || 1)
+        totalSpan.textContent = brl(total)
+      }
+      custoUnitInp.addEventListener('input', () => { itens[i].custoUnit = custoUnitInp.value; updateRowTotal() })
+      qtdInp.addEventListener('input', () => { itens[i].quantidade = qtdInp.value; updateRowTotal() })
+      updateRowTotal()
+
+      const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
+      delBtn.addEventListener('click', () => {
+        if (itens.length === 1) return
+        itens.splice(i, 1); renderItens()
+      })
+
+      itensWrap.appendChild(
+        el('div', { class: 'form-produto-block' },
+          el('div', { class: 'form-produto-header' },
+            el('span', { class: 'form-produto-label' }, `Item ${i + 1}`),
+            delBtn
+          ),
+          el('div', { class: 'form-produto-row3' },
+            el('div', { class: 'field field-grow' }, el('label', {}, 'Produto'), itemProdutoAc.el),
+            el('div', { class: 'field' }, el('label', {}, 'Custo unitário R$'), custoUnitInp),
+            el('div', { class: 'field' }, el('label', {}, 'Quantidade'), qtdInp),
+          ),
+          el('div', { class: 'text-muted', style: 'text-align:right;font-size:13px;margin-top:6px' },
+            'Total: ', totalSpan)
+        )
+      )
+    })
+  }
+  renderItens()
+
+  const addItemBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Adicionar item')
+  addItemBtn.addEventListener('click', () => {
+    itens.push({ produtoId: null, produto: '', custoUnit: '', quantidade: 1 })
+    renderItens()
+  })
+
+  return { itensWrap, addItemBtn, getItens: () => itens }
 }
 
 export function renderComprasList(container, compras, { fornecedores, produtosCatalogo, clientes }) {
@@ -337,80 +413,17 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         // ── Itens da compra — 1 fornecedor, N produtos (ex: acessório comprado
         // em lote, cada um com seu custo unitário e quantidade). 1 item só vira
         // Compra no formato de sempre; 2+ itens viram UMA Compra com "itens[]"
-        // (mesma nota, mesmo fornecedor). "Total" aqui é só custo unitário ×
-        // quantidade, pra conferência na hora — quem é gravado por item é o total.
-        let itens = [{ produtoId: null, produto: '', custoUnit: '', quantidade: 1 }]
-        const itensWrap = el('div', { class: 'produtos-wrap' })
-
-        function renderItens() {
-          itensWrap.replaceChildren()
-
-          itens.forEach((it, i) => {
-            const itemProdutoAc = createAutocomplete({
-              placeholder:  'Produto do catálogo',
-              items:        produtoNomes,
-              initialValue: it.produto,
-              onSelect:     v => {
-                itens[i].produto = v
-                itens[i].produtoId = produtosCatalogo.find(p => p.nome === v)?.id || null
-              },
-            })
-            itemProdutoAc.el.style.width = '100%'
-            itemProdutoAc.el.addEventListener('input', () => {
-              itens[i].produto = itemProdutoAc.getValue()
-              itens[i].produtoId = produtosCatalogo.find(p => p.nome === itemProdutoAc.getValue())?.id || null
-            })
-
-            const custoUnitInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
-            custoUnitInp.value = it.custoUnit
-            const qtdInp = el('input', { type: 'number', step: '1', min: '1', placeholder: '1' })
-            qtdInp.value = it.quantidade
-            const totalSpan = el('span', {}, brl(0))
-
-            function updateRowTotal() {
-              const total = (parseFloat(custoUnitInp.value) || 0) * (parseInt(qtdInp.value) || 1)
-              totalSpan.textContent = brl(total)
-            }
-            custoUnitInp.addEventListener('input', () => { itens[i].custoUnit = custoUnitInp.value; updateRowTotal() })
-            qtdInp.addEventListener('input', () => { itens[i].quantidade = qtdInp.value; updateRowTotal() })
-            updateRowTotal()
-
-            const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
-            delBtn.addEventListener('click', () => {
-              if (itens.length === 1) return
-              itens.splice(i, 1); renderItens()
-            })
-
-            itensWrap.appendChild(
-              el('div', { class: 'form-produto-block' },
-                el('div', { class: 'form-produto-header' },
-                  el('span', { class: 'form-produto-label' }, `Item ${i + 1}`),
-                  delBtn
-                ),
-                el('div', { class: 'form-produto-row3' },
-                  el('div', { class: 'field field-grow' }, el('label', {}, 'Produto'), itemProdutoAc.el),
-                  el('div', { class: 'field' }, el('label', {}, 'Custo unitário R$'), custoUnitInp),
-                  el('div', { class: 'field' }, el('label', {}, 'Quantidade'), qtdInp),
-                ),
-                el('div', { class: 'text-muted', style: 'text-align:right;font-size:13px;margin-top:6px' },
-                  'Total: ', totalSpan)
-              )
-            )
-          })
-        }
-        renderItens()
-
-        const addItemBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Adicionar item')
-        addItemBtn.addEventListener('click', () => {
-          itens.push({ produtoId: null, produto: '', custoUnit: '', quantidade: 1 })
-          renderItens()
-        })
+        // (mesma nota, mesmo fornecedor).
+        const { itensWrap, addItemBtn, getItens } = criarEditorItens(
+          produtoNomes, produtosCatalogo,
+          [{ produtoId: null, produto: '', custoUnit: '', quantidade: 1 }]
+        )
 
         const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelBtn.addEventListener('click', closeModal)
         const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Criar compra')
         okBtn.addEventListener('click', async () => {
-          const validos = itens.filter(it => it.produto.trim())
+          const validos = getItens().filter(it => it.produto.trim())
           if (!validos.length) { toastError('Adicione ao menos um produto.'); return }
           okBtn.disabled = true
           try {
@@ -456,8 +469,16 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
     })
   }
 
+  // Compra gerada por um Pedido é 1 aparelho/serviço só, sem produto de
+  // catálogo — edição fica simples (Fornecedor/Custo/Dados do aparelho), igual
+  // sempre foi. Compra lançada direto no menu (sem pedidoId) usa o mesmo
+  // editor de itens da Nova Compra, pra poder corrigir produto/custo/
+  // quantidade sem excluir e relançar.
   function openEditModal(compra) {
-    const temItens = Array.isArray(compra.itens) && compra.itens.length
+    return compra.pedidoId ? openEditModalPedido(compra) : openEditModalItens(compra)
+  }
+
+  function openEditModalPedido(compra) {
     openModal({
       title: 'Editar Compra',
       size:  'md',
@@ -481,11 +502,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         okBtn.addEventListener('click', async () => {
           okBtn.disabled = true
           try {
-            if (temItens) {
-              await patchCompra(compra.id, { fornecedor: fornInp.value.trim(), observacoes: aparelhoInp.value.trim() })
-            } else {
-              await updateCompra(compra.id, { fornecedor: fornInp.value, custo: custoInp.value, observacoes: aparelhoInp.value })
-            }
+            await updateCompra(compra.id, { fornecedor: fornInp.value, custo: custoInp.value, observacoes: aparelhoInp.value })
             toastSuccess('Compra atualizada.'); close()
           } catch {
             toastError('Erro ao salvar.')
@@ -493,18 +510,83 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           }
         })
 
-        // Nota com vários itens: custo é a soma de cada linha, não dá pra editar
-        // como um número solto sem redistribuir — só mostra o resumo aqui; pra
-        // corrigir valor de item específico, exclui e relança a compra.
         mount(body,
           dl,
           el('div', { class: 'form-grid' },
             el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornInp),
-            ...(temItens
-              ? [el('div', { class: 'field field-full' }, el('label', {}, 'Itens'),
-                  el('p', { class: 'text-muted' },
-                    compra.itens.map(i => `${i.produto} — ${i.quantidade}x ${brl(toNumero(i.custo))}`).join(', ')))]
-              : [el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp)]),
+            el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+            el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
+          ),
+          el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
+        )
+      },
+    })
+  }
+
+  function openEditModalItens(compra) {
+    const produtoNomes = produtosCatalogo.map(p => p.nome)
+    const itensIniciais = (Array.isArray(compra.itens) && compra.itens.length
+      ? compra.itens
+      : [{ produtoId: compra.produtoId || null, produto: compra.produto || '', quantidade: compra.quantidade || 1, custo: compra.custo || 0 }]
+    ).map(it => ({
+      produtoId:  it.produtoId || null,
+      produto:    it.produto || '',
+      custoUnit:  it.quantidade ? (it.custo || 0) / it.quantidade : (it.custo || 0),
+      quantidade: it.quantidade || 1,
+    }))
+
+    openModal({
+      title: 'Editar Compra',
+      size:  'lg',
+      renderBody: (body, close) => {
+        const dl = el('datalist', { id: 'ce-forn-list' })
+        fornecedores.forEach(f => dl.appendChild(el('option', { value: f.name })))
+
+        const fornInp = el('input', { type: 'text', list: 'ce-forn-list', placeholder: 'Fornecedor' })
+        fornInp.value = compra.fornecedor || ''
+
+        const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
+          placeholder: 'Specs, serial, IMEI... (aparece no recibo do cliente)' })
+        aparelhoInp.value = compra.observacoes || ''
+
+        const { itensWrap, addItemBtn, getItens } = criarEditorItens(produtoNomes, produtosCatalogo, itensIniciais)
+
+        const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
+        cancelBtn.addEventListener('click', close)
+        const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Salvar')
+        okBtn.addEventListener('click', async () => {
+          const validos = getItens().filter(it => it.produto.trim())
+          if (!validos.length) { toastError('Adicione ao menos um produto.'); return }
+          okBtn.disabled = true
+          try {
+            await updateCompraItens(compra,
+              validos.map(it => ({
+                produtoId:  it.produtoId,
+                produto:    it.produto.trim(),
+                quantidade: it.quantidade,
+                custo:      (parseFloat(it.custoUnit) || 0) * (parseInt(it.quantidade) || 1),
+              })),
+              { fornecedor: fornInp.value, observacoes: aparelhoInp.value }
+            )
+            toastSuccess('Compra atualizada.'); close()
+          } catch (err) {
+            console.error(err)
+            toastError('Erro ao salvar.')
+            okBtn.disabled = false
+          }
+        })
+
+        mount(body,
+          dl,
+          el('div', { class: 'form-grid' },
+            el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornInp),
+          ),
+          el('div', { class: 'form-produto-header' },
+            el('p', { class: 'form-sub-label' }, 'Itens'),
+            addItemBtn
+          ),
+          itensWrap,
+          el('div', { class: 'form-grid' },
             el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
