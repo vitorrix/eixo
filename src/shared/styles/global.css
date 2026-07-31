@@ -301,6 +301,11 @@ html, body {
 .page-header h2 { font-size: 20px; font-weight: 700; }
 .text-muted { color: var(--color-muted); font-size: 14px; margin-top: 4px; }
 
+/* ── Formulário em página cheia (Novo/Editar em vez de modal) ────────── */
+.fullpage-header { display: flex; align-items: center; gap: 14px; }
+.fullpage-back-btn { flex-shrink: 0; }
+.fullpage-form-body { max-width: 820px; }
+
 /* ── Dashboard — grade e ritmo comuns a todos os cards ───────────────
    Um único vocabulário de espaçamento pra tela inteira: mesmo gap entre
    cards de uma fileira, mesma margem entre fileiras, mesmo padding interno
