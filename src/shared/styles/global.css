@@ -1444,6 +1444,10 @@ html, body {
   border-color: #f59e0b;
 }
 .form-produto-block.manutencao .form-produto-label { color: #b45309; }
+.form-produto-block-vazio {
+  background: transparent;
+  border-style: dashed;
+}
 .form-produto-row {
   display: grid;
   grid-template-columns: 1fr 120px 120px 100px;

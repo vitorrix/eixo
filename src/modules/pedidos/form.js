@@ -31,9 +31,9 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   // como já era o comportamento — era sempre brinde antes), e ao salvar de
   // novo o pedido já grava no formato novo.
   let produtos = []
-  ;(pedido?.produtos?.length ? pedido.produtos : [{ tipo: 'produto', nome: '', cor: '', valor: '' }]).forEach(p => {
+  ;(pedido?.produtos || []).forEach(p => {
     produtos.push({
-      tipo:        p.tipo === 'manutencao' ? 'manutencao' : 'produto',
+      tipo:        p.tipo === 'manutencao' || p.tipo === 'acessorio' ? p.tipo : 'produto',
       nome:        p.nome       || '',
       cor:         p.cor        || '',
       aparelho:    p.aparelho   || '',
@@ -49,7 +49,10 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       })
     })
   })
-  if (!produtos.length) produtos = [{ tipo: 'produto', nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 }]
+  // Sempre termina com uma linha vazia (tipo não escolhido) pronta pra
+  // adicionar o próximo item — é ela que dá lugar aos campos certos assim que
+  // o tipo é selecionado, e é reposta sempre que a última linha é preenchida.
+  produtos.push({ tipo: '' })
 
   let formasPagamento = Array.isArray(pedido?.formasPagamento)
     ? [...pedido.formasPagamento]
@@ -193,15 +196,63 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     )
   }
 
+  // Item novo do tipo escolhido — zera os campos (troca de tipo não aproveita
+  // nada do que tinha antes, os campos são outros).
+  function criarItemVazio(tipo) {
+    if (tipo === 'manutencao') return { tipo, nome: '', aparelho: '', valor: '', quantidade: 1, desconto: 0 }
+    if (tipo === 'acessorio')  return { tipo, nome: '', produtoId: null, valor: '', quantidade: 1, desconto: 0 }
+    if (tipo === 'produto')    return { tipo, nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 }
+    return { tipo: '' }
+  }
+
+  // Garante que sempre sobra uma linha vazia no fim pra dar o próximo item —
+  // sem isso, depois de escolher o tipo da única linha, não sobraria nenhuma
+  // linha pra continuar adicionando.
+  function garantirLinhaVazia() {
+    if (!produtos.length || produtos[produtos.length - 1].tipo) produtos.push({ tipo: '' })
+  }
+
+  function buildTipoField(p, i) {
+    const tipoSel = el('select', { class: 'field-select' },
+      el('option', { value: '' }, '— Selecione —'),
+      el('option', { value: 'produto' }, 'Produto'),
+      el('option', { value: 'manutencao' }, 'Manutenção'),
+      el('option', { value: 'acessorio' }, 'Acessório'),
+    )
+    tipoSel.value = p.tipo || ''
+    tipoSel.addEventListener('change', () => {
+      produtos[i] = criarItemVazio(tipoSel.value)
+      garantirLinhaVazia()
+      renderProdutos()
+    })
+    return el('div', { class: 'form-grid' }, el('div', { class: 'field' }, el('label', {}, 'Tipo'), tipoSel))
+  }
+
   function renderProdutos() {
     produtosWrap.replaceChildren()
 
     produtos.forEach((p, i) => {
       const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
       delBtn.addEventListener('click', () => {
-        if (produtos.length === 1) return
-        produtos.splice(i, 1); renderProdutos(); updateTotal()
+        produtos.splice(i, 1)
+        garantirLinhaVazia()
+        renderProdutos(); updateTotal()
       })
+
+      // Linha ainda sem tipo escolhido — só o seletor, mais nada. É sempre a
+      // última linha (garantirLinhaVazia mantém isso), pronta pra virar o
+      // próximo item assim que o tipo for escolhido.
+      if (!p.tipo) {
+        produtosWrap.appendChild(
+          el('div', { class: 'form-produto-block form-produto-block-vazio' },
+            el('div', { class: 'form-produto-header' },
+              el('span', { class: 'form-produto-label' }, `Item ${i + 1}`),
+            ),
+            buildTipoField(p, i)
+          )
+        )
+        return
+      }
 
       if (p.tipo === 'manutencao') {
         const aparelhoAc = createAutocomplete({
@@ -232,6 +283,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
               el('span', { class: 'form-produto-label' }, `🛠️ Manutenção ${i + 1}`),
               delBtn
             ),
+            buildTipoField(p, i),
             el('div', { class: 'form-produto-row3' },
               el('div', { class: 'field' }, el('label', {}, 'Aparelho'), aparelhoAc.el),
               el('div', { class: 'field' }, el('label', {}, 'Serviço'), servicoAc.el),
@@ -277,6 +329,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
               el('span', { class: 'form-produto-label' }, `🎒 Acessório ${i + 1}`),
               el('div', { style: 'display:flex;gap:6px' }, brindeBtn, delBtn)
             ),
+            buildTipoField(p, i),
             el('div', { class: 'form-produto-row3' },
               el('div', { class: 'field field-grow' }, el('label', {}, 'Item'), nomeAc.el),
               el('div', { class: 'field field-valor' }, el('label', {}, 'Preço R$'), valorInp),
@@ -308,9 +361,10 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       produtosWrap.appendChild(
         el('div', { class: 'form-produto-block' },
           el('div', { class: 'form-produto-header' },
-            el('span', { class: 'form-produto-label' }, `Produto ${i + 1}`),
+            el('span', { class: 'form-produto-label' }, `📦 Produto ${i + 1}`),
             delBtn
           ),
+          buildTipoField(p, i),
           el('div', { class: 'form-produto-row3' },
             el('div', { class: 'field' }, el('label', {}, 'Item'), nomeAc.el),
             el('div', { class: 'field field-cor' }, el('label', {}, 'Cor'), corInp),
@@ -325,24 +379,6 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   }
 
   renderProdutos()
-
-  const addProdutoBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ produto')
-  addProdutoBtn.addEventListener('click', () => {
-    produtos.push({ tipo: 'produto', nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 })
-    renderProdutos()
-  })
-
-  const addManutencaoBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ manutenção')
-  addManutencaoBtn.addEventListener('click', () => {
-    produtos.push({ tipo: 'manutencao', nome: '', aparelho: '', valor: '', quantidade: 1, desconto: 0 })
-    renderProdutos()
-  })
-
-  const addAcessorioBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ acessório')
-  addAcessorioBtn.addEventListener('click', () => {
-    produtos.push({ tipo: 'acessorio', nome: '', produtoId: null, valor: '', quantidade: 1, desconto: 0 })
-    renderProdutos()
-  })
 
   // ── Negociação ────────────────────────────────────────────────────────────
   function makePagChips() {
@@ -478,7 +514,8 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     submitBtn.textContent = 'Salvando...'
 
     try {
-      const data = { dataContato: dataInp.value, cliente, produtos, formasPagamento, trocas: trocasFinal, observacoes: obsInp.value }
+      const produtosFinal = produtos.filter(p => p.tipo)
+      const data = { dataContato: dataInp.value, cliente, produtos: produtosFinal, formasPagamento, trocas: trocasFinal, observacoes: obsInp.value }
       if (isEdit) {
         await editarPedido(pedido.id, data)
         const voltou = pedido.status && pedido.status !== 'negociando'
@@ -508,10 +545,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
         )
       ),
       el('div', { class: 'form-section' },
-        el('div', { class: 'form-produto-header' },
-          el('p', { class: 'form-section-title', style: 'margin:0' }, 'Produtos'),
-          el('div', { style: 'display:flex;gap:8px' }, addManutencaoBtn, addProdutoBtn, addAcessorioBtn)
-        ),
+        el('p', { class: 'form-section-title' }, 'Produtos'),
         produtosWrap,
         totalDisplay
       ),
