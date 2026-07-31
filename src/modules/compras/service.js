@@ -50,36 +50,62 @@ export async function createCompra(data) {
   return batch.commit()
 }
 
-// Lança várias Compras de uma vez, mesmo fornecedor/status/observações —
-// pra compra em lote de itens fungíveis (ex: acessório comprado em
-// quantidade, com produtos diferentes na mesma nota). Cada linha vira sua
-// própria Compra (mesmo formato do createCompra), mas tudo numa escrita só,
-// pra não ficar meio caminho andado se alguma linha falhar no meio.
+// Lança as Compras de uma nota — mesmo fornecedor/status/observações. Uma nota
+// com um produto só vira uma Compra no formato de sempre (plano, igual
+// createCompra). Uma nota com 2+ produtos (ex: acessório comprado em lote, com
+// produtos diferentes na mesma nota) vira UMA Compra só com "itens[]" — é a
+// mesma compra, não faz sentido virar N linhas na lista pra 1 nota fiscal só.
 export async function createComprasEmLote(comum, linhas) {
   const batch = writeBatch(db)
-  linhas.forEach(l => {
-    const status = comum.status || STATUS_EM_ESTOQUE
-    const quantidade = parseInt(l.quantidade) || 1
-    const jaRecebida = status === STATUS_EM_ESTOQUE && l.produtoId
+  const status = comum.status || STATUS_EM_ESTOQUE
+  const jaRecebida = status === STATUS_EM_ESTOQUE
+  const base = {
+    fornecedor:      (comum.fornecedor || '').trim(),
+    status,
+    observacoes:     (comum.observacoes || '').trim(),
+    cliente:         (comum.cliente || '').trim(),
+    pedidoId:        null,
+    criadoEm:        serverTimestamp(),
+  }
 
+  if (linhas.length > 1) {
+    const itens = linhas.map(l => ({
+      produtoId:  l.produtoId || null,
+      produto:    (l.produto || '').trim(),
+      quantidade: parseInt(l.quantidade) || 1,
+      custo:      parseFloat(l.custo) || 0,
+    }))
     const ref = doc(collection(db, COL))
     batch.set(ref, {
-      produtoId:       l.produtoId || null,
-      produto:         (l.produto || '').trim(),
-      fornecedor:      (comum.fornecedor || '').trim(),
-      custo:           parseFloat(l.custo) || 0,
-      quantidade,
-      status,
-      observacoes:     (comum.observacoes || '').trim(),
-      cliente:         (comum.cliente || '').trim(),
-      pedidoId:        null,
-      estoqueAplicado: !!jaRecebida,
-      criadoEm:        serverTimestamp(),
+      ...base,
+      produtoId:       null,
+      produto:         itens.map(i => i.produto).join(', '),
+      itens,
+      custo:           itens.reduce((s, i) => s + i.custo, 0),
+      estoqueAplicado: jaRecebida,
     })
     if (jaRecebida) {
-      batch.update(doc(db, 'produtos', l.produtoId), { estoqueAtual: increment(quantidade) })
+      itens.forEach(i => {
+        if (i.produtoId) batch.update(doc(db, 'produtos', i.produtoId), { estoqueAtual: increment(i.quantidade) })
+      })
     }
+    return batch.commit()
+  }
+
+  const l = linhas[0]
+  const quantidade = parseInt(l.quantidade) || 1
+  const ref = doc(collection(db, COL))
+  batch.set(ref, {
+    ...base,
+    produtoId:       l.produtoId || null,
+    produto:         (l.produto || '').trim(),
+    custo:           parseFloat(l.custo) || 0,
+    quantidade,
+    estoqueAplicado: jaRecebida && !!l.produtoId,
   })
+  if (jaRecebida && l.produtoId) {
+    batch.update(doc(db, 'produtos', l.produtoId), { estoqueAtual: increment(quantidade) })
+  }
   return batch.commit()
 }
 
@@ -94,13 +120,20 @@ export async function patchCompra(id, fields) {
 // entregue). Sair de "estoque" pra "concluído" não desconta de volta — quem
 // consome (venda ou outro pedido) já cuida disso na hora.
 export async function atualizarStatusCompra(compra, novoStatus) {
-  const daEntradaEstoque = novoStatus === STATUS_EM_ESTOQUE && !compra.pedidoId && !compra.estoqueAplicado && compra.produtoId
+  const temItens = Array.isArray(compra.itens) && compra.itens.length
+  const daEntradaEstoque = novoStatus === STATUS_EM_ESTOQUE && !compra.pedidoId && !compra.estoqueAplicado && (compra.produtoId || temItens)
   if (!daEntradaEstoque) {
     return patchCompra(compra.id, { status: novoStatus })
   }
   const batch = writeBatch(db)
   batch.update(doc(db, COL, compra.id), { status: novoStatus, estoqueAplicado: true })
-  batch.update(doc(db, 'produtos', compra.produtoId), { estoqueAtual: increment(compra.quantidade || 1) })
+  if (temItens) {
+    compra.itens.forEach(i => {
+      if (i.produtoId) batch.update(doc(db, 'produtos', i.produtoId), { estoqueAtual: increment(i.quantidade || 1) })
+    })
+  } else {
+    batch.update(doc(db, 'produtos', compra.produtoId), { estoqueAtual: increment(compra.quantidade || 1) })
+  }
   return batch.commit()
 }
 

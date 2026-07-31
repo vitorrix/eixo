@@ -33,6 +33,16 @@ function monthKey(ts) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
+// Compra de nota com 1 produto só mostra o nome; nota com vários (itens[])
+// mostra o primeiro + quantos a mais, igual ao resumo de Vendas.
+function compraProdutoResumo(c) {
+  if (Array.isArray(c.itens) && c.itens.length) {
+    const [first, ...resto] = c.itens
+    return resto.length ? `${first.produto} +${resto.length}` : first.produto
+  }
+  return c.produto || '—'
+}
+
 export function renderComprasList(container, compras, { fornecedores, produtosCatalogo, clientes }) {
   let clientesList = [...clientes]
   const canCreate = can('compras', 'create')
@@ -196,7 +206,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
         el('td', {}, c.cliente || '—'),
-        el('td', { class: 'td-name' }, c.produto || '—'),
+        el('td', { class: 'td-name' }, compraProdutoResumo(c)),
         el('td', {}, c.fornecedor || '—'),
         el('td', { class: 'td-money' }, brl(toNumero(c.custo))),
         el('td', {}, statusSel),
@@ -210,12 +220,15 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   // ── Detalhes (consulta) ──────────────────────────────────────────────────
   function abrirDetalhesCompraModal(c) {
     const meta = STATUS_META[c.status] || { label: c.status || '—' }
+    const temItens = Array.isArray(c.itens) && c.itens.length
     abrirDetalhesModal({
       title: 'Detalhes da Compra',
       campos: [
         ['Cliente', c.cliente],
-        ['Produto', c.produto],
-        c.quantidade > 1 ? ['Quantidade', String(c.quantidade)] : null,
+        temItens
+          ? ['Itens', c.itens.map(i => `${i.produto} (${i.quantidade}x ${brl(toNumero(i.custo))})`).join(' · ')]
+          : ['Produto', c.produto],
+        !temItens && c.quantidade > 1 ? ['Quantidade', String(c.quantidade)] : null,
         ['Fornecedor', c.fornecedor],
         ['Custo', brl(toNumero(c.custo))],
         ['Status', meta.label],
@@ -322,9 +335,10 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente; deixe em branco pra lote sem serial, ex: acessório)' })
 
         // ── Itens da compra — 1 fornecedor, N produtos (ex: acessório comprado
-        // em lote, cada um com seu custo unitário e quantidade). Cada linha vira
-        // sua própria Compra no fim; "Total" aqui é só custo unitário × quantidade,
-        // pra conferência na hora — quem é gravado por linha é o total mesmo.
+        // em lote, cada um com seu custo unitário e quantidade). 1 item só vira
+        // Compra no formato de sempre; 2+ itens viram UMA Compra com "itens[]"
+        // (mesma nota, mesmo fornecedor). "Total" aqui é só custo unitário ×
+        // quantidade, pra conferência na hora — quem é gravado por item é o total.
         let itens = [{ produtoId: null, produto: '', custoUnit: '', quantidade: 1 }]
         const itensWrap = el('div', { class: 'produtos-wrap' })
 
@@ -414,7 +428,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
                 custo:      (parseFloat(it.custoUnit) || 0) * (parseInt(it.quantidade) || 1),
               }))
             )
-            toastSuccess(validos.length > 1 ? `${validos.length} compras criadas.` : 'Compra criada.')
+            toastSuccess('Compra criada.')
             closeModal()
           } catch (err) {
             console.error(err)
@@ -443,6 +457,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   }
 
   function openEditModal(compra) {
+    const temItens = Array.isArray(compra.itens) && compra.itens.length
     openModal({
       title: 'Editar Compra',
       size:  'md',
@@ -451,8 +466,9 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         fornecedores.forEach(f => dl.appendChild(el('option', { value: f.name })))
 
         const fornInp  = el('input', { type: 'text', list: 'ce-forn-list', placeholder: 'Fornecedor' })
-        const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
         fornInp.value  = compra.fornecedor || ''
+
+        const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
         custoInp.value = compra.custo || ''
 
         const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
@@ -465,7 +481,11 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         okBtn.addEventListener('click', async () => {
           okBtn.disabled = true
           try {
-            await updateCompra(compra.id, { fornecedor: fornInp.value, custo: custoInp.value, observacoes: aparelhoInp.value })
+            if (temItens) {
+              await patchCompra(compra.id, { fornecedor: fornInp.value.trim(), observacoes: aparelhoInp.value.trim() })
+            } else {
+              await updateCompra(compra.id, { fornecedor: fornInp.value, custo: custoInp.value, observacoes: aparelhoInp.value })
+            }
             toastSuccess('Compra atualizada.'); close()
           } catch {
             toastError('Erro ao salvar.')
@@ -473,11 +493,18 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           }
         })
 
+        // Nota com vários itens: custo é a soma de cada linha, não dá pra editar
+        // como um número solto sem redistribuir — só mostra o resumo aqui; pra
+        // corrigir valor de item específico, exclui e relança a compra.
         mount(body,
           dl,
           el('div', { class: 'form-grid' },
             el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornInp),
-            el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+            ...(temItens
+              ? [el('div', { class: 'field field-full' }, el('label', {}, 'Itens'),
+                  el('p', { class: 'text-muted' },
+                    compra.itens.map(i => `${i.produto} — ${i.quantidade}x ${brl(toNumero(i.custo))}`).join(', ')))]
+              : [el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp)]),
             el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)

@@ -473,7 +473,9 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     const snap = await getDocs(collection(db, 'compras'))
     return snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(c => c.status === 'estoque'
+      // Compra de nota com vários itens (itens[], ex: lote de acessório) nunca é
+      // um aparelho — não faz sentido oferecer aqui.
+      .filter(c => c.status === 'estoque' && !(Array.isArray(c.itens) && c.itens.length)
         && (c.origemTroca || c.pedidoId === null || c.pedidoId === undefined || c.pedidoId === pedidoId))
       .sort((a, b) => (a.produto || '').localeCompare(b.produto || ''))
   }
