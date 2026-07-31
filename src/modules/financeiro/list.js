@@ -8,6 +8,7 @@ import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
+import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createLancamento, updateLancamento, deleteLancamento, marcarLiquidado } from './service.js'
 import { deleteVenda } from '../vendas/service.js'
 import { deleteCompra } from '../compras/service.js'
@@ -122,19 +123,37 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   )
 
   // ── Tabela ───────────────────────────────────────────────────────────────
+  const sortHead = createSortableHead([
+    { key: 'cod',       label: 'Cód' },
+    { key: 'descricao', label: 'Descrição' },
+    { key: 'contato',   label: 'Contato' },
+    { key: 'conta',     label: 'Conta' },
+    { key: 'data',      label: 'Data' },
+    { key: 'situacao',  label: 'Situação' },
+    { key: 'valor',     label: 'Valor', cls: 'th-money' },
+    ...(canEdit || canDelete ? [{ key: null, label: '', cls: 'col-actions' }] : []),
+  ], {
+    initialCol: 'data',
+    initialDir: 'asc',
+    sortValue: (l, key) => {
+      switch (key) {
+        case 'cod':       return l.numero ?? 0
+        case 'descricao': return l.descricao || ''
+        case 'contato':   return l.contato || ''
+        case 'conta':     return l.conta || ''
+        case 'data':      return l.dataVencimento || ''
+        case 'situacao':  return l.liquidado ? 1 : 0
+        case 'valor':     return toNumero(l.valor)
+        default:          return ''
+      }
+    },
+    onSort: () => refresh(),
+  })
+
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {},
-      el('tr', {},
-        el('th', {}, 'Cód'),
-        el('th', {}, 'Descrição'),
-        el('th', {}, 'Contato'),
-        el('th', {}, 'Conta'),
-        el('th', {}, 'Data'),
-        el('th', {}, 'Situação'),
-        el('th', { class: 'th-money' }, 'Valor'),
-        ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, '')] : []),
-      )
+      el('tr', {}, ...sortHead.ths)
     ),
     tbody
   )
@@ -148,7 +167,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       (l.descricao || '').toLowerCase().includes(q) ||
       (l.contato || '').toLowerCase().includes(q)
     )
-    return list.sort((a, b) => (a.dataVencimento || '').localeCompare(b.dataVencimento || ''))
+    return sortHead.sort(list)
   }
 
   function refresh() {

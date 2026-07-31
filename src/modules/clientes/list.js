@@ -4,6 +4,7 @@ import { maskCPF, maskCNPJ, maskPhone } from '../../shared/utils/formatters.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
 import { toastError, toastSuccess } from '../../shared/components/Toast.js'
+import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { deleteCliente, importarClientes, deletarClientes } from './service.js'
 import { renderClienteForm } from './form.js'
 
@@ -119,17 +120,33 @@ export function renderClienteList(container, clientes) {
   )
 
   // ── Tabela ───────────────────────────────────────────────────────────────
+  const sortHead = createSortableHead([
+    { key: 'nome',      label: 'Nome' },
+    { key: 'tipo',      label: 'Tipo' },
+    { key: 'documento', label: 'Documento' },
+    { key: 'telefone',  label: 'Telefone' },
+    { key: 'email',     label: 'E-mail' },
+    ...(canEdit || canDelete ? [{ key: null, label: 'Ações', cls: 'col-actions' }] : []),
+  ], {
+    initialCol: 'nome',
+    initialDir: 'asc',
+    sortValue: (c, key) => {
+      switch (key) {
+        case 'nome':      return c.name || ''
+        case 'tipo':      return c.type === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica'
+        case 'documento': return c.document || ''
+        case 'telefone':  return (c.phone || '').replace(/\D/g, '').padStart(15, '0')
+        case 'email':     return c.email || ''
+        default:          return ''
+      }
+    },
+    onSort: () => applyFilterAndSort(),
+  })
+
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {},
-      el('tr', {},
-        el('th', {}, 'Nome'),
-        el('th', {}, 'Tipo'),
-        el('th', {}, 'Documento'),
-        el('th', {}, 'Telefone'),
-        el('th', {}, 'E-mail'),
-        ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, 'Ações')] : [])
-      )
+      el('tr', {}, ...sortHead.ths)
     ),
     tbody
   )
@@ -186,26 +203,29 @@ export function renderClienteList(container, clientes) {
 
   // ── Busca client-side ─────────────────────────────────────────────────
   let allClientes = clientes
-  renderRows(allClientes)
 
-  searchInput.addEventListener('input', () => {
+  function applyFilterAndSort() {
     const qText   = searchInput.value.toLowerCase().trim()
     const qDigits = qText.replace(/\D/g, '')
-    if (!qText) { renderRows(allClientes); return }
-    const filtered = allClientes.filter(c =>
-      c.name.toLowerCase().includes(qText) ||
-      c.email.toLowerCase().includes(qText) ||
-      (qDigits && (c.document.includes(qDigits) || c.phone.includes(qDigits)))
-    )
-    renderRows(filtered)
-  })
+    const filtered = qText
+      ? allClientes.filter(c =>
+          c.name.toLowerCase().includes(qText) ||
+          c.email.toLowerCase().includes(qText) ||
+          (qDigits && (c.document.includes(qDigits) || c.phone.includes(qDigits)))
+        )
+      : allClientes
+    renderRows(sortHead.sort(filtered))
+  }
+  applyFilterAndSort()
+
+  searchInput.addEventListener('input', applyFilterAndSort)
 
   // ── Expor atualização de dados (chamada pelo subscribeClientes) ────────
   return {
     update(newList) {
       clientes = newList
       allClientes = newList
-      searchInput.dispatchEvent(new Event('input'))
+      applyFilterAndSort()
     },
   }
 }

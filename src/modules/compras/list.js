@@ -8,6 +8,7 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { createComprasEmLote, atualizarStatusCompra, updateCompra, updateCompraItens, deleteCompra } from './service.js'
 import { createClienteRapido } from '../clientes/service.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
+import { createSortableHead } from '../../shared/components/SortableHead.js'
 
 const STATUS_META = {
   aguardando: { label: 'Aguardando', cls: 'badge-aguardando' },
@@ -192,16 +193,34 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   )
 
   // ── Tabela ─────────────────────────────────────────────────────────────────
+  const sortHead = createSortableHead([
+    { key: 'data',       label: 'Data' },
+    { key: 'cliente',    label: 'Cliente' },
+    { key: 'produto',    label: 'Produto' },
+    { key: 'fornecedor', label: 'Fornecedor' },
+    { key: 'custo',      label: 'Custo', cls: 'th-money' },
+    { key: 'status',     label: 'Status' },
+  ], {
+    initialCol: 'data',
+    initialDir: 'desc',
+    sortValue: (c, key) => {
+      switch (key) {
+        case 'data':       return c.criadoEm?.toDate ? c.criadoEm.toDate().getTime() : 0
+        case 'cliente':    return c.cliente || ''
+        case 'produto':    return compraProdutoResumo(c)
+        case 'fornecedor': return c.fornecedor || ''
+        case 'custo':      return toNumero(c.custo)
+        case 'status':     return c.status || ''
+        default:           return ''
+      }
+    },
+    onSort: () => refresh(),
+  })
+
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {},
-      el('tr', {},
-        el('th', {}, 'Data'),
-        el('th', {}, 'Cliente'),
-        el('th', {}, 'Produto'),
-        el('th', {}, 'Fornecedor'),
-        el('th', { class: 'th-money' }, 'Custo'),
-        el('th', {}, 'Status'),
+      el('tr', {}, ...sortHead.ths,
         ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, '')] : []),
       )
     ),
@@ -222,7 +241,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
       (c.fornecedor || '').toLowerCase().includes(q) ||
       (c.cliente || '').toLowerCase().includes(q)
     )
-    return list
+    return sortHead.sort(list)
   }
 
   function refresh() {

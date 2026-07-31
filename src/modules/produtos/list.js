@@ -4,6 +4,7 @@ import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
+import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { deleteProduto, importarProdutos, deletarProdutos } from './service.js'
 import { renderProdutoForm } from './form.js'
 
@@ -121,18 +122,35 @@ export function renderProdutoList(container, produtos) {
   )
 
   // ── Tabela ────────────────────────────────────────────────────────────────
+  const sortHead = createSortableHead([
+    { key: 'nome',      label: 'Nome' },
+    { key: 'categoria', label: 'Categoria' },
+    { key: 'custo',     label: 'Custo',  cls: 'th-money' },
+    { key: 'venda',     label: 'Venda',  cls: 'th-money' },
+    { key: 'margem',    label: 'Margem', cls: 'th-money' },
+    { key: 'estoque',   label: 'Estoque' },
+    ...(canEdit || canDelete ? [{ key: null, label: '', cls: 'col-actions' }] : []),
+  ], {
+    initialCol: 'nome',
+    initialDir: 'asc',
+    sortValue: (p, key) => {
+      switch (key) {
+        case 'nome':      return p.nome || ''
+        case 'categoria': return p.categoria || ''
+        case 'custo':     return p.precoCusto || 0
+        case 'venda':     return p.precoVenda || 0
+        case 'margem':    return p.margemPct ?? 0
+        case 'estoque':   return p.controlaEstoque ? (p.estoqueAtual ?? 0) : -1
+        default:          return ''
+      }
+    },
+    onSort: () => renderTable(),
+  })
+
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table produtos-table' },
     el('thead', {},
-      el('tr', {},
-        el('th', {}, 'Nome'),
-        el('th', {}, 'Categoria'),
-        el('th', { class: 'th-money' }, 'Custo'),
-        el('th', { class: 'th-money' }, 'Venda'),
-        el('th', { class: 'th-money' }, 'Margem'),
-        el('th', {}, 'Estoque'),
-        ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, '')] : [])
-      )
+      el('tr', {}, ...sortHead.ths)
     ),
     tbody
   )
@@ -141,11 +159,11 @@ export function renderProdutoList(container, produtos) {
 
   function renderTable() {
     const q = searchInp.value.trim().toLowerCase()
-    const filtered = q
+    const filtered = sortHead.sort(q
       ? produtos.filter(p =>
           p.nameLower?.includes(q) || p.categoriaLower?.includes(q)
         )
-      : [...produtos]
+      : produtos)
 
     countBadge.textContent = filtered.length
 

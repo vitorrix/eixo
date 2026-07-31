@@ -13,6 +13,7 @@ import {
   imprimirReciboAutomaticamente,
 } from '../../shared/components/Recibo.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
+import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { patchPedido } from '../pedidos/service.js'
 import { createVenda, patchVenda, deleteVenda } from './service.js'
 
@@ -137,19 +138,37 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   )
 
   // ── Tabela ─────────────────────────────────────────────────────────────────
+  const sortHead = createSortableHead([
+    { key: 'data',    label: 'Data' },
+    { key: 'cliente', label: 'Cliente' },
+    { key: 'produto', label: 'Produto' },
+    { key: 'valor',   label: 'Valor', cls: 'th-money' },
+    { key: 'pgto',    label: 'Pgto' },
+    { key: 'entrega', label: 'Entrega' },
+    { key: 'recibo',  label: 'Recibo' },
+    ...(canEdit || canDelete ? [{ key: null, label: '', cls: 'col-actions' }] : []),
+  ], {
+    initialCol: 'data',
+    initialDir: 'desc',
+    sortValue: (v, key) => {
+      switch (key) {
+        case 'data':    return v.criadoEm?.toDate ? v.criadoEm.toDate().getTime() : 0
+        case 'cliente': return v.cliente || ''
+        case 'produto': return vendaProdutoResumo(v)
+        case 'valor':   return toNumero(v.valorVenda)
+        case 'pgto':    return PAG_LABEL[v.formaPagamento] || v.formaPagamento || ''
+        case 'entrega': return ENTREGA_META[v.statusEntrega]?.label || v.statusEntrega || ''
+        case 'recibo':  return v.reciboEmitido ? 1 : 0
+        default:        return ''
+      }
+    },
+    onSort: () => refresh(),
+  })
+
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {},
-      el('tr', {},
-        el('th', {}, 'Data'),
-        el('th', {}, 'Cliente'),
-        el('th', {}, 'Produto'),
-        el('th', { class: 'th-money' }, 'Valor'),
-        el('th', {}, 'Pgto'),
-        el('th', {}, 'Entrega'),
-        el('th', {}, 'Recibo'),
-        ...(canEdit || canDelete ? [el('th', { class: 'col-actions' }, '')] : []),
-      )
+      el('tr', {}, ...sortHead.ths)
     ),
     tbody
   )
@@ -167,7 +186,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       (v.cliente || '').toLowerCase().includes(q) ||
       vendaItens(v).some(it => (it.produto || '').toLowerCase().includes(q))
     )
-    return list
+    return sortHead.sort(list)
   }
 
   function refresh() {
