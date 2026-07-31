@@ -1448,6 +1448,24 @@ html, body {
   background: transparent;
   border-style: dashed;
 }
+/* Seletor de tipo colado no campo de item — mesmo grupo visual (um controle
+   só), tipo o combo do eGestor. */
+.tipo-item-group { display: flex; }
+.tipo-item-group .field-select {
+  width: auto;
+  max-width: 148px;
+  flex: 0 0 auto;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+  background: var(--color-bg);
+}
+.tipo-item-group input {
+  flex: 1;
+  min-width: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
 .form-produto-row {
   display: grid;
   grid-template-columns: 1fr 120px 120px 100px;

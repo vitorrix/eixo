@@ -212,12 +212,14 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     if (!produtos.length || produtos[produtos.length - 1].tipo) produtos.push({ tipo: '' })
   }
 
-  function buildTipoField(p, i) {
+  // Seletor de tipo — colado no campo de item (nome/aparelho) do bloco, num
+  // grupo visual só, tipo o combo "Produto ▾" do eGestor.
+  function criarTipoSelect(p, i) {
     const tipoSel = el('select', { class: 'field-select' },
       el('option', { value: '' }, '— Selecione —'),
-      el('option', { value: 'produto' }, 'Produto'),
-      el('option', { value: 'manutencao' }, 'Manutenção'),
-      el('option', { value: 'acessorio' }, 'Acessório'),
+      el('option', { value: 'produto' }, '📦 Produto'),
+      el('option', { value: 'manutencao' }, '🛠️ Manutenção'),
+      el('option', { value: 'acessorio' }, '🎒 Acessório'),
     )
     tipoSel.value = p.tipo || ''
     tipoSel.addEventListener('change', () => {
@@ -225,7 +227,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       garantirLinhaVazia()
       renderProdutos()
     })
-    return el('div', { class: 'form-grid' }, el('div', { class: 'field' }, el('label', {}, 'Tipo'), tipoSel))
+    return tipoSel
   }
 
   function renderProdutos() {
@@ -248,7 +250,8 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
             el('div', { class: 'form-produto-header' },
               el('span', { class: 'form-produto-label' }, `Item ${i + 1}`),
             ),
-            buildTipoField(p, i)
+            el('div', { class: 'form-grid' },
+              el('div', { class: 'field' }, el('label', {}, 'Tipo'), criarTipoSelect(p, i)))
           )
         )
         return
@@ -283,9 +286,9 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
               el('span', { class: 'form-produto-label' }, `🛠️ Manutenção ${i + 1}`),
               delBtn
             ),
-            buildTipoField(p, i),
             el('div', { class: 'form-produto-row3' },
-              el('div', { class: 'field' }, el('label', {}, 'Aparelho'), aparelhoAc.el),
+              el('div', { class: 'field' }, el('label', {}, 'Aparelho'),
+                el('div', { class: 'tipo-item-group' }, criarTipoSelect(p, i), aparelhoAc.el)),
               el('div', { class: 'field' }, el('label', {}, 'Serviço'), servicoAc.el),
               el('div', { class: 'field field-valor' }, el('label', {}, 'Valor R$'), valorInp),
             ),
@@ -329,9 +332,9 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
               el('span', { class: 'form-produto-label' }, `🎒 Acessório ${i + 1}`),
               el('div', { style: 'display:flex;gap:6px' }, brindeBtn, delBtn)
             ),
-            buildTipoField(p, i),
             el('div', { class: 'form-produto-row3' },
-              el('div', { class: 'field field-grow' }, el('label', {}, 'Item'), nomeAc.el),
+              el('div', { class: 'field field-grow' }, el('label', {}, 'Item'),
+                el('div', { class: 'tipo-item-group' }, criarTipoSelect(p, i), nomeAc.el)),
               el('div', { class: 'field field-valor' }, el('label', {}, 'Preço R$'), valorInp),
             ),
             buildQtdDescTotalRow(p, i, valorInp)
@@ -364,9 +367,9 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
             el('span', { class: 'form-produto-label' }, `📦 Produto ${i + 1}`),
             delBtn
           ),
-          buildTipoField(p, i),
           el('div', { class: 'form-produto-row3' },
-            el('div', { class: 'field' }, el('label', {}, 'Item'), nomeAc.el),
+            el('div', { class: 'field' }, el('label', {}, 'Item'),
+              el('div', { class: 'tipo-item-group' }, criarTipoSelect(p, i), nomeAc.el)),
             el('div', { class: 'field field-cor' }, el('label', {}, 'Cor'), corInp),
             el('div', { class: 'field field-valor' }, el('label', {}, 'Valor R$'), valorInp),
           ),
