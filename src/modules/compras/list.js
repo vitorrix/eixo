@@ -10,17 +10,18 @@ import { createClienteRapido } from '../clientes/service.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 
 const STATUS_META = {
-  pendente:        { label: 'Pendente',         cls: 'badge-pendente'  },
-  comprado:        { label: 'Comprado',         cls: 'badge-comprado'  },
-  recebido:        { label: 'Recebido',         cls: 'badge-recebido'  },
-  orcamento:       { label: 'Orçamento',        cls: 'badge-orcamento' },
-  compra_realizada:{ label: 'Compra Realizada', cls: 'badge-realizada' },
+  aguardando: { label: 'Aguardando', cls: 'badge-aguardando' },
+  estoque:    { label: 'Estoque',    cls: 'badge-estoque'    },
+  concluido:  { label: 'Concluído',  cls: 'badge-concluido'  },
 }
 
-// "Orçamento" e "Compra Realizada" são pra aparelho recebido em troca (forma de
-// pagamento): entra em estoque como orçamento (valor ainda não definido pra
-// revenda); quando anunciado/pronto pra vender, vira "Compra Realizada".
-const STATUS_ORDER = ['pendente', 'comprado', 'recebido', 'orcamento', 'compra_realizada']
+// Aguardando: gerado pelo fluxo de Pedidos (compra pro fornecedor ou troca do
+// cliente) enquanto o pedido não é marcado como entregue — nasce assim, nunca
+// escolhido manualmente. Estoque: unidade disponível pra vender/puxar em outro
+// pedido (compra avulsa já nasce aqui; troca vira isso quando o pedido é
+// entregue). Concluído: não tem mais nada a fazer — foi vendido, ou (sem
+// troca) foi direto pro cliente do próprio pedido que gerou a compra.
+const STATUS_ORDER = ['aguardando', 'estoque', 'concluido']
 
 function nowMonth() {
   const d = new Date()
@@ -41,17 +42,17 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   let currentMonth = nowMonth()
 
   // ── KPIs ─────────────────────────────────────────────────────────────────
-  const totalEl    = el('div', { class: 'pedido-stat-value' })
-  const custoEl    = el('div', { class: 'pedido-stat-value' })
-  const pendEl     = el('div', { class: 'pedido-stat-value red' })
-  const recebidoEl = el('div', { class: 'pedido-stat-value green' })
+  const totalEl      = el('div', { class: 'pedido-stat-value' })
+  const custoEl      = el('div', { class: 'pedido-stat-value' })
+  const aguardEl     = el('div', { class: 'pedido-stat-value red' })
+  const estoqueEl    = el('div', { class: 'pedido-stat-value green' })
 
   function updateKpis(list) {
-    totalEl.textContent    = list.length
-    custoEl.textContent    = brl(list.reduce((s, c) => s + toNumero(c.custo), 0))
-    pendEl.textContent     = list.filter(c => c.status === 'pendente').length
-    recebidoEl.textContent = list.filter(c => c.status === 'recebido').length
-    pendEl.className       = 'pedido-stat-value ' + (pendEl.textContent > 0 ? 'red' : 'green')
+    totalEl.textContent   = list.length
+    custoEl.textContent   = brl(list.reduce((s, c) => s + toNumero(c.custo), 0))
+    aguardEl.textContent  = list.filter(c => c.status === 'aguardando').length
+    estoqueEl.textContent = list.filter(c => c.status === 'estoque').length
+    aguardEl.className    = 'pedido-stat-value ' + (aguardEl.textContent > 0 ? 'red' : 'green')
   }
 
   function kpiCard(label, valueEl, sub) {
@@ -63,10 +64,10 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   }
 
   const kpisRow = el('div', { class: 'pedidos-stats' },
-    kpiCard('Compras',    totalEl,    'no mês'),
-    kpiCard('Custo Total', custoEl,    'soma do mês'),
-    kpiCard('Pendentes',  pendEl,     'a comprar'),
-    kpiCard('Recebidos',  recebidoEl, 'em mãos'),
+    kpiCard('Compras',    totalEl,   'no mês'),
+    kpiCard('Custo Total', custoEl,   'soma do mês'),
+    kpiCard('Aguardando', aguardEl,  'trocas em andamento'),
+    kpiCard('Em Estoque', estoqueEl, 'disponível'),
   )
 
   // ── Toolbar ───────────────────────────────────────────────────────────────
@@ -157,7 +158,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
     emptyState.classList.add('hidden')
 
     for (const c of list) {
-      const meta = STATUS_META[c.status] || { label: c.status, cls: 'badge-pendente' }
+      const meta = STATUS_META[c.status] || { label: c.status, cls: 'badge-aguardando' }
 
       // Inline status select
       const statusSel = el('select', { class: `status-inline-sel ${meta.cls}` })
@@ -172,7 +173,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         try {
           await atualizarStatusCompra(c, statusSel.value)
           toastSuccess(
-            ['recebido', 'orcamento'].includes(statusSel.value) && !c.pedidoId && c.produtoId
+            statusSel.value === 'estoque' && !c.pedidoId && c.produtoId
               ? 'Status atualizado. Estoque atualizado.'
               : 'Status atualizado.'
           )
@@ -323,8 +324,12 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
 
         const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
 
+        // "Aguardando" não aparece aqui — só nasce do fluxo de Pedidos (esperando
+        // troca/entrega). Lançamento manual já é uma compra fechada: ou vai pro
+        // estoque (padrão), ou já nasce concluída (raro, mas possível).
         const statusSelNew = el('select', {})
-        STATUS_ORDER.forEach(s => statusSelNew.appendChild(el('option', { value: s }, STATUS_META[s]?.label || s)))
+        ;['estoque', 'concluido'].forEach(s => statusSelNew.appendChild(el('option', { value: s }, STATUS_META[s]?.label || s)))
+        statusSelNew.value = 'estoque'
 
         const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
           placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente)' })

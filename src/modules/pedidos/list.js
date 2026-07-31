@@ -454,16 +454,17 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   // (só quem é lançada direto no menu Compras, puxando do catálogo) — exigir
   // isso deixava a lista praticamente vazia mesmo com aparelho fisicamente em
   // estoque. O código que consome a seleção já tolera produtoId ausente.
-  // "vendida" (não pedidoId) é quem diz se já foi escolhida por outro pedido:
-  // aparelho de troca já nasce com pedidoId (o pedido de ONDE veio, não pra
-  // quem foi vendido), então usar pedidoId como sinal de "reservado" deixava
-  // todo aparelho de troca permanentemente indisponível pra outro pedido.
+  // Status "estoque" já basta pra saber que está disponível — no momento em
+  // que é escolhida por outro pedido (ou vendida avulsa), o status muda pra
+  // "concluído" na hora, então não precisa checar mais nada além dele. Compra
+  // de troca já nasce com pedidoId (o pedido de ONDE veio, não pra quem foi
+  // vendida), por isso o pedidoId sozinho não seria sinal confiável de
+  // "reservado" — daí o "origemTroca" entrar na condição do parêntese abaixo.
   async function buscarEstoqueDisponivel(pedidoId) {
     const snap = await getDocs(collection(db, 'compras'))
     return snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(c => ['recebido', 'orcamento', 'compra_realizada'].includes(c.status)
-        && !c.vendida
+      .filter(c => c.status === 'estoque'
         && (c.origemTroca || c.pedidoId === null || c.pedidoId === undefined || c.pedidoId === pedidoId))
       .sort((a, b) => (a.produto || '').localeCompare(b.produto || ''))
   }

@@ -14,16 +14,17 @@ export function subscribeCompras(callback, onError) {
   )
 }
 
-// Status que já significam "o item está fisicamente com a gente" — tanto uma
-// compra normal recebida do fornecedor quanto um aparelho dado na troca (entra
-// como "orçamento" até ser anunciado/vendido, quando vira "compra realizada").
-const STATUS_ENTRADA_ESTOQUE = new Set(['recebido', 'orcamento'])
+// "Estoque" é o único status que significa "unidade disponível pra vender" —
+// Aguardando (ainda não chegou) e Concluído (já foi embora) não somam estoque.
+const STATUS_EM_ESTOQUE = 'estoque'
 
-// Se a compra já nasce com status que dá entrada em estoque, já soma de cara —
-// mesma regra usada quando o status muda depois via atualizarStatusCompra.
+// Se a compra já nasce em "estoque", já soma de cara — mesma regra usada
+// quando o status muda depois via atualizarStatusCompra. Compra lançada aqui
+// (avulsa, ex: aparelho comprado direto de um cliente) já nasce em estoque por
+// padrão; só vira Aguardando/Concluído quando gerada pelo fluxo de Pedidos.
 export async function createCompra(data) {
-  const status = data.status || 'pendente'
-  const jaRecebida = STATUS_ENTRADA_ESTOQUE.has(status) && data.produtoId
+  const status = data.status || STATUS_EM_ESTOQUE
+  const jaRecebida = status === STATUS_EM_ESTOQUE && data.produtoId
 
   const batch = writeBatch(db)
   const ref = doc(collection(db, COL))
@@ -36,7 +37,6 @@ export async function createCompra(data) {
     observacoes:     (data.observacoes || '').trim(), // dados do aparelho — mesmos que vão pro recibo
     cliente:         (data.cliente || '').trim(),
     pedidoId:        null,
-    vendida:         false,
     estoqueAplicado: !!jaRecebida,
     criadoEm:        serverTimestamp(),
   })
@@ -50,13 +50,14 @@ export async function patchCompra(id, fields) {
   return updateDoc(doc(db, COL, id), { ...fields })
 }
 
-// Muda o status da compra; se virar "recebido" ou "orçamento" numa compra avulsa
-// (sem pedidoId) que ainda não deu entrada, soma 1 no estoqueAtual do produto
-// vinculado — só compra lançada direto neste menu mexe em estoque (a que vem de
-// pedido é compra-e-venda simultânea, nunca fica parada em estoque). Ir de
-// "orçamento" para "compra realizada" não soma de novo — já foi aplicado antes.
+// Muda o status da compra; se virar "estoque" numa compra avulsa (sem
+// pedidoId) que ainda não deu entrada, soma 1 no estoqueAtual do produto
+// vinculado — só compra lançada direto neste menu mexe em estoque (a que vem
+// de pedido é compra-e-venda simultânea, ou fica Aguardando até o pedido ser
+// entregue). Sair de "estoque" pra "concluído" não desconta de volta — quem
+// consome (venda ou outro pedido) já cuida disso na hora.
 export async function atualizarStatusCompra(compra, novoStatus) {
-  const daEntradaEstoque = STATUS_ENTRADA_ESTOQUE.has(novoStatus) && !compra.pedidoId && !compra.estoqueAplicado && compra.produtoId
+  const daEntradaEstoque = novoStatus === STATUS_EM_ESTOQUE && !compra.pedidoId && !compra.estoqueAplicado && compra.produtoId
   if (!daEntradaEstoque) {
     return patchCompra(compra.id, { status: novoStatus })
   }

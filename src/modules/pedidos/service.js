@@ -72,11 +72,11 @@ export function produtoLabel(pr) {
 // reconfirmado (a edição reseta o status pra negociando, mas não limpa o que
 // já tinha sido gerado; sem isso, cada reconfirmação criava registros extras).
 //
-// Compra com estoqueAplicado=true não nasceu desse fluxo — é uma unidade que
-// já estava em estoque (lançada avulsa em Compras) e só foi vinculada aqui.
-// Apagar destruiria o registro real da compra; em vez disso desvincula e
-// devolve a unidade pro estoque, pra reconfirmar/editar/excluir o pedido
-// nunca fazer sumir uma compra de verdade.
+// Compra com estoqueAplicado=true ou status "concluído" não nasceu desse
+// fluxo — é uma unidade que já estava em estoque (lançada avulsa em Compras)
+// e só foi vinculada/consumida aqui. Apagar destruiria o registro real da
+// compra; em vez disso desvincula e devolve a unidade pro estoque, pra
+// reconfirmar/editar/excluir o pedido nunca fazer sumir uma compra de verdade.
 async function limparCompraEVenda(pedidoId, batch) {
   const [comprasSnap, vendasSnap, financeiroSnap] = await Promise.all([
     getDocs(query(collection(db, 'compras'),   where('pedidoId', '==', pedidoId))),
@@ -85,8 +85,8 @@ async function limparCompraEVenda(pedidoId, batch) {
   ])
   comprasSnap.docs.forEach(d => {
     const c = d.data()
-    if (c.estoqueAplicado || c.vendida) {
-      batch.update(d.ref, { pedidoId: null, cliente: '', vendida: false })
+    if (c.estoqueAplicado || c.status === 'concluido') {
+      batch.update(d.ref, { pedidoId: null, cliente: '', status: 'estoque' })
       if (c.produtoId) batch.update(doc(db, 'produtos', c.produtoId), { estoqueAtual: increment(1) })
     } else {
       batch.delete(d.ref)
@@ -100,13 +100,16 @@ async function limparCompraEVenda(pedidoId, batch) {
 // manutenção — e UMA Venda pro pedido inteiro, com todos os itens dentro
 // (mesmo agrupamento do recibo). Compra continua uma por aparelho, já que
 // custo/fornecedor são rastreados por unidade; Venda é o registro da venda em
-// si, que é sempre do pedido como um todo, não de cada aparelho separado. Não
-// mexe em estoqueAtual: esse fluxo é sempre compra-e-venda simultânea (o
-// produto nunca fica parado em estoque); só entra em estoque o que for
-// lançado direto no menu Compras.
+// si, que é sempre do pedido como um todo, não de cada aparelho separado.
+// Compra nasce "aguardando" — quando o pedido for marcado como entregue
+// (marcarEntregue), vira "concluído" (foi direto pro cliente, nunca passa por
+// estoque; só entra em estoque o que for lançado direto no menu Compras).
 //
 // Se o pedido inclui troca, gera também a Compra do aparelho usado — a Baruk
-// compra do próprio cliente, então fornecedor = cliente e custo = crédito dado.
+// compra do próprio cliente, então fornecedor = cliente e custo = crédito
+// dado. Essa também nasce "aguardando", mas ao contrário da compra normal
+// vira "estoque" quando o pedido é entregue (o aparelho do cliente chegou e
+// fica disponível pra puxar depois em outro pedido).
 //
 // Junto, já lança no Financeiro: 1 Pagamento por item com custo informado
 // (vinculado à Compra), 1 Pagamento da troca quando houver, e 1 Recebimento pro
@@ -136,7 +139,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
       const compraRef = doc(db, 'compras', item.estoqueCompraId)
       const compraSnap = await getDoc(compraRef)
       const compraData = compraSnap.data() || {}
-      batch.update(compraRef, { pedidoId: pedido.id, cliente: pedido.cliente, vendida: true })
+      batch.update(compraRef, { pedidoId: pedido.id, cliente: pedido.cliente, status: 'concluido' })
       if (compraData.produtoId) {
         batch.update(doc(db, 'produtos', compraData.produtoId), { estoqueAtual: increment(-1) })
       }
@@ -156,8 +159,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
       tipo:        p.tipo || 'produto',
       fornecedor,
       custo,
-      status:      'comprado',
-      vendida:     false,
+      status:      'aguardando',
       observacoes: (item.observacoes || '').trim(),
       criadoEm:    serverTimestamp(),
     })
@@ -204,9 +206,8 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
       tipo:        'produto',
       fornecedor:  pedido.cliente,
       custo:       creditoTroca,
-      status:      'comprado',
+      status:      'aguardando',
       origemTroca: true,
-      vendida:     false,
       observacoes: (troca.observacoes || '').trim(),
       criadoEm:    serverTimestamp(),
     })
@@ -322,8 +323,26 @@ export async function salvarRoteiro(id, roteiro) {
   return patchPedido(id, { 'logistica.roteiro': roteiro })
 }
 
+// Resolve o "aguardando" das Compras geradas por esse pedido: a de troca vira
+// "estoque" (o aparelho do cliente chegou, fica disponível pra puxar depois);
+// a normal (sem troca) vira "concluído" (foi direto pro cliente, nunca passa
+// por estoque). Só mexe nas que ainda estão aguardando.
+async function resolverComprasAguardando(pedidoId, batch) {
+  const snap = await getDocs(query(
+    collection(db, 'compras'),
+    where('pedidoId', '==', pedidoId),
+    where('status', '==', 'aguardando')
+  ))
+  snap.docs.forEach(d => {
+    batch.update(d.ref, { status: d.data().origemTroca ? 'estoque' : 'concluido' })
+  })
+}
+
 export async function marcarEntregue(id) {
-  await patchPedido(id, { status: 'entregue' })
+  const batch = writeBatch(db)
+  batch.update(doc(db, COL, id), { status: 'entregue', atualizadoEm: serverTimestamp() })
+  await resolverComprasAguardando(id, batch)
+  await batch.commit()
   return syncVendasEntrega(id, 'entregue')
 }
 
