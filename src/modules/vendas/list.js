@@ -466,12 +466,32 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         })
 
         mount(body,
-          el('div', { class: 'form-grid' },
-            el('div', { class: 'field field-full' }, el('label', {}, 'Produto'), produtoAc.el),
-            el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteAc.el),
-            el('div', { class: 'field' }, el('label', {}, 'Valor R$'), valorInp),
-            el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagSel),
-            el('div', { class: 'field' }, el('label', {}, 'Entrega'), entregaSelEdit),
+          el('div', { class: 'pedido-form' },
+            el('div', { class: 'form-section' },
+              el('p', { class: 'form-section-title' }, 'Identificação'),
+              el('div', { class: 'form-grid' },
+                el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteAc.el),
+              )
+            ),
+            el('div', { class: 'form-section' },
+              el('p', { class: 'form-section-title' }, 'Produto'),
+              el('div', { class: 'form-produto-block' },
+                el('div', { class: 'form-produto-header' },
+                  el('span', { class: 'form-produto-label' }, '📦 Produto'),
+                ),
+                el('div', { class: 'form-grid' },
+                  el('div', { class: 'field field-full' }, el('label', {}, 'Produto do catálogo'), produtoAc.el),
+                  el('div', { class: 'field' }, el('label', {}, 'Valor R$'), valorInp),
+                )
+              )
+            ),
+            el('div', { class: 'form-section' },
+              el('p', { class: 'form-section-title' }, 'Negociação'),
+              el('div', { class: 'form-grid' },
+                el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagSel),
+                el('div', { class: 'field' }, el('label', {}, 'Entrega'), entregaSelEdit),
+              )
+            ),
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
@@ -567,12 +587,32 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         })
 
         mount(body,
-          el('div', { class: 'form-grid' },
-            el('div', { class: 'field field-full' }, el('label', {}, 'Produto'), produtoAc.el),
-            el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteAc.el),
-            el('div', { class: 'field' }, el('label', {}, 'Valor R$'), valorInp),
-            el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagSel),
-            el('div', { class: 'field' }, el('label', {}, 'Entrega'), entregaSelNew),
+          el('div', { class: 'pedido-form' },
+            el('div', { class: 'form-section' },
+              el('p', { class: 'form-section-title' }, 'Identificação'),
+              el('div', { class: 'form-grid' },
+                el('div', { class: 'field field-full' }, el('label', {}, 'Cliente'), clienteAc.el),
+              )
+            ),
+            el('div', { class: 'form-section' },
+              el('p', { class: 'form-section-title' }, 'Produto'),
+              el('div', { class: 'form-produto-block' },
+                el('div', { class: 'form-produto-header' },
+                  el('span', { class: 'form-produto-label' }, '📦 Produto'),
+                ),
+                el('div', { class: 'form-grid' },
+                  el('div', { class: 'field field-full' }, el('label', {}, 'Produto do catálogo'), produtoAc.el),
+                  el('div', { class: 'field' }, el('label', {}, 'Valor R$'), valorInp),
+                )
+              )
+            ),
+            el('div', { class: 'form-section' },
+              el('p', { class: 'form-section-title' }, 'Negociação'),
+              el('div', { class: 'form-grid' },
+                el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagSel),
+                el('div', { class: 'field' }, el('label', {}, 'Entrega'), entregaSelNew),
+              )
+            ),
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
