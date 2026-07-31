@@ -132,6 +132,9 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
   const categoriaReceber = operacoes.categorias?.find(c => c.tipo === 'receber')?.nome || ''
   const categoriaPagar = operacoes.categorias?.find(c => c.tipo === 'pagar' && c.grupo === 'Custo dos Produtos Vendidos (CMV)')?.nome
     || operacoes.categorias?.find(c => c.tipo === 'pagar')?.nome || ''
+  // Pagamento de aparelho (Compra/Troca gerada pelo Pedido) sempre sai da
+  // Nubank — não depende da forma de pagamento do cliente, é regra do caixa.
+  const contaPagamentoAparelho = 'Nubank'
 
   const totalItem = p => (parseFloat(p.valor) || 0) * (parseInt(p.quantidade) || 1) - (parseFloat(p.desconto) || 0)
 
@@ -185,7 +188,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
         valor:           custo,
         contato:         fornecedor,
         categoria:       categoriaPagar,
-        conta:           '',
+        conta:           contaPagamentoAparelho,
         formaPagamento:  '',
         liquidado:       true,
         dataVencimento:  hoje,
@@ -254,7 +257,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
         valor:           creditoTroca,
         contato:         pedido.cliente,
         categoria:       categoriaPagar,
-        conta:           '',
+        conta:           contaPagamentoAparelho,
         formaPagamento:  '',
         liquidado:       true,
         dataVencimento:  hoje,
