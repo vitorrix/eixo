@@ -1444,10 +1444,6 @@ html, body {
   border-color: #f59e0b;
 }
 .form-produto-block.manutencao .form-produto-label { color: #b45309; }
-.form-produto-block-vazio {
-  background: transparent;
-  border-style: dashed;
-}
 /* Seletor de tipo colado no campo de item — mesmo grupo visual (um controle
    só), tipo o combo do eGestor. */
 .tipo-item-group { display: flex; }

@@ -49,10 +49,10 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       })
     })
   })
-  // Sempre termina com uma linha vazia (tipo não escolhido) pronta pra
-  // adicionar o próximo item — é ela que dá lugar aos campos certos assim que
-  // o tipo é selecionado, e é reposta sempre que a última linha é preenchida.
-  produtos.push({ tipo: '' })
+  // Sempre termina com uma linha vazia pronta pro próximo item — já nasce no
+  // formato de Produto (o padrão neutro, como no eGestor), preenchida ou não;
+  // trocar o tipo no dropdown só reformata os campos da própria linha.
+  produtos.push({ tipo: 'produto', nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 })
 
   let formasPagamento = Array.isArray(pedido?.formasPagamento)
     ? [...pedido.formasPagamento]
@@ -197,34 +197,46 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   }
 
   // Item novo do tipo escolhido — zera os campos (troca de tipo não aproveita
-  // nada do que tinha antes, os campos são outros).
-  function criarItemVazio(tipo) {
+  // nada do que tinha antes, os campos são outros). "Produto" é o padrão
+  // neutro (linha nova sempre nasce assim, como no eGestor).
+  function criarItemVazio(tipo = 'produto') {
     if (tipo === 'manutencao') return { tipo, nome: '', aparelho: '', valor: '', quantidade: 1, desconto: 0 }
     if (tipo === 'acessorio')  return { tipo, nome: '', produtoId: null, valor: '', quantidade: 1, desconto: 0 }
-    if (tipo === 'produto')    return { tipo, nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 }
-    return { tipo: '' }
+    return { tipo: 'produto', nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 }
+  }
+
+  // Linha "em branco" = ainda não recebeu o nome do item (independente do
+  // tipo escolhido) — é ela que fica de reserva pro próximo item.
+  function linhaVazia(p) {
+    return p.tipo === 'manutencao' ? !p.nome && !p.aparelho : !p.nome
   }
 
   // Garante que sempre sobra uma linha vazia no fim pra dar o próximo item —
-  // sem isso, depois de escolher o tipo da única linha, não sobraria nenhuma
-  // linha pra continuar adicionando.
+  // sem isso, depois de preencher a única linha, não sobraria nenhuma linha
+  // pra continuar adicionando.
   function garantirLinhaVazia() {
-    if (!produtos.length || produtos[produtos.length - 1].tipo) produtos.push({ tipo: '' })
+    if (!produtos.length || !linhaVazia(produtos[produtos.length - 1])) produtos.push(criarItemVazio())
+  }
+
+  // Ao sair do campo de nome/aparelho da última linha, se ela foi preenchida,
+  // já solta a próxima linha vazia — sem isso, preencher a única linha não
+  // deixaria como continuar adicionando itens.
+  function verificarNovaLinha(i) {
+    if (i === produtos.length - 1 && !linhaVazia(produtos[i])) { garantirLinhaVazia(); renderProdutos() }
   }
 
   // Seletor de tipo — colado no campo de item (nome/aparelho) do bloco, num
-  // grupo visual só, tipo o combo "Produto ▾" do eGestor.
+  // grupo visual só, tipo o combo "Produto ▾" do eGestor. Trocar o tipo só
+  // reformata a própria linha; não mexe na linha vazia reserva do fim.
   function criarTipoSelect(p, i) {
     const tipoSel = el('select', { class: 'field-select' },
-      el('option', { value: '' }, '— Selecione —'),
       el('option', { value: 'produto' }, '📦 Produto'),
       el('option', { value: 'manutencao' }, '🛠️ Manutenção'),
       el('option', { value: 'acessorio' }, '🎒 Acessório'),
     )
-    tipoSel.value = p.tipo || ''
+    tipoSel.value = p.tipo
     tipoSel.addEventListener('change', () => {
       produtos[i] = criarItemVazio(tipoSel.value)
-      garantirLinhaVazia()
       renderProdutos()
     })
     return tipoSel
@@ -241,22 +253,6 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
         renderProdutos(); updateTotal()
       })
 
-      // Linha ainda sem tipo escolhido — só o seletor, mais nada. É sempre a
-      // última linha (garantirLinhaVazia mantém isso), pronta pra virar o
-      // próximo item assim que o tipo for escolhido.
-      if (!p.tipo) {
-        produtosWrap.appendChild(
-          el('div', { class: 'form-produto-block form-produto-block-vazio' },
-            el('div', { class: 'form-produto-header' },
-              el('span', { class: 'form-produto-label' }, `Item ${i + 1}`),
-            ),
-            el('div', { class: 'form-grid' },
-              el('div', { class: 'field' }, el('label', {}, 'Tipo'), criarTipoSelect(p, i)))
-          )
-        )
-        return
-      }
-
       if (p.tipo === 'manutencao') {
         const aparelhoAc = createAutocomplete({
           placeholder:  'ex: iPhone 13 Pro Max 256GB',
@@ -266,6 +262,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
         })
         aparelhoAc.el.style.width = '100%'
         aparelhoAc.el.addEventListener('input', () => { produtos[i].aparelho = aparelhoAc.getValue() })
+        aparelhoAc.el.addEventListener('blur', () => verificarNovaLinha(i))
 
         const servicoAc = createAutocomplete({
           placeholder:  'ex: Troca de Tela',
@@ -319,6 +316,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
           produtos[i].nome = nomeAc.getValue()
           produtos[i].produtoId = acessorioCatalogo(nomeAc.getValue())?.id || null
         })
+        nomeAc.el.addEventListener('blur', () => verificarNovaLinha(i))
 
         const brindeBtn = el('button', { type: 'button', class: 'btn btn-sm btn-outline' }, '🎁 Brinde')
         brindeBtn.addEventListener('click', () => {
@@ -352,6 +350,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       })
       nomeAc.el.style.width = '100%'
       nomeAc.el.addEventListener('input', () => { produtos[i].nome = nomeAc.getValue() })
+      nomeAc.el.addEventListener('blur', () => verificarNovaLinha(i))
 
       const corInp = el('input', { type: 'text', placeholder: 'ex: Preto, Branco...' })
       corInp.value = p.cor || ''
@@ -517,7 +516,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     submitBtn.textContent = 'Salvando...'
 
     try {
-      const produtosFinal = produtos.filter(p => p.tipo)
+      const produtosFinal = produtos.filter(p => !linhaVazia(p))
       const data = { dataContato: dataInp.value, cliente, produtos: produtosFinal, formasPagamento, trocas: trocasFinal, observacoes: obsInp.value }
       if (isEdit) {
         await editarPedido(pedido.id, data)
