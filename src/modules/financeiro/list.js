@@ -9,6 +9,8 @@ import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
+import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { presetRange } from '../../shared/utils/periodo.js'
 import { createLancamento, updateLancamento, deleteLancamento, marcarLiquidado } from './service.js'
 import { deleteVenda } from '../vendas/service.js'
 import { deleteCompra } from '../compras/service.js'
@@ -20,13 +22,6 @@ const TIPO_META = {
 
 const PAG_LABEL = { pix: '🏦 PIX', dinheiro: '💰 Dinheiro', cartao: '💳 Cartão', link: '🏪 Link' }
 
-function nowMonth() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-function monthKey(dataISO) {
-  return (dataISO || '').slice(0, 7)
-}
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -42,7 +37,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   const categorias = operacoes.categorias || []
 
   let activeTipo = 'receber'
-  let currentMonth = nowMonth()
+  let periodo = presetRange('este-mes')
 
   // ── KPIs ─────────────────────────────────────────────────────────────────
   const totalEl  = el('div', { class: 'pedido-stat-value' })
@@ -71,10 +66,10 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   }
 
   const kpisRow = el('div', { class: 'pedidos-stats' },
-    kpiCard('Lançamentos', totalEl, 'no mês'),
-    kpiCard('Total',       valorEl, 'no mês'),
-    kpiCard('Liquidado',   okEl,    'no mês'),
-    kpiCard('Pendente',    pendEl,  'no mês'),
+    kpiCard('Lançamentos', totalEl, 'no período'),
+    kpiCard('Total',       valorEl, 'no período'),
+    kpiCard('Liquidado',   okEl,    'no período'),
+    kpiCard('Pendente',    pendEl,  'no período'),
   )
 
   // ── Abas Recebimentos / Pagamentos ──────────────────────────────────────
@@ -93,21 +88,10 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   const searchInp = el('input', { type: 'text', class: 'search-input', placeholder: 'Buscar por descrição ou contato...' })
   searchInp.addEventListener('input', () => refresh())
 
-  const monthNavLabel = el('span', { class: 'month-nav-label' })
-  function monthLabel(ym) {
-    const [y, m] = ym.split('-')
-    const ms = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-    return `${ms[+m - 1]} ${y}`
-  }
-  function shiftMonth(ym, delta) {
-    const [y, m] = ym.split('-').map(Number)
-    const d = new Date(y, m - 1 + delta, 1)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  }
-  const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
-  const nextBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '›')
-  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); refresh() })
-  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); refresh() })
+  const picker = createPeriodoPicker({
+    initialPreset: 'este-mes',
+    onChange: p => { periodo = p; refresh() },
+  })
 
   const newBtn = el('button', { type: 'button', class: 'btn btn-primary' })
   newBtn.style.display = canCreate ? '' : 'none'
@@ -117,7 +101,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   const toolbar = el('div', { class: 'toolbar' },
     el('div', { style: 'display:flex;gap:10px;align-items:center' },
       newBtn,
-      el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
+      picker.el,
     ),
     countBadge
   )
@@ -158,11 +142,12 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
     tbody
   )
   const tableWrap  = el('div', { class: 'table-wrapper' }, table)
-  const emptyState = el('div', { class: 'empty-state hidden' }, el('p', {}, 'Nenhum lançamento neste mês.'))
+  const emptyState = el('div', { class: 'empty-state hidden' }, el('p', {}, 'Nenhum lançamento no período.'))
 
   function filteredList() {
     const q = searchInp.value.trim().toLowerCase()
-    let list = lancamentos.filter(l => l.tipo === activeTipo && monthKey(l.dataVencimento) === currentMonth)
+    let list = lancamentos.filter(l => l.tipo === activeTipo
+      && (l.dataVencimento || '') >= periodo.de && (l.dataVencimento || '') <= periodo.ate)
     if (q) list = list.filter(l =>
       (l.descricao || '').toLowerCase().includes(q) ||
       (l.contato || '').toLowerCase().includes(q)
@@ -172,7 +157,6 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
 
   function refresh() {
     newBtn.textContent = TIPO_META[activeTipo].novo
-    monthNavLabel.textContent = monthLabel(currentMonth)
     const list = filteredList()
     countBadge.textContent = list.length
     updateKpis(list)
