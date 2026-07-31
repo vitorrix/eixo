@@ -117,7 +117,7 @@ function formatRoteiro({ retiradas = [], entrega = {} }, dataISO = '') {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export function renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores, usuariosPorUid = {}, empresa = {} }) {
+export function renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores, usuariosPorUid = {}, empresa = {}, operacoes = {} }) {
   const canCreate = can('pedidos', 'create')
   const canEdit   = can('pedidos', 'edit')
   const canDelete = can('pedidos', 'delete')
@@ -1000,7 +1000,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     openModal({
       title: p ? 'Editar Pedido' : 'Novo Pedido',
       size:  'lg',
-      renderBody: (body, close) => renderPedidoForm(body, close, p, { clientes, produtosCatalogo, fornecedores }),
+      renderBody: (body, close) => renderPedidoForm(body, close, p, { clientes, produtosCatalogo, fornecedores, operacoes }),
     })
   }
 

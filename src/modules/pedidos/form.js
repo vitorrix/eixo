@@ -8,15 +8,10 @@ import { renderClienteForm } from '../clientes/form.js'
 import { openModal } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
-const PAGAMENTO_OPTS = [
-  { value: 'pix',      label: '🏦 PIX'     },
-  { value: 'dinheiro', label: '💰 Dinheiro' },
-  { value: 'cartao',   label: '💳 Cartão'  },
-]
-
 function todayISO() { return new Date().toISOString().slice(0, 10) }
 
-export function renderPedidoForm(container, close, pedido, { clientes, produtosCatalogo }) {
+export function renderPedidoForm(container, close, pedido, { clientes, produtosCatalogo, operacoes = {} }) {
+  const formasPagamentoConfig = operacoes.formasPagamento || []
   const isEdit = !!pedido
 
   const produtosAcessorios = produtosCatalogo.filter(p => {
@@ -352,14 +347,19 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   // ── Negociação ────────────────────────────────────────────────────────────
   function makePagChips() {
     const wrap = el('div', { class: 'status-chips-row' })
-    PAGAMENTO_OPTS.forEach(opt => {
-      const btn = el('button', { type: 'button', class: 'status-chip-btn' }, opt.label)
-      if (formasPagamento.includes(opt.value)) btn.classList.add('active')
+    if (!formasPagamentoConfig.length) {
+      wrap.appendChild(el('p', { class: 'text-muted' }, 'Nenhuma forma de pagamento cadastrada em Configurações.'))
+      return wrap
+    }
+    formasPagamentoConfig.forEach(f => {
+      const nome = f.nome
+      const btn = el('button', { type: 'button', class: 'status-chip-btn' }, nome)
+      if (formasPagamento.includes(nome)) btn.classList.add('active')
       btn.addEventListener('click', () => {
-        const idx = formasPagamento.indexOf(opt.value)
-        if (idx === -1) formasPagamento.push(opt.value)
+        const idx = formasPagamento.indexOf(nome)
+        if (idx === -1) formasPagamento.push(nome)
         else formasPagamento.splice(idx, 1)
-        btn.classList.toggle('active', formasPagamento.includes(opt.value))
+        btn.classList.toggle('active', formasPagamento.includes(nome))
       })
       wrap.appendChild(btn)
     })

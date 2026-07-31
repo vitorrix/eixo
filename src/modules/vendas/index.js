@@ -2,7 +2,7 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
 import { toastError } from '../../shared/components/Toast.js'
-import { getEmpresa } from '../configuracoes/service.js'
+import { getEmpresa, getOperacoes } from '../configuracoes/service.js'
 import { subscribeVendas } from './service.js'
 import { renderVendasList } from './list.js'
 
@@ -38,6 +38,13 @@ async function _init(container) {
     console.error('Erro ao carregar dados da empresa/usuários (recibo ficará incompleto):', err)
   }
 
+  let operacoes = { formasPagamento: [], contas: [], categorias: [] }
+  try {
+    operacoes = await getOperacoes()
+  } catch (err) {
+    console.error('Erro ao carregar operações (formas de pagamento ficarão indisponíveis):', err)
+  }
+
   let listController = null
   let firstLoad = true
 
@@ -45,7 +52,7 @@ async function _init(container) {
     vendas => {
       if (firstLoad) {
         firstLoad = false
-        listController = renderVendasList(container, vendas, { produtosCatalogo, clientes, usuariosPorUid, empresa })
+        listController = renderVendasList(container, vendas, { produtosCatalogo, clientes, usuariosPorUid, empresa, operacoes })
       } else {
         listController?.update(vendas)
       }

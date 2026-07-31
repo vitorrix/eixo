@@ -53,7 +53,17 @@ function monthKey(ts) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-export function renderVendasList(container, vendas, { produtosCatalogo, clientes, usuariosPorUid = {}, empresa = {} } = {}) {
+export function renderVendasList(container, vendas, { produtosCatalogo, clientes, usuariosPorUid = {}, empresa = {}, operacoes = {} } = {}) {
+  const formasPagamentoConfig = operacoes.formasPagamento || []
+  function buildPagSel(valorAtual) {
+    const sel = el('select', {})
+    formasPagamentoConfig.forEach(f => {
+      const opt = el('option', { value: f.nome }, f.nome)
+      if (f.nome === valorAtual) opt.selected = true
+      sel.appendChild(opt)
+    })
+    return sel
+  }
   const canCreate = can('vendas', 'create')
   const canEdit   = can('vendas', 'edit')
   const canDelete = can('vendas', 'delete')
@@ -403,12 +413,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
         valorInp.value = venda.valorVenda || ''
 
-        const pagSel = el('select', {})
-        Object.entries(PAG_LABEL).forEach(([value, label]) => {
-          const opt = el('option', { value }, label)
-          if (value === venda.formaPagamento) opt.selected = true
-          pagSel.appendChild(opt)
-        })
+        const pagSel = buildPagSel(venda.formaPagamento)
 
         const entregaSelEdit = el('select', {})
         ENTREGA_ORDER.forEach(s => {
@@ -514,8 +519,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
 
         const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
 
-        const pagSel = el('select', {})
-        Object.entries(PAG_LABEL).forEach(([value, label]) => pagSel.appendChild(el('option', { value }, label)))
+        const pagSel = buildPagSel()
 
         const entregaSelNew = el('select', {})
         ENTREGA_ORDER.forEach(s => entregaSelNew.appendChild(el('option', { value: s }, ENTREGA_META[s]?.label || s)))
