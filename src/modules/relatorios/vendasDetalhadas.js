@@ -77,7 +77,7 @@ function buildRelatorio(vendas, compras, produtos, periodo) {
     const custoVenda = itens.reduce((s, it) => s + toNumero(it.custo), 0)
     const valorVenda = itens.reduce((s, it) => s + toNumero(it.venda), 0)
     const lucroVenda = valorVenda - custoVenda
-    totUnidades += itens.length
+    totUnidades += itens.reduce((s, it) => s + (it.quantidade || 1), 0)
     totCusto += custoVenda
     totVenda += valorVenda
 

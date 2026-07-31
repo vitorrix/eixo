@@ -94,35 +94,26 @@ export async function garantirNumeroRecibo(entidade, patchFn) {
   return numero
 }
 
-// Mesma ordem dos atalhos de acessório no form de Pedidos — mantém o recibo
-// consistente com o que o vendedor vê na hora de lançar.
-const ORDEM_ACESSORIOS = ['Case', 'Película', 'Fonte', 'Cabo', 'AirPods', 'Baseus', 'Peining']
-
-// Cada produto do pedido vira um item; cada acessório vira um item "brinde" (preço
-// e desconto não são rastreados por acessório hoje, então entra a R$ 0 — simplificação
-// a refinar depois se quisermos casar o preço com o catálogo). Itens com a mesma
-// descrição e preço (ex.: "Case" repetido em dois aparelhos) são unificados numa
-// única linha com a quantidade somada, em vez de aparecer duplicado no recibo.
-// Ordem final: todos os aparelhos primeiro, depois os acessórios agrupados por
-// tipo (Case, Película, Fonte...) — não intercalado aparelho-acessório-aparelho.
+// Cada linha do pedido (aparelho, manutenção ou acessório) vira uma linha do
+// recibo, na mesma ordem em que foi lançada — preço/quantidade/desconto já
+// vêm prontos de cada item (não precisa mais inferir quantidade agrupando
+// descrição+preço repetidos). Pedido lançado antes dessa mudança ainda tem
+// acessório como "acessorios: string[]" aninhado no aparelho — vira linha de
+// brinde a R$0, mesmo comportamento de sempre.
 function montarItensPedido(pedido) {
-  const produtos    = new Map()
-  const acessorios  = new Map()
-  const add = (mapa, descricao, precoUnit) => {
-    const chave = `${descricao}__${precoUnit}`
-    if (!mapa.has(chave)) mapa.set(chave, { descricao, precoUnit, quant: 0, desconto: 0 })
-    mapa.get(chave).quant += 1
-  }
+  const itens = []
   ;(pedido.produtos || []).forEach(p => {
-    add(produtos, produtoLabel(p), p.valor || 0)
-    ;(p.acessorios || []).forEach(nome => add(acessorios, nome, 0))
+    itens.push({
+      descricao: produtoLabel(p),
+      precoUnit: p.valor || 0,
+      quant:     p.quantidade || 1,
+      desconto:  p.desconto || 0,
+    })
+    ;(p.acessorios || []).forEach(nome => {
+      itens.push({ descricao: nome, precoUnit: 0, quant: 1, desconto: 0 })
+    })
   })
-  const acessoriosOrdenados = [...acessorios.values()].sort((a, b) => {
-    const ia = ORDEM_ACESSORIOS.indexOf(a.descricao)
-    const ib = ORDEM_ACESSORIOS.indexOf(b.descricao)
-    return (ia === -1 ? ORDEM_ACESSORIOS.length : ia) - (ib === -1 ? ORDEM_ACESSORIOS.length : ib)
-  })
-  return [...produtos.values(), ...acessoriosOrdenados].map(it => ({ ...it, total: it.precoUnit * it.quant }))
+  return itens.map(it => ({ ...it, total: it.precoUnit * it.quant - it.desconto }))
 }
 
 // Observações do recibo = "Dados do aparelho" registrados na Compra vinculada a

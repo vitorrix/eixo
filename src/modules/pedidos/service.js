@@ -92,7 +92,15 @@ async function limparCompraEVenda(pedidoId, batch) {
       batch.delete(d.ref)
     }
   })
-  vendasSnap.docs.forEach(d => batch.delete(d.ref))
+  vendasSnap.docs.forEach(d => {
+    // Acessório não tem Compra por trás — o desconto de estoque foi direto no
+    // produto, registrado aqui pra poder devolver certinho (a quantidade pode
+    // já ter mudado no pedido desde a confirmação original).
+    ;(d.data().estoqueAcessorios || []).forEach(({ produtoId, quantidade }) => {
+      batch.update(doc(db, 'produtos', produtoId), { estoqueAtual: increment(quantidade) })
+    })
+    batch.delete(d.ref)
+  })
   financeiroSnap.docs.forEach(d => batch.delete(d.ref))
 }
 
@@ -125,9 +133,14 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
   const categoriaPagar = operacoes.categorias?.find(c => c.tipo === 'pagar' && c.grupo === 'Custo dos Produtos Vendidos (CMV)')?.nome
     || operacoes.categorias?.find(c => c.tipo === 'pagar')?.nome || ''
 
+  const totalItem = p => (parseFloat(p.valor) || 0) * (parseInt(p.quantidade) || 1) - (parseFloat(p.desconto) || 0)
+
   const itensVenda = []
-  for (let i = 0; i < pedido.produtos.length; i++) {
-    const p     = pedido.produtos[i]
+  // Acessório nunca entra aqui — mesma filtragem usada na tela de Confirmar
+  // Pagamento (pedidos/list.js), pra "itensCompra[i]" bater com o item certo.
+  const itensCompraveis = pedido.produtos.filter(p => p.tipo !== 'acessorio')
+  for (let i = 0; i < itensCompraveis.length; i++) {
+    const p     = itensCompraveis[i]
     const item  = itensCompra[i] || {}
 
     // Aparelho já estava em estoque (comprado avulso, ex: direto de um
@@ -143,7 +156,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
       if (compraData.produtoId) {
         batch.update(doc(db, 'produtos', compraData.produtoId), { estoqueAtual: increment(-1) })
       }
-      itensVenda.push({ produto: compraData.produto || produtoLabel(p), tipo: p.tipo || 'produto', valor: p.valor || 0 })
+      itensVenda.push({ produto: compraData.produto || produtoLabel(p), tipo: p.tipo || 'produto', valor: totalItem(p), quantidade: parseInt(p.quantidade) || 1 })
       continue
     }
 
@@ -186,7 +199,28 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
       })
     }
 
-    itensVenda.push({ produto: label, tipo: p.tipo || 'produto', valor: p.valor || 0 })
+    itensVenda.push({ produto: label, tipo: p.tipo || 'produto', valor: totalItem(p), quantidade: parseInt(p.quantidade) || 1 })
+  }
+
+  // Acessório: o custo já foi pago na compra em lote lançada direto em
+  // Compras (nunca gera Compra/Pagamento novo aqui) — só desconta do estoque
+  // do catálogo, sempre (brinde ou vendido, a unidade física sai igual), e só
+  // vira linha de receita na Venda quando o preço da linha é > 0 (não-brinde).
+  // "estoqueAcessorios" vai gravado na própria Venda — é dali que
+  // limparCompraEVenda lê quanto devolver pro estoque se o pedido for editado/
+  // apagado depois; ler direto do pedido na hora não bastaria, porque a
+  // quantidade pode já ter mudado desde a confirmação original.
+  const estoqueAcessorios = []
+  for (const ac of pedido.produtos.filter(p => p.tipo === 'acessorio')) {
+    const qtd = parseInt(ac.quantidade) || 1
+    if (ac.produtoId) {
+      batch.update(doc(db, 'produtos', ac.produtoId), { estoqueAtual: increment(-qtd) })
+      estoqueAcessorios.push({ produtoId: ac.produtoId, quantidade: qtd })
+    }
+    const totalAcessorio = totalItem(ac)
+    if (totalAcessorio > 0) {
+      itensVenda.push({ produto: ac.nome, tipo: 'acessorio', valor: totalAcessorio, quantidade: qtd })
+    }
   }
 
   // Troca: a Baruk COMPRA o(s) aparelho(s) usado(s) do próprio cliente do pedido,
@@ -245,6 +279,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
     formaPagamento: formaPag,
     statusEntrega:  'aguardando',
     reciboEmitido:  false,
+    estoqueAcessorios,
     criadoEm:       serverTimestamp(),
   })
 
@@ -369,27 +404,21 @@ export function normalizarTrocasPedido(pedido) {
 function sanitize(d) {
   const produtos = (d.produtos || [])
     .map(p => {
-      const tipo = p.tipo === 'manutencao' ? 'manutencao' : 'produto'
-      if (tipo === 'manutencao') {
-        return {
-          tipo,
-          nome:       (p.nome     || '').trim(), // serviço selecionado (ex: Troca de Tela)
-          aparelho:   (p.aparelho || '').trim(),
-          valor:      parseFloat(p.valor) || 0,
-          acessorios: [],
-        }
-      }
-      return {
+      const tipo = ['manutencao', 'acessorio'].includes(p.tipo) ? p.tipo : 'produto'
+      const base = {
         tipo,
-        nome:       (p.nome       || '').trim(),
-        cor:        (p.cor        || '').trim(),
+        nome:       (p.nome || '').trim(),
         valor:      parseFloat(p.valor) || 0,
-        acessorios: (p.acessorios || []).filter(Boolean),
+        quantidade: Math.max(1, parseInt(p.quantidade) || 1),
+        desconto:   parseFloat(p.desconto) || 0,
       }
+      if (tipo === 'manutencao') return { ...base, aparelho: (p.aparelho || '').trim() }
+      if (tipo === 'acessorio')  return { ...base, produtoId: p.produtoId || null }
+      return { ...base, cor: (p.cor || '').trim(), produtoId: p.produtoId || null }
     })
     .filter(p => p.nome)
 
-  const valorNegociado = produtos.reduce((s, p) => s + p.valor, 0)
+  const valorNegociado = produtos.reduce((s, p) => s + (p.valor * p.quantidade - p.desconto), 0)
   const temManutencao  = produtos.some(p => p.tipo === 'manutencao') // pra filtrar em relatórios sem varrer o array
 
   const formasPagamento = Array.isArray(d.formasPagamento)

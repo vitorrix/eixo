@@ -14,23 +14,47 @@ const PAGAMENTO_OPTS = [
   { value: 'cartao',   label: '💳 Cartão'  },
 ]
 
-const ACESSORIOS_RAPIDOS = ['Case', 'Película', 'Fonte', 'Cabo', 'AirPods', 'Baseus', 'Peining']
-
 function todayISO() { return new Date().toISOString().slice(0, 10) }
 
 export function renderPedidoForm(container, close, pedido, { clientes, produtosCatalogo }) {
   const isEdit = !!pedido
 
+  const produtosAcessorios = produtosCatalogo.filter(p => {
+    const cat = (p.categoria || '').trim().toLowerCase()
+    return cat === 'acessórios' || cat === 'acessorios'
+  })
+  const nomesAcessorios = produtosAcessorios.map(p => p.nome)
+  function acessorioCatalogo(nome) {
+    return produtosAcessorios.find(p => p.nome === nome) || null
+  }
+
   // ── Estado ────────────────────────────────────────────────────────────────
-  let produtos = (pedido?.produtos || [{ tipo: 'produto', nome: '', cor: '', valor: '', acessorios: [] }]).map(p => ({
-    tipo:       p.tipo === 'manutencao' ? 'manutencao' : 'produto',
-    nome:       p.nome       || '',
-    cor:        p.cor        || '',
-    aparelho:   p.aparelho   || '',
-    valor:      p.valor      !== undefined ? p.valor : '',
-    acessorios: [...(p.acessorios || [])],
-  }))
-  if (!produtos.length) produtos = [{ tipo: 'produto', nome: '', cor: '', valor: '', acessorios: [] }]
+  // Acessório é item de primeira classe (linha própria, com preço/quantidade/
+  // desconto), não mais aninhado dentro de um aparelho. Pedido criado antes
+  // dessa mudança ainda tem "acessorios: string[]" dentro de cada produto —
+  // ao abrir pra editar, isso "acha" pra linhas de acessório soltas (preço 0,
+  // como já era o comportamento — era sempre brinde antes), e ao salvar de
+  // novo o pedido já grava no formato novo.
+  let produtos = []
+  ;(pedido?.produtos?.length ? pedido.produtos : [{ tipo: 'produto', nome: '', cor: '', valor: '' }]).forEach(p => {
+    produtos.push({
+      tipo:        p.tipo === 'manutencao' ? 'manutencao' : 'produto',
+      nome:        p.nome       || '',
+      cor:         p.cor        || '',
+      aparelho:    p.aparelho   || '',
+      produtoId:   p.produtoId  || null,
+      valor:       p.valor      !== undefined ? p.valor : '',
+      quantidade:  p.quantidade || 1,
+      desconto:    p.desconto   || 0,
+    })
+    ;(p.acessorios || []).forEach(nome => {
+      produtos.push({
+        tipo: 'acessorio', nome, produtoId: acessorioCatalogo(nome)?.id || null,
+        valor: 0, quantidade: 1, desconto: 0,
+      })
+    })
+  })
+  if (!produtos.length) produtos = [{ tipo: 'produto', nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 }]
 
   let formasPagamento = Array.isArray(pedido?.formasPagamento)
     ? [...pedido.formasPagamento]
@@ -131,18 +155,59 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   const produtosWrap = el('div', { class: 'produtos-wrap' })
   const totalDisplay = el('div', { class: 'pedido-total-display' })
 
+  // Total da linha = preço unitário × quantidade − desconto (em R$). Total do
+  // pedido = soma de todas as linhas, aparelho/manutenção/acessório juntos.
+  function itemTotal(p) {
+    const preco = parseFloat(p.valor) || 0
+    const qtd   = parseInt(p.quantidade) || 1
+    const desc  = parseFloat(p.desconto) || 0
+    return preco * qtd - desc
+  }
   function calcTotal() {
-    return produtos.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0)
+    return produtos.reduce((s, p) => s + itemTotal(p), 0)
   }
   function updateTotal() {
     const t = calcTotal()
     totalDisplay.textContent = t > 0 ? `Total: ${brl(t)}` : ''
   }
 
+  // Linha de Quantidade/Desconto/Total — igual pros 3 tipos de item. valorInp
+  // já existe por tipo (aparelho/manutenção/acessório têm o seu); essa função
+  // só cria os 3 campos que faltam e devolve a linha pronta.
+  function buildQtdDescTotalRow(p, i, valorInp) {
+    const qtdInp = el('input', { type: 'number', step: '1', min: '1', placeholder: '1' })
+    qtdInp.value = p.quantidade || 1
+    const descInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+    descInp.value = p.desconto || 0
+    const totalInp = el('input', { type: 'text', readonly: true, class: 'field-total-readonly' })
+
+    function updateRowTotal() {
+      produtos[i].quantidade = qtdInp.value
+      produtos[i].desconto   = descInp.value
+      totalInp.value = brl(itemTotal(produtos[i]))
+    }
+    qtdInp.addEventListener('input', () => { updateRowTotal(); updateTotal() })
+    descInp.addEventListener('input', () => { updateRowTotal(); updateTotal() })
+    valorInp.addEventListener('input', updateRowTotal)
+    updateRowTotal()
+
+    return el('div', { class: 'form-produto-row3' },
+      el('div', { class: 'field' }, el('label', {}, 'Quantidade'), qtdInp),
+      el('div', { class: 'field' }, el('label', {}, 'Desconto R$'), descInp),
+      el('div', { class: 'field' }, el('label', {}, 'Total'), totalInp),
+    )
+  }
+
   function renderProdutos() {
     produtosWrap.replaceChildren()
 
     produtos.forEach((p, i) => {
+      const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
+      delBtn.addEventListener('click', () => {
+        if (produtos.length === 1) return
+        produtos.splice(i, 1); renderProdutos(); updateTotal()
+      })
+
       if (p.tipo === 'manutencao') {
         const aparelhoAc = createAutocomplete({
           placeholder:  'ex: iPhone 13 Pro Max 256GB',
@@ -166,12 +231,6 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
         valorInp.value = p.valor !== undefined && p.valor !== '' ? p.valor : ''
         valorInp.addEventListener('input', () => { produtos[i].valor = valorInp.value; updateTotal() })
 
-        const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
-        delBtn.addEventListener('click', () => {
-          if (produtos.length === 1) return
-          produtos.splice(i, 1); renderProdutos(); updateTotal()
-        })
-
         produtosWrap.appendChild(
           el('div', { class: 'form-produto-block manutencao' },
             el('div', { class: 'form-produto-header' },
@@ -182,41 +241,56 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
               el('div', { class: 'field' }, el('label', {}, 'Aparelho'), aparelhoAc.el),
               el('div', { class: 'field' }, el('label', {}, 'Serviço'), servicoAc.el),
               el('div', { class: 'field field-valor' }, el('label', {}, 'Valor R$'), valorInp),
-            )
+            ),
+            buildQtdDescTotalRow(p, i, valorInp)
           )
         )
         return
       }
 
-      const acessListEl = el('div', { class: 'acessorios-selected' })
+      if (p.tipo === 'acessorio') {
+        const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+        valorInp.value = p.valor !== undefined && p.valor !== '' ? p.valor : ''
+        valorInp.addEventListener('input', () => { produtos[i].valor = valorInp.value; updateTotal() })
 
-      function renderAcess() {
-        acessListEl.replaceChildren()
-        produtos[i].acessorios.forEach((a, j) => {
-          const rm = el('button', { type: 'button', class: 'acessorio-remove-btn' }, '×')
-          rm.addEventListener('click', () => { produtos[i].acessorios.splice(j, 1); renderAcess() })
-          acessListEl.appendChild(el('span', { class: 'acessorio-item' }, a, rm))
+        const nomeAc = createAutocomplete({
+          placeholder:  'ex: Case Space',
+          items:        nomesAcessorios,
+          initialValue: p.nome,
+          onSelect:     v => {
+            produtos[i].nome = v
+            const catalogo = acessorioCatalogo(v)
+            produtos[i].produtoId = catalogo?.id || null
+            if (catalogo) { valorInp.value = catalogo.precoVenda; produtos[i].valor = catalogo.precoVenda; valorInp.dispatchEvent(new Event('input')) }
+          },
         })
-      }
-      function addAcess(nome) {
-        const n = nome.trim()
-        if (!n || produtos[i].acessorios.includes(n)) return
-        produtos[i].acessorios.push(n); renderAcess()
-      }
-      renderAcess()
+        nomeAc.el.style.width = '100%'
+        nomeAc.el.addEventListener('input', () => {
+          produtos[i].nome = nomeAc.getValue()
+          produtos[i].produtoId = acessorioCatalogo(nomeAc.getValue())?.id || null
+        })
 
-      const quickBtns = ACESSORIOS_RAPIDOS.map(a => {
-        const btn = el('button', { type: 'button', class: 'acessorio-quick-btn' }, a)
-        btn.addEventListener('click', () => addAcess(a))
-        return btn
-      })
-      const acessInp = el('input', { type: 'text', class: 'acessorio-custom-inp',
-        placeholder: 'ex: Película 3D, Fonte Tipo C...' })
-      acessInp.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); addAcess(acessInp.value); acessInp.value = '' }
-      })
-      const acessAddBtn = el('button', { type: 'button', class: 'btn btn-sm btn-outline' }, '+ Add')
-      acessAddBtn.addEventListener('click', () => { addAcess(acessInp.value); acessInp.value = '' })
+        const brindeBtn = el('button', { type: 'button', class: 'btn btn-sm btn-outline' }, '🎁 Brinde')
+        brindeBtn.addEventListener('click', () => {
+          valorInp.value = 0
+          valorInp.dispatchEvent(new Event('input'))
+        })
+
+        produtosWrap.appendChild(
+          el('div', { class: 'form-produto-block acessorio' },
+            el('div', { class: 'form-produto-header' },
+              el('span', { class: 'form-produto-label' }, `🎒 Acessório ${i + 1}`),
+              el('div', { style: 'display:flex;gap:6px' }, brindeBtn, delBtn)
+            ),
+            el('div', { class: 'form-produto-row3' },
+              el('div', { class: 'field field-grow' }, el('label', {}, 'Item'), nomeAc.el),
+              el('div', { class: 'field field-valor' }, el('label', {}, 'Preço R$'), valorInp),
+            ),
+            buildQtdDescTotalRow(p, i, valorInp)
+          )
+        )
+        return
+      }
 
       // Autocomplete do item
       const nomeAc = createAutocomplete({
@@ -236,12 +310,6 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       valorInp.value = p.valor !== undefined && p.valor !== '' ? p.valor : ''
       valorInp.addEventListener('input', () => { produtos[i].valor = valorInp.value; updateTotal() })
 
-      const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
-      delBtn.addEventListener('click', () => {
-        if (produtos.length === 1) return
-        produtos.splice(i, 1); renderProdutos(); updateTotal()
-      })
-
       produtosWrap.appendChild(
         el('div', { class: 'form-produto-block' },
           el('div', { class: 'form-produto-header' },
@@ -253,12 +321,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
             el('div', { class: 'field field-cor' }, el('label', {}, 'Cor'), corInp),
             el('div', { class: 'field field-valor' }, el('label', {}, 'Valor R$'), valorInp),
           ),
-          el('div', { class: 'form-section-sub' },
-            el('p', { class: 'form-sub-label' }, 'Acessórios'),
-            el('div', { class: 'acessorios-quickadd' }, ...quickBtns),
-            el('div', { class: 'acessorio-custom-row' }, acessInp, acessAddBtn),
-            acessListEl
-          )
+          buildQtdDescTotalRow(p, i, valorInp)
         )
       )
     })
@@ -270,13 +333,19 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
   const addProdutoBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ produto')
   addProdutoBtn.addEventListener('click', () => {
-    produtos.push({ tipo: 'produto', nome: '', cor: '', valor: '', acessorios: [] })
+    produtos.push({ tipo: 'produto', nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 })
     renderProdutos()
   })
 
   const addManutencaoBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ manutenção')
   addManutencaoBtn.addEventListener('click', () => {
-    produtos.push({ tipo: 'manutencao', nome: '', aparelho: '', valor: '', acessorios: [] })
+    produtos.push({ tipo: 'manutencao', nome: '', aparelho: '', valor: '', quantidade: 1, desconto: 0 })
+    renderProdutos()
+  })
+
+  const addAcessorioBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ acessório')
+  addAcessorioBtn.addEventListener('click', () => {
+    produtos.push({ tipo: 'acessorio', nome: '', produtoId: null, valor: '', quantidade: 1, desconto: 0 })
     renderProdutos()
   })
 
@@ -441,7 +510,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       el('div', { class: 'form-section' },
         el('div', { class: 'form-produto-header' },
           el('p', { class: 'form-section-title', style: 'margin:0' }, 'Produtos'),
-          el('div', { style: 'display:flex;gap:8px' }, addManutencaoBtn, addProdutoBtn)
+          el('div', { style: 'display:flex;gap:8px' }, addManutencaoBtn, addProdutoBtn, addAcessorioBtn)
         ),
         produtosWrap,
         totalDisplay

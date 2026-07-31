@@ -317,6 +317,15 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           )
           return
         }
+        if (pr.tipo === 'acessorio') {
+          prodsCell.appendChild(
+            el('div', { class: 'pedido-produto-line' },
+              el('span', { class: 'dot' }, '🎒'),
+              el('span', { class: 'pedido-produto-nome' }, pr.nome || '—'),
+            )
+          )
+          return
+        }
         const info = produtoLabel(pr)
         prodsCell.appendChild(
           el('div', { class: 'pedido-produto-line' },
@@ -479,9 +488,15 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         mount(body, el('div', { class: 'loading' }, 'Carregando estoque...'))
 
         buscarEstoqueDisponivel(pedido.id).then(estoqueDisponivel => {
-          const itens = pedido.produtos.map(() => ({ fornecedor: '', custo: '', observacoes: '', estoqueCompraId: null }))
+          // Acessório nunca passa por aqui — o custo dele já foi pago na compra
+          // em lote lançada direto em Compras, então essa tela só pergunta
+          // fornecedor/custo pra aparelho e manutenção. Precisa ser a MESMA
+          // filtragem usada em criarCompraEVenda (pedidos/service.js), senão os
+          // índices de "itens" (posição i) ficam dessincronizados dos produtos.
+          const itensCompraveis = pedido.produtos.filter(p => p.tipo !== 'acessorio')
+          const itens = itensCompraveis.map(() => ({ fornecedor: '', custo: '', observacoes: '', estoqueCompraId: null }))
 
-          const itemBlocks = pedido.produtos.map((p, i) => {
+          const itemBlocks = itensCompraveis.map((p, i) => {
             const fornAc = createAutocomplete({
               placeholder: 'Fornecedor',
               items:       fornecedorNomes,
@@ -531,10 +546,11 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
               if (!emEstoque) { itens[i].estoqueCompraId = null; estoqueSel.value = '' }
             })
 
+            const totalLinha = (p.valor || 0) * (p.quantidade || 1) - (p.desconto || 0)
             return el('div', { class: 'form-produto-block' },
               el('div', { class: 'form-produto-header' },
                 el('span', { class: 'form-produto-label' }, produtoLabel(p) || `Item ${i + 1}`),
-                el('span', { class: 'text-muted' }, `Venda: ${brl(p.valor || 0)}`),
+                el('span', { class: 'text-muted' }, `Venda: ${brl(totalLinha)}`),
               ),
               toggleRow,
               compraNovaFields,
@@ -790,7 +806,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           entrega   = { endereco: saved[0]?.entrega?.endereco || '', cliente: pedido.cliente || '' }
         } else {
           isFresh = true
-          retiradas = (pedido.produtos || [{}]).map(pr => ({
+          // Acessório fica de fora do roteiro — já está em estoque na loja, não
+          // precisa de retirada em fornecedor nenhum.
+          const paraRetirar = (pedido.produtos || []).filter(pr => pr.tipo !== 'acessorio')
+          retiradas = (paraRetirar.length ? paraRetirar : [{}]).map(pr => ({
             item: [pr.nome, pr.cor].filter(Boolean).join(' '),
             loja: '',
           }))
@@ -951,13 +970,14 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         // de cada item pela Compra feita na confirmação de pagamento — preenche
         // "Loja/Fornecedor" sozinho, sem precisar digitar de novo.
         if (isFresh) {
+          const produtosParaRetirar = (pedido.produtos || []).filter(pr => pr.tipo !== 'acessorio')
           getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
             .then(snap => {
               const comprasPedido = snap.docs.map(d => d.data())
               let mudou = false
               retiradas.forEach((r, i) => {
                 if (r.loja) return
-                const produtoOriginal = pedido.produtos?.[i]
+                const produtoOriginal = produtosParaRetirar[i]
                 if (!produtoOriginal) return
                 const label = produtoLabel(produtoOriginal)
                 const compra = comprasPedido.find(c => c.produto === label)

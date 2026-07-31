@@ -35,9 +35,9 @@ export function itensComCusto(venda, comprasPorPedido, produtosPorId) {
       const idx = disponiveis.findIndex(c => c.produto === it.produto)
       let custo = 0
       if (idx >= 0) { custo = disponiveis[idx].custo || 0; disponiveis.splice(idx, 1) }
-      return { nome: it.produto, custo, venda: it.valor || 0, produtoId: null }
+      return { nome: it.produto, custo, venda: it.valor || 0, produtoId: null, quantidade: it.quantidade || 1 }
     })
   }
   const custo = venda.produtoId ? (produtosPorId.get(venda.produtoId)?.precoCusto || 0) : 0
-  return [{ nome: venda.produto || '—', custo, venda: venda.valorVenda || 0, produtoId: venda.produtoId || null }]
+  return [{ nome: venda.produto || '—', custo, venda: venda.valorVenda || 0, produtoId: venda.produtoId || null, quantidade: 1 }]
 }

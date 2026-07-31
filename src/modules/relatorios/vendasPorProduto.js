@@ -65,22 +65,22 @@ function vendasNoPeriodo(vendas, de, ate) {
   })
 }
 
-// Venda de pedido tem itens[] (um por aparelho/serviço do pedido); venda
-// avulsa é sempre 1 produto só. Nos dois casos cada linha vira 1 unidade —
-// não existe campo de quantidade, cada item já representa 1 aparelho.
+// Venda de pedido tem itens[] (um por aparelho/serviço/acessório do pedido);
+// venda avulsa é sempre 1 produto só. Quantidade vem do item quando existe
+// (pedido lançado antes da linha ganhar campo de quantidade sempre foi 1).
 function agruparPorProduto(vendasMes) {
   const mapa = new Map()
-  function soma(nome, valor) {
+  function soma(nome, valor, quantidade = 1) {
     nome = (nome || '').trim()
     if (!nome) return
     const atual = mapa.get(nome) || { nome, quantidade: 0, valor: 0 }
-    atual.quantidade += 1
+    atual.quantidade += quantidade
     atual.valor += valor || 0
     mapa.set(nome, atual)
   }
   vendasMes.forEach(v => {
     if (Array.isArray(v.itens) && v.itens.length) {
-      v.itens.forEach(it => soma(it.produto, it.valor))
+      v.itens.forEach(it => soma(it.produto, it.valor, it.quantidade || 1))
     } else {
       soma(v.produto, v.valorVenda)
     }

@@ -22,8 +22,11 @@ const STATUS_EM_ESTOQUE = 'estoque'
 // quando o status muda depois via atualizarStatusCompra. Compra lançada aqui
 // (avulsa, ex: aparelho comprado direto de um cliente) já nasce em estoque por
 // padrão; só vira Aguardando/Concluído quando gerada pelo fluxo de Pedidos.
+// "quantidade" (default 1) é pra lançamento em lote (ex: acessório comprado
+// em quantidade) — "custo" continua sendo o total da linha, não o unitário.
 export async function createCompra(data) {
   const status = data.status || STATUS_EM_ESTOQUE
+  const quantidade = parseInt(data.quantidade) || 1
   const jaRecebida = status === STATUS_EM_ESTOQUE && data.produtoId
 
   const batch = writeBatch(db)
@@ -33,6 +36,7 @@ export async function createCompra(data) {
     produto:         (data.produto      || '').trim(),
     fornecedor:      (data.fornecedor   || '').trim(),
     custo:           parseFloat(data.custo) || 0,
+    quantidade,
     status,
     observacoes:     (data.observacoes || '').trim(), // dados do aparelho — mesmos que vão pro recibo
     cliente:         (data.cliente || '').trim(),
@@ -41,8 +45,41 @@ export async function createCompra(data) {
     criadoEm:        serverTimestamp(),
   })
   if (jaRecebida) {
-    batch.update(doc(db, 'produtos', data.produtoId), { estoqueAtual: increment(1) })
+    batch.update(doc(db, 'produtos', data.produtoId), { estoqueAtual: increment(quantidade) })
   }
+  return batch.commit()
+}
+
+// Lança várias Compras de uma vez, mesmo fornecedor/status/observações —
+// pra compra em lote de itens fungíveis (ex: acessório comprado em
+// quantidade, com produtos diferentes na mesma nota). Cada linha vira sua
+// própria Compra (mesmo formato do createCompra), mas tudo numa escrita só,
+// pra não ficar meio caminho andado se alguma linha falhar no meio.
+export async function createComprasEmLote(comum, linhas) {
+  const batch = writeBatch(db)
+  linhas.forEach(l => {
+    const status = comum.status || STATUS_EM_ESTOQUE
+    const quantidade = parseInt(l.quantidade) || 1
+    const jaRecebida = status === STATUS_EM_ESTOQUE && l.produtoId
+
+    const ref = doc(collection(db, COL))
+    batch.set(ref, {
+      produtoId:       l.produtoId || null,
+      produto:         (l.produto || '').trim(),
+      fornecedor:      (comum.fornecedor || '').trim(),
+      custo:           parseFloat(l.custo) || 0,
+      quantidade,
+      status,
+      observacoes:     (comum.observacoes || '').trim(),
+      cliente:         (comum.cliente || '').trim(),
+      pedidoId:        null,
+      estoqueAplicado: !!jaRecebida,
+      criadoEm:        serverTimestamp(),
+    })
+    if (jaRecebida) {
+      batch.update(doc(db, 'produtos', l.produtoId), { estoqueAtual: increment(quantidade) })
+    }
+  })
   return batch.commit()
 }
 
@@ -63,7 +100,7 @@ export async function atualizarStatusCompra(compra, novoStatus) {
   }
   const batch = writeBatch(db)
   batch.update(doc(db, COL, compra.id), { status: novoStatus, estoqueAplicado: true })
-  batch.update(doc(db, 'produtos', compra.produtoId), { estoqueAtual: increment(1) })
+  batch.update(doc(db, 'produtos', compra.produtoId), { estoqueAtual: increment(compra.quantidade || 1) })
   return batch.commit()
 }
 

@@ -5,7 +5,7 @@ import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { createCompra, patchCompra, atualizarStatusCompra, updateCompra, deleteCompra } from './service.js'
+import { createComprasEmLote, patchCompra, atualizarStatusCompra, updateCompra, deleteCompra } from './service.js'
 import { createClienteRapido } from '../clientes/service.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 
@@ -215,6 +215,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
       campos: [
         ['Cliente', c.cliente],
         ['Produto', c.produto],
+        c.quantidade > 1 ? ['Quantidade', String(c.quantidade)] : null,
         ['Fornecedor', c.fornecedor],
         ['Custo', brl(toNumero(c.custo))],
         ['Status', meta.label],
@@ -229,20 +230,8 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
 
     openModal({
       title: 'Nova Compra',
-      size:  'md',
+      size:  'lg',
       renderBody: (body, closeModal) => {
-        let produtoId = null
-
-        const produtoAc = createAutocomplete({
-          placeholder: 'Produto do catálogo',
-          items:       produtoNomes,
-          onSelect:    v => { produtoId = produtosCatalogo.find(p => p.nome === v)?.id || null },
-        })
-        produtoAc.el.style.width = '100%'
-        produtoAc.el.addEventListener('input', () => {
-          produtoId = produtosCatalogo.find(p => p.nome === produtoAc.getValue())?.id || null
-        })
-
         // Fornecedor OU cliente — muitas compras (principalmente semi-novo) são
         // feitas direto de um cliente, não de um fornecedor cadastrado. Se o
         // texto bater com um cliente da lista, a compra grava em "cliente" em
@@ -322,8 +311,6 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         fornAc.el.style.width = '100%'
         fornAc.el.addEventListener('input', atualizarClienteSelecionado)
 
-        const custoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
-
         // "Aguardando" não aparece aqui — só nasce do fluxo de Pedidos (esperando
         // troca/entrega). Lançamento manual já é uma compra fechada: ou vai pro
         // estoque (padrão), ou já nasce concluída (raro, mas possível).
@@ -332,25 +319,103 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         statusSelNew.value = 'estoque'
 
         const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
-          placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente)' })
+          placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente; deixe em branco pra lote sem serial, ex: acessório)' })
+
+        // ── Itens da compra — 1 fornecedor, N produtos (ex: acessório comprado
+        // em lote, cada um com seu custo unitário e quantidade). Cada linha vira
+        // sua própria Compra no fim; "Total" aqui é só custo unitário × quantidade,
+        // pra conferência na hora — quem é gravado por linha é o total mesmo.
+        let itens = [{ produtoId: null, produto: '', custoUnit: '', quantidade: 1 }]
+        const itensWrap = el('div', { class: 'produtos-wrap' })
+
+        function renderItens() {
+          itensWrap.replaceChildren()
+
+          itens.forEach((it, i) => {
+            const itemProdutoAc = createAutocomplete({
+              placeholder:  'Produto do catálogo',
+              items:        produtoNomes,
+              initialValue: it.produto,
+              onSelect:     v => {
+                itens[i].produto = v
+                itens[i].produtoId = produtosCatalogo.find(p => p.nome === v)?.id || null
+              },
+            })
+            itemProdutoAc.el.style.width = '100%'
+            itemProdutoAc.el.addEventListener('input', () => {
+              itens[i].produto = itemProdutoAc.getValue()
+              itens[i].produtoId = produtosCatalogo.find(p => p.nome === itemProdutoAc.getValue())?.id || null
+            })
+
+            const custoUnitInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+            custoUnitInp.value = it.custoUnit
+            const qtdInp = el('input', { type: 'number', step: '1', min: '1', placeholder: '1' })
+            qtdInp.value = it.quantidade
+            const totalSpan = el('span', {}, brl(0))
+
+            function updateRowTotal() {
+              const total = (parseFloat(custoUnitInp.value) || 0) * (parseInt(qtdInp.value) || 1)
+              totalSpan.textContent = brl(total)
+            }
+            custoUnitInp.addEventListener('input', () => { itens[i].custoUnit = custoUnitInp.value; updateRowTotal() })
+            qtdInp.addEventListener('input', () => { itens[i].quantidade = qtdInp.value; updateRowTotal() })
+            updateRowTotal()
+
+            const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
+            delBtn.addEventListener('click', () => {
+              if (itens.length === 1) return
+              itens.splice(i, 1); renderItens()
+            })
+
+            itensWrap.appendChild(
+              el('div', { class: 'form-produto-block' },
+                el('div', { class: 'form-produto-header' },
+                  el('span', { class: 'form-produto-label' }, `Item ${i + 1}`),
+                  delBtn
+                ),
+                el('div', { class: 'form-produto-row3' },
+                  el('div', { class: 'field field-grow' }, el('label', {}, 'Produto'), itemProdutoAc.el),
+                  el('div', { class: 'field' }, el('label', {}, 'Custo unitário R$'), custoUnitInp),
+                  el('div', { class: 'field' }, el('label', {}, 'Quantidade'), qtdInp),
+                ),
+                el('div', { class: 'text-muted', style: 'text-align:right;font-size:13px;margin-top:6px' },
+                  'Total: ', totalSpan)
+              )
+            )
+          })
+        }
+        renderItens()
+
+        const addItemBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Adicionar item')
+        addItemBtn.addEventListener('click', () => {
+          itens.push({ produtoId: null, produto: '', custoUnit: '', quantidade: 1 })
+          renderItens()
+        })
 
         const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelBtn.addEventListener('click', closeModal)
         const okBtn = el('button', { type: 'button', class: 'btn btn-primary' }, 'Criar compra')
         okBtn.addEventListener('click', async () => {
-          const produto = produtoAc.getValue().trim()
-          if (!produto) { toastError('Selecione o produto.'); return }
+          const validos = itens.filter(it => it.produto.trim())
+          if (!validos.length) { toastError('Adicione ao menos um produto.'); return }
           okBtn.disabled = true
           try {
-            await createCompra({
-              produtoId, produto,
-              fornecedor:  clienteSelecionado ? '' : fornAc.getValue(),
-              cliente:     clienteSelecionado ? clienteSelecionado.name : '',
-              custo:       custoInp.value,
-              status:      statusSelNew.value,
-              observacoes: aparelhoInp.value,
-            })
-            toastSuccess('Compra criada.'); closeModal()
+            await createComprasEmLote(
+              {
+                fornecedor:  clienteSelecionado ? '' : fornAc.getValue(),
+                cliente:     clienteSelecionado ? clienteSelecionado.name : '',
+                status:      statusSelNew.value,
+                observacoes: aparelhoInp.value,
+              },
+              validos.map(it => ({
+                produtoId:  it.produtoId,
+                produto:    it.produto.trim(),
+                quantidade: it.quantidade,
+                custo:      (parseFloat(it.custoUnit) || 0) * (parseInt(it.quantidade) || 1),
+              }))
+            )
+            toastSuccess(validos.length > 1 ? `${validos.length} compras criadas.` : 'Compra criada.')
+            closeModal()
           } catch (err) {
             console.error(err)
             toastError('Erro ao criar compra.')
@@ -360,9 +425,14 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
 
         mount(body,
           el('div', { class: 'form-grid' },
-            el('div', { class: 'field field-full' }, el('label', {}, 'Produto'), produtoAc.el),
             el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor ou cliente'), fornAc.el),
-            el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+          ),
+          el('div', { class: 'form-produto-header' },
+            el('p', { class: 'form-sub-label' }, 'Itens'),
+            addItemBtn
+          ),
+          itensWrap,
+          el('div', { class: 'form-grid' },
             el('div', { class: 'field' }, el('label', {}, 'Status'), statusSelNew),
             el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
           ),

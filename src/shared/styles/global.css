@@ -2027,6 +2027,13 @@ html, body {
 }
 .field-cor   input { }
 .field-valor input { font-weight: 700; }
+.field-total-readonly {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 700;
+  cursor: default;
+}
+.form-produto-block.acessorio .form-produto-label { color: #0e7490; }
 
 /* ── Total do pedido ─────────────────────────────── */
 .pedido-total-display {

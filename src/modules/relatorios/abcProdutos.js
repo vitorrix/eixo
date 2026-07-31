@@ -92,7 +92,7 @@ function buildRelatorio(vendas, compras, produtos, periodo) {
       if (!porCategoria.has(cat)) porCategoria.set(cat, new Map())
       const prods = porCategoria.get(cat)
       const atual = prods.get(nome) || { nome, quantidade: 0, venda: 0, custo: 0 }
-      atual.quantidade += 1
+      atual.quantidade += item.quantidade || 1
       atual.venda += toNumero(item.venda)
       atual.custo += toNumero(item.custo)
       prods.set(nome, atual)
