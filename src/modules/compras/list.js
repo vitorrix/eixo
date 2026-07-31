@@ -481,7 +481,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   function openEditModalPedido(compra) {
     openModal({
       title: 'Editar Compra',
-      size:  'md',
+      size:  'lg',
       renderBody: (body, close) => {
         const dl = el('datalist', { id: 'ce-forn-list' })
         fornecedores.forEach(f => dl.appendChild(el('option', { value: f.name })))
@@ -495,6 +495,23 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
           placeholder: 'Specs, serial, IMEI... (aparece no recibo do cliente)' })
         aparelhoInp.value = compra.observacoes || ''
+
+        // Produto vem do item do Pedido que gerou essa Compra — travado aqui:
+        // mudar o texto por conta própria desalinharia com a Venda/recibo, que
+        // usam o mesmo texto pra casar item ↔ custo (relatorios/vendasCalc.js).
+        // Quem quiser trocar o produto edita o Pedido, não a Compra.
+        const produtoLockedInp = el('input', { type: 'text', disabled: true })
+        produtoLockedInp.value = compra.produto || ''
+
+        const itemBlock = el('div', { class: 'form-produto-block' },
+          el('div', { class: 'form-produto-header' },
+            el('span', { class: 'form-produto-label' }, 'Item 1'),
+          ),
+          el('div', { class: 'form-grid' },
+            el('div', { class: 'field field-full' }, el('label', {}, 'Produto (vem do Pedido)'), produtoLockedInp),
+            el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+          ),
+        )
 
         const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelBtn.addEventListener('click', close)
@@ -514,7 +531,12 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           dl,
           el('div', { class: 'form-grid' },
             el('div', { class: 'field field-full' }, el('label', {}, 'Fornecedor'), fornInp),
-            el('div', { class: 'field' }, el('label', {}, 'Custo R$'), custoInp),
+          ),
+          el('div', { class: 'form-produto-header' },
+            el('p', { class: 'form-sub-label' }, 'Itens'),
+          ),
+          itemBlock,
+          el('div', { class: 'form-grid' },
             el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
