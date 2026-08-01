@@ -11,6 +11,7 @@ import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
+import { createChipSelect } from '../../shared/components/ChipSelect.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 import { createLancamento, updateLancamento, deleteLancamento, marcarLiquidado } from './service.js'
 import { deleteVenda } from '../vendas/service.js'
@@ -327,17 +328,18 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
         )
         contaSel.value = lancamento?.conta || ''
 
-        const formaSel = el('select', { class: 'field-select' },
-          el('option', { value: '' }, '— Selecione —'),
-          ...formasPagamento.map(f => el('option', { value: f.nome }, f.nome))
-        )
-        formaSel.value = lancamento?.formaPagamento || ''
-        formaSel.addEventListener('change', () => {
-          if (!contaSel.value) {
-            const forma = formasPagamento.find(f => f.nome === formaSel.value)
-            if (forma?.contaPadrao) contaSel.value = forma.contaPadrao
+        const pagChips = createChipSelect(
+          formasPagamento.map(f => f.nome),
+          {
+            value: lancamento?.formaPagamento || '',
+            onChange: nome => {
+              if (!contaSel.value) {
+                const forma = formasPagamento.find(f => f.nome === nome)
+                if (forma?.contaPadrao) contaSel.value = forma.contaPadrao
+              }
+            },
           }
-        })
+        )
 
         const vencInp = el('input', { type: 'date' })
         vencInp.value = lancamento?.dataVencimento || todayISO()
@@ -410,7 +412,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
               contato:         contatoAc.getValue(),
               categoria:       categoriaSel.value,
               conta:           contaSel.value,
-              formaPagamento:  formaSel.value,
+              formaPagamento:  pagChips.getValue(),
               liquidado,
               dataVencimento:  vencInp.value,
               dataLiquidacao:  liquidacaoInp.value,
@@ -441,7 +443,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
           el('div', { class: 'field' }, el('label', {}, meta.contatoLabel), contatoAc.el),
           el('div', { class: 'field' }, el('label', {}, 'Categoria'), categoriaSel),
           el('div', { class: 'field' }, el('label', {}, 'Conta'), contaSel),
-          el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), formaSel),
+          el('div', { class: 'field field-full' }, el('label', {}, 'Forma de pagamento'), pagChips.el),
           el('div', { class: 'field' }, el('label', {}, 'Vencimento'), vencInp),
           el('div', { class: 'field' }, el('label', {}, tipo === 'receber' ? 'Recebido?' : 'Pago?'), liquidadoToggle),
           liquidacaoField,

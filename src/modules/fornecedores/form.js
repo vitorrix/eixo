@@ -6,6 +6,7 @@ import { COUNTRIES, findCountryByDial, maskPhoneForCountry, validatePhoneForCoun
 import { createFornecedor, updateFornecedor, validarFornecedor } from './service.js'
 import { validationStatus, VALIDATION_LABELS } from './validation.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
+import { createChipSelect } from '../../shared/components/ChipSelect.js'
 
 // Marca/tipo do que o fornecedor vende. "Semi-Novo" saiu daqui: condição
 // (novo/usado) é outra dimensão, controlada pelo seletor CONDICOES abaixo — um
@@ -130,12 +131,13 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
   )
 
   // ── Condição da lista (novo / semi-novo / misto) ─────────────────────────
-  const condicaoSelect = el('select', { id: 'ff-condicao', class: 'field-select' },
-    ...CONDICOES.map(c => el('option', { value: c.value }, c.label))
+  const condicaoChips = createChipSelect(
+    CONDICOES.map(c => ({ value: c.value, label: c.label })),
+    { value: CONDICOES[0].value }
   )
   const condicaoField = el('div', { class: 'field field-full' },
-    el('label', { for: 'ff-condicao' }, 'Condição dos aparelhos'),
-    condicaoSelect,
+    el('label', {}, 'Condição dos aparelhos'),
+    condicaoChips.el,
     el('span', { class: 'field-hint' }, 'Só semi-novo ou só novo classifica tudo do fornecedor de uma vez. Misto deixa o sistema decidir item a item.')
   )
 
@@ -330,7 +332,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
     docInput.value       = f.type === 'pf' ? maskCPF(f.document || '') : maskCNPJ(f.document || '')
     const categoriasSet  = new Set(f.categorias || [])
     categoriaChecks.forEach(c => { c.checkbox.checked = categoriasSet.has(c.value) })
-    condicaoSelect.value = CONDICOES.some(c => c.value === f.condicao) ? f.condicao : 'misto'
+    condicaoChips.setValue(CONDICOES.some(c => c.value === f.condicao) ? f.condicao : 'misto')
     const a = f.address || {}
     cepInput.value    = maskCEP(a.cep || '')
     logradInput.value = a.logradouro  || ''
@@ -360,7 +362,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
         email:      emailInput.value,
         box:        boxInput.value,
         categorias: categoriaChecks.filter(c => c.checkbox.checked).map(c => c.value),
-        condicao:   condicaoSelect.value,
+        condicao:   condicaoChips.getValue(),
         comunidade,
         notes:      notesInput.value,
         address: {

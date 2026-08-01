@@ -15,6 +15,7 @@ import {
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
+import { createChipSelect } from '../../shared/components/ChipSelect.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 import { patchPedido } from '../pedidos/service.js'
@@ -56,12 +57,26 @@ function dataLocal(ts) {
 
 export function renderVendasList(container, vendas, { produtosCatalogo, clientes, usuariosPorUid = {}, empresa = {}, operacoes = {} } = {}) {
   const formasPagamentoConfig = operacoes.formasPagamento || []
-  function buildPagSel(valorAtual) {
-    const sel = el('select', {})
-    formasPagamentoConfig.forEach(f => {
-      const opt = el('option', { value: f.nome }, f.nome)
-      if (f.nome === valorAtual) opt.selected = true
+  // Forma de pagamento em botões (chips), igual ao Pedido, só que de escolha
+  // única — a Venda só tem uma forma, não junta como o Pedido permite.
+  function buildPagChips(valorAtual) {
+    return createChipSelect(
+      formasPagamentoConfig.map(f => f.nome),
+      { value: valorAtual || formasPagamentoConfig[0]?.nome || '' }
+    )
+  }
+  // Entrega no mesmo select colorido (status-inline-sel) já usado na linha da
+  // tabela — antes era um <select> cru, sem nada a ver com o resto da tela.
+  function buildEntregaSel(valorAtual) {
+    const meta = ENTREGA_META[valorAtual] || ENTREGA_META.aguardando
+    const sel = el('select', { class: `status-inline-sel ${meta.cls}` })
+    ENTREGA_ORDER.forEach(s => {
+      const opt = el('option', { value: s }, ENTREGA_META[s]?.label || s)
+      if (s === valorAtual) opt.selected = true
       sel.appendChild(opt)
+    })
+    sel.addEventListener('change', () => {
+      sel.className = `status-inline-sel ${ENTREGA_META[sel.value]?.cls || ''}`
     })
     return sel
   }
@@ -420,14 +435,9 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
         valorInp.value = venda.valorVenda || ''
 
-        const pagSel = buildPagSel(venda.formaPagamento)
+        const pagChips = buildPagChips(venda.formaPagamento)
 
-        const entregaSelEdit = el('select', {})
-        ENTREGA_ORDER.forEach(s => {
-          const opt = el('option', { value: s }, ENTREGA_META[s]?.label || s)
-          if (s === venda.statusEntrega) opt.selected = true
-          entregaSelEdit.appendChild(opt)
-        })
+        const entregaSelEdit = buildEntregaSel(venda.statusEntrega)
         if (venda.pedidoId) { entregaSelEdit.disabled = true; entregaSelEdit.title = 'Segue a logística do pedido' }
 
         const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
@@ -442,7 +452,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
               produtoId, produto,
               cliente:        clienteAc.getValue(),
               valorVenda:     valorInp.value,
-              formaPagamento: pagSel.value,
+              formaPagamento: pagChips.getValue(),
               ...(venda.pedidoId ? {} : { statusEntrega: entregaSelEdit.value }),
             })
             toastSuccess('Venda atualizada.'); closeModal()
@@ -476,7 +486,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
             el('div', { class: 'form-section' },
               el('p', { class: 'form-section-title' }, 'Negociação'),
               el('div', { class: 'form-grid' },
-                el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagSel),
+                el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagChips.el),
                 el('div', { class: 'field' }, el('label', {}, 'Entrega'), entregaSelEdit),
               )
             ),
@@ -543,10 +553,8 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
 
         const valorInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
 
-        const pagSel = buildPagSel()
-
-        const entregaSelNew = el('select', {})
-        ENTREGA_ORDER.forEach(s => entregaSelNew.appendChild(el('option', { value: s }, ENTREGA_META[s]?.label || s)))
+        const pagChips = buildPagChips()
+        const entregaSelNew = buildEntregaSel('aguardando')
 
         const cancelBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelBtn.addEventListener('click', closeModal)
@@ -560,7 +568,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
               produtoId, produto,
               cliente:        clienteAc.getValue(),
               valorVenda:     valorInp.value,
-              formaPagamento: pagSel.value,
+              formaPagamento: pagChips.getValue(),
               statusEntrega:  entregaSelNew.value,
             })
             toastSuccess('Venda criada.'); closeModal()
@@ -594,7 +602,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
             el('div', { class: 'form-section' },
               el('p', { class: 'form-section-title' }, 'Negociação'),
               el('div', { class: 'form-grid' },
-                el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagSel),
+                el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), pagChips.el),
                 el('div', { class: 'field' }, el('label', {}, 'Entrega'), entregaSelNew),
               )
             ),

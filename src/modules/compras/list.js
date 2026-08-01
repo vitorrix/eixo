@@ -408,10 +408,14 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
 
         // "Aguardando" não aparece aqui — só nasce do fluxo de Pedidos (esperando
         // troca/entrega). Lançamento manual já é uma compra fechada: ou vai pro
-        // estoque (padrão), ou já nasce concluída (raro, mas possível).
-        const statusSelNew = el('select', {})
+        // estoque (padrão), ou já nasce concluída (raro, mas possível). Mesmo
+        // select colorido (status-inline-sel) já usado na linha da tabela.
+        const statusSelNew = el('select', { class: `status-inline-sel ${STATUS_META.estoque.cls}` })
         ;['estoque', 'concluido'].forEach(s => statusSelNew.appendChild(el('option', { value: s }, STATUS_META[s]?.label || s)))
         statusSelNew.value = 'estoque'
+        statusSelNew.addEventListener('change', () => {
+          statusSelNew.className = `status-inline-sel ${STATUS_META[statusSelNew.value]?.cls || ''}`
+        })
 
         const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
           placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente; deixe em branco pra lote sem serial, ex: acessório)' })
