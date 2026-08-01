@@ -9,6 +9,7 @@ import { createComprasEmLote, atualizarStatusCompra, updateCompra, updateCompraI
 import { createClienteRapido } from '../clientes/service.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
+import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 
 const STATUS_META = {
   aguardando: { label: 'Aguardando', cls: 'badge-aguardando' },
@@ -336,10 +337,8 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   function abrirNovaCompraModal() {
     const produtoNomes = produtosCatalogo.map(p => p.nome)
 
-    openModal({
-      title: 'Nova Compra',
-      size:  'lg',
-      renderBody: (body, closeModal) => {
+    pageSwitch.showForm('Nova Compra',
+      (body, closeModal) => {
         // Fornecedor OU cliente — muitas compras (principalmente semi-novo) são
         // feitas direto de um cliente, não de um fornecedor cadastrado. Se o
         // texto bater com um cliente da lista, a compra grava em "cliente" em
@@ -484,8 +483,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
-      },
-    })
+      })
   }
 
   // Compra gerada por um Pedido é 1 aparelho/serviço só, sem produto de
@@ -498,10 +496,8 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   }
 
   function openEditModalPedido(compra) {
-    openModal({
-      title: 'Editar Compra',
-      size:  'lg',
-      renderBody: (body, close) => {
+    pageSwitch.showForm('Editar Compra',
+      (body, close) => {
         const dl = el('datalist', { id: 'ce-forn-list' })
         fornecedores.forEach(f => dl.appendChild(el('option', { value: f.name })))
 
@@ -560,8 +556,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
-      },
-    })
+      })
   }
 
   function openEditModalItens(compra) {
@@ -576,10 +571,8 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
       quantidade: it.quantidade || 1,
     }))
 
-    openModal({
-      title: 'Editar Compra',
-      size:  'lg',
-      renderBody: (body, close) => {
+    pageSwitch.showForm('Editar Compra',
+      (body, close) => {
         const dl = el('datalist', { id: 'ce-forn-list' })
         fornecedores.forEach(f => dl.appendChild(el('option', { value: f.name })))
 
@@ -632,8 +625,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
-      },
-    })
+      })
   }
 
   function confirmDelete(c) {
@@ -649,7 +641,8 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
     })
   }
 
-  mount(container, kpisRow, toolbar, searchInp, tableWrap, emptyState)
+  const pageSwitch = createFullPageSwitcher(container)
+  mount(pageSwitch.listWrap, kpisRow, toolbar, searchInp, tableWrap, emptyState)
   refresh()
 
   return {

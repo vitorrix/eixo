@@ -14,6 +14,7 @@ import {
 } from '../../shared/components/Recibo.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
+import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 import { patchPedido } from '../pedidos/service.js'
 import { createVenda, patchVenda, deleteVenda } from './service.js'
 
@@ -405,10 +406,8 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     const produtoNomes = (produtosCatalogo || []).map(p => p.nome)
     const clienteNomes = (clientes || []).map(c => c.name)
 
-    openModal({
-      title: 'Editar Venda',
-      size:  'md',
-      renderBody: (body, closeModal) => {
+    pageSwitch.showForm('Editar Venda',
+      (body, closeModal) => {
         let produtoId = venda.produtoId || null
 
         const produtoAc = createAutocomplete({
@@ -495,8 +494,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
-      },
-    })
+      })
   }
 
   // ── Detalhes (consulta) ──────────────────────────────────────────────────
@@ -534,10 +532,8 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     const produtoNomes  = (produtosCatalogo || []).map(p => p.nome)
     const clienteNomes  = (clientes || []).map(c => c.name)
 
-    openModal({
-      title: 'Nova Venda',
-      size:  'md',
-      renderBody: (body, closeModal) => {
+    pageSwitch.showForm('Nova Venda',
+      (body, closeModal) => {
         let produtoId = null
 
         const produtoAc = createAutocomplete({
@@ -616,11 +612,11 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
         )
-      },
-    })
+      })
   }
 
-  mount(container, kpisRow, toolbar, searchInp, tableWrap, emptyState)
+  const pageSwitch = createFullPageSwitcher(container)
+  mount(pageSwitch.listWrap, kpisRow, toolbar, searchInp, tableWrap, emptyState)
   refresh()
 
   return {

@@ -10,6 +10,7 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 import { createLancamento, updateLancamento, deleteLancamento, marcarLiquidado } from './service.js'
 import { deleteVenda } from '../vendas/service.js'
@@ -299,10 +300,8 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
     const tipo = lancamento?.tipo || activeTipo
     const meta = TIPO_META[tipo]
 
-    openModal({
-      title: isEdit ? 'Editar lançamento' : meta.novo,
-      size:  'lg',
-      renderBody: (body, closeModal) => {
+    pageSwitch.showForm(isEdit ? 'Editar lançamento' : meta.novo.replace(/^\+\s*/, ''),
+      (body, closeModal) => {
         const descInp = el('input', { type: 'text', placeholder: 'Ex: Conta de luz' })
         descInp.value = lancamento?.descricao || ''
 
@@ -459,11 +458,11 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
         }
 
         mount(body, ...blocos, el('div', { class: 'modal-footer' }, cancelBtn, okBtn))
-      },
-    })
+      })
   }
 
-  mount(container, kpisRow, tabBar, toolbar, searchInp, tableWrap, emptyState)
+  const pageSwitch = createFullPageSwitcher(container)
+  mount(pageSwitch.listWrap, kpisRow, tabBar, toolbar, searchInp, tableWrap, emptyState)
   refresh()
 
   return {

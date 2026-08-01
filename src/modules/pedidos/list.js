@@ -17,6 +17,7 @@ import {
   imprimirReciboAutomaticamente,
 } from '../../shared/components/Recibo.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
+import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 
 // ── Status ────────────────────────────────────────────────────────────────────
 const STATUS_META = {
@@ -997,42 +998,15 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     })
   }
 
-  // ── Novo/Editar Pedido — página cheia em vez de modal, igual ao "Nova Venda"
-  // do eGestor: some a lista, mostra o formulário ocupando o espaço todo,
-  // "← Voltar" ou Esc devolve pra lista (sem recriar a lista do zero).
-  let onEscForm = null
-
-  function mostrarLista() {
-    if (onEscForm) { document.removeEventListener('keydown', onEscForm); onEscForm = null }
-    formWrap.replaceChildren()
-    formWrap.classList.add('hidden')
-    listWrap.classList.remove('hidden')
-  }
+  // ── Novo/Editar Pedido — página cheia em vez de modal ────────────────────
+  const pageSwitch = createFullPageSwitcher(container)
+  mount(pageSwitch.listWrap, periodoRow, kpisRow, toolbar, searchInp, tableWrap, emptyState)
 
   function abrirFormularioPedido(p) {
-    listWrap.classList.add('hidden')
-    formWrap.classList.remove('hidden')
-    formWrap.replaceChildren()
-
-    const backBtn = el('button', { type: 'button', class: 'btn btn-ghost fullpage-back-btn' }, '← Voltar')
-    backBtn.addEventListener('click', mostrarLista)
-    const header = el('div', { class: 'page-header fullpage-header' },
-      backBtn,
-      el('h2', {}, p ? 'Editar Pedido' : 'Novo Pedido'),
-    )
-    const bodyWrap = el('div', { class: 'fullpage-form-body' })
-    mount(formWrap, header, bodyWrap)
-
-    onEscForm = e => { if (e.key === 'Escape') mostrarLista() }
-    document.addEventListener('keydown', onEscForm)
-
-    renderPedidoForm(bodyWrap, mostrarLista, p, { clientes, produtosCatalogo, fornecedores, operacoes })
+    pageSwitch.showForm(p ? 'Editar Pedido' : 'Novo Pedido',
+      (body, close) => renderPedidoForm(body, close, p, { clientes, produtosCatalogo, fornecedores, operacoes }))
   }
 
-  const listWrap = el('div', {})
-  const formWrap = el('div', { class: 'hidden' })
-  mount(listWrap, periodoRow, kpisRow, toolbar, searchInp, tableWrap, emptyState)
-  mount(container, listWrap, formWrap)
   refresh()
 
   return { update(newPedidos) { pedidos = newPedidos; refresh() } }
