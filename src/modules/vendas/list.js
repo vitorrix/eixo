@@ -15,6 +15,8 @@ import {
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
+import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { presetRange } from '../../shared/utils/periodo.js'
 import { patchPedido } from '../pedidos/service.js'
 import { createVenda, patchVenda, deleteVenda } from './service.js'
 
@@ -45,14 +47,11 @@ function vendaProdutoResumo(v) {
   return resto.length ? `${first.produto} +${resto.length}` : first.produto
 }
 
-function nowMonth() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-function monthKey(ts) {
-  if (!ts) return ''
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+// Data local (não UTC) do Timestamp — pra comparar com o range do period picker.
+function dataLocal(ts) {
+  if (!ts?.toDate) return ''
+  const d = ts.toDate()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export function renderVendasList(container, vendas, { produtosCatalogo, clientes, usuariosPorUid = {}, empresa = {}, operacoes = {} } = {}) {
@@ -70,7 +69,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   const canEdit   = can('vendas', 'edit')
   const canDelete = can('vendas', 'delete')
 
-  let currentMonth = nowMonth()
+  let periodo = presetRange('este-mes')
 
   // ── KPIs ─────────────────────────────────────────────────────────────────
   const totalEl   = el('div', { class: 'pedido-stat-value' })
@@ -97,7 +96,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   }
 
   const kpisRow = el('div', { class: 'pedidos-stats' },
-    kpiCard('Vendas',       totalEl,  'no mês'),
+    kpiCard('Vendas',       totalEl,  'no período'),
     kpiCard('Faturamento',  fatEl,    'receita'),
     kpiCard('Ticket Médio', ticketEl, 'por venda'),
     kpiCard('Pendentes',    pendEl,   'não entregues'),
@@ -108,22 +107,10 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     placeholder: 'Buscar por cliente ou produto...' })
   searchInp.addEventListener('input', () => refresh())
 
-  const monthNavLabel = el('span', { class: 'month-nav-label' })
-  function monthLabel(ym) {
-    const [y, m] = ym.split('-')
-    const ms = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-    return `${ms[+m - 1]} ${y}`
-  }
-  function shiftMonth(ym, delta) {
-    const [y, m] = ym.split('-').map(Number)
-    const d = new Date(y, m - 1 + delta, 1)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  }
-
-  const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
-  const nextBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '›')
-  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); refresh() })
-  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); refresh() })
+  const picker = createPeriodoPicker({
+    initialPreset: 'este-mes',
+    onChange: p => { periodo = p; refresh() },
+  })
 
   const newBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Nova Venda')
   newBtn.style.display = canCreate ? '' : 'none'
@@ -133,7 +120,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   const toolbar = el('div', { class: 'toolbar' },
     el('div', { style: 'display:flex;gap:10px;align-items:center' },
       newBtn,
-      el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
+      picker.el,
     ),
     countBadge
   )
@@ -175,14 +162,17 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   )
   const tableWrap  = el('div', { class: 'table-wrapper' }, table)
   const emptyState = el('div', { class: 'empty-state hidden' },
-    el('p', {}, 'Nenhuma venda neste mês.'),
+    el('p', {}, 'Nenhuma venda no período.'),
     el('p', { class: 'text-muted', style: 'font-size:13px;margin-top:4px' },
       'As vendas são geradas ao confirmar o pagamento de um pedido.')
   )
 
   function filteredList() {
     const q = searchInp.value.trim().toLowerCase()
-    let list = vendas.filter(v => monthKey(v.criadoEm) === currentMonth)
+    let list = vendas.filter(v => {
+      const d = dataLocal(v.criadoEm)
+      return d && d >= periodo.de && d <= periodo.ate
+    })
     if (q) list = list.filter(v =>
       (v.cliente || '').toLowerCase().includes(q) ||
       vendaItens(v).some(it => (it.produto || '').toLowerCase().includes(q))
@@ -191,7 +181,6 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   }
 
   function refresh() {
-    monthNavLabel.textContent = monthLabel(currentMonth)
     const list = filteredList()
     countBadge.textContent = list.length
     updateKpis(list)

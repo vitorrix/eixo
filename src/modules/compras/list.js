@@ -10,6 +10,8 @@ import { createClienteRapido } from '../clientes/service.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
+import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { presetRange } from '../../shared/utils/periodo.js'
 
 const STATUS_META = {
   aguardando: { label: 'Aguardando', cls: 'badge-aguardando' },
@@ -25,16 +27,12 @@ const STATUS_META = {
 // troca) foi direto pro cliente do próprio pedido que gerou a compra.
 const STATUS_ORDER = ['aguardando', 'estoque', 'concluido']
 
-function nowMonth() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+// Data local (não UTC) do Timestamp — pra comparar com o range do period picker.
+function dataLocal(ts) {
+  if (!ts?.toDate) return ''
+  const d = ts.toDate()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-function monthKey(ts) {
-  if (!ts) return ''
-  const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
 // Compra de nota com 1 produto só mostra o nome; nota com vários (itens[])
 // mostra o primeiro + quantos a mais, igual ao resumo de Vendas.
 function compraProdutoResumo(c) {
@@ -127,7 +125,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   const canEdit   = can('compras', 'edit')
   const canDelete = can('compras', 'delete')
 
-  let currentMonth = nowMonth()
+  let periodo = presetRange('este-mes')
 
   // ── KPIs ─────────────────────────────────────────────────────────────────
   const totalEl      = el('div', { class: 'pedido-stat-value' })
@@ -152,8 +150,8 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   }
 
   const kpisRow = el('div', { class: 'pedidos-stats' },
-    kpiCard('Compras',    totalEl,   'no mês'),
-    kpiCard('Custo Total', custoEl,   'soma do mês'),
+    kpiCard('Compras',    totalEl,   'no período'),
+    kpiCard('Custo Total', custoEl,   'no período'),
     kpiCard('Aguardando', aguardEl,  'trocas em andamento'),
     kpiCard('Em Estoque', estoqueEl, 'disponível'),
   )
@@ -163,22 +161,10 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
     placeholder: 'Buscar por produto, fornecedor ou cliente...' })
   searchInp.addEventListener('input', () => refresh())
 
-  const monthNavLabel = el('span', { class: 'month-nav-label' })
-  function monthLabel(ym) {
-    const [y, m] = ym.split('-')
-    const ms = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-    return `${ms[+m - 1]} ${y}`
-  }
-  function shiftMonth(ym, delta) {
-    const [y, m] = ym.split('-').map(Number)
-    const d = new Date(y, m - 1 + delta, 1)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  }
-
-  const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
-  const nextBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '›')
-  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); refresh() })
-  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); refresh() })
+  const picker = createPeriodoPicker({
+    initialPreset: 'este-mes',
+    onChange: p => { periodo = p; refresh() },
+  })
 
   const newBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Nova Compra')
   newBtn.style.display = canCreate ? '' : 'none'
@@ -188,7 +174,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   const toolbar = el('div', { class: 'toolbar' },
     el('div', { style: 'display:flex;gap:10px;align-items:center' },
       newBtn,
-      el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
+      picker.el,
     ),
     countBadge
   )
@@ -229,14 +215,17 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   )
   const tableWrap  = el('div', { class: 'table-wrapper' }, table)
   const emptyState = el('div', { class: 'empty-state hidden' },
-    el('p', {}, 'Nenhuma compra neste mês.'),
+    el('p', {}, 'Nenhuma compra no período.'),
     el('p', { class: 'text-muted', style: 'font-size:13px;margin-top:4px' },
       'As compras são geradas ao confirmar o pagamento de um pedido.')
   )
 
   function filteredList() {
     const q = searchInp.value.trim().toLowerCase()
-    let list = compras.filter(c => monthKey(c.criadoEm) === currentMonth)
+    let list = compras.filter(c => {
+      const d = dataLocal(c.criadoEm)
+      return d && d >= periodo.de && d <= periodo.ate
+    })
     if (q) list = list.filter(c =>
       (c.produto || '').toLowerCase().includes(q) ||
       (c.fornecedor || '').toLowerCase().includes(q) ||
@@ -246,7 +235,6 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   }
 
   function refresh() {
-    monthNavLabel.textContent = monthLabel(currentMonth)
     const list = filteredList()
     countBadge.textContent = list.length
     updateKpis(list)

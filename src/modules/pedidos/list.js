@@ -18,6 +18,8 @@ import {
 } from '../../shared/components/Recibo.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
+import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { presetRange } from '../../shared/utils/periodo.js'
 
 // ── Status ────────────────────────────────────────────────────────────────────
 const STATUS_META = {
@@ -69,31 +71,6 @@ function actionBtn(iconKey, label, cls, onClick) {
   return btn
 }
 
-// ── Helpers de data ───────────────────────────────────────────────────────────
-function monthKey(iso) { return iso ? iso.slice(0, 7) : '' }
-function nowMonth() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-function todayISO() { return new Date().toISOString().slice(0, 10) }
-function weekRange() {
-  const now = new Date()
-  const diff = now.getDay() === 0 ? -6 : 1 - now.getDay()
-  const mon = new Date(now); mon.setDate(now.getDate() + diff)
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
-  return { start: mon.toISOString().slice(0, 10), end: sun.toISOString().slice(0, 10) }
-}
-function monthLabel(ym) {
-  const [y, m] = ym.split('-')
-  const ms = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-  return `${ms[+m - 1]} ${y}`
-}
-function shiftMonth(ym, delta) {
-  const [y, m] = ym.split('-').map(Number)
-  const d = new Date(y, m - 1 + delta, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
 // ── Roteiro WhatsApp ──────────────────────────────────────────────────────────
 function fmtDateBR(iso) {
   if (!iso) return ''
@@ -130,7 +107,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   const pendEl  = el('div', { class: 'pedido-stat-value' })
   const subLabel = el('span', {})
 
-  function updateKpis(list, periodo) {
+  function updateKpis(list) {
     const valor = list.reduce((s, p) => s + (toNumero(p.valorNegociado) || toNumero(p.totalVenda)), 0)
     const pagos = list.filter(p => PAID_STATUSES.has(p.status)).length
     const pend  = list.filter(p => ACTIVE_STATUSES.has(p.status)).length
@@ -139,12 +116,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     pagosEl.textContent = pagos
     pendEl.textContent  = pend
     pendEl.className    = 'pedido-stat-value ' + (pend > 0 ? 'red' : '')
-    const pLabels = { hoje: 'hoje', semana: 'esta semana', mes: monthLabel(currentMonth) }
-    subLabel.textContent = pLabels[periodo] || monthLabel(currentMonth)
+    subLabel.textContent = 'no período'
   }
 
-  let currentMonth = nowMonth()
-  let periodoFiltro = 'mes'
+  let periodo = presetRange('este-mes')
   let sortCol = 'data'
   let sortDir = 'desc'
 
@@ -171,24 +146,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     })
   }
 
-  // ── Abas de período (só mês atual) ───────────────────────────────────────
-  const PERIODOS = [{ key: 'hoje', label: 'Hoje' }, { key: 'semana', label: 'Semana' }, { key: 'mes', label: 'Mês' }]
-  const periodoBtns = PERIODOS.map(({ key, label }) => {
-    const btn = el('button', { type: 'button', class: 'periodo-btn' + (key === periodoFiltro ? ' active' : '') }, label)
-    btn.addEventListener('click', () => {
-      periodoFiltro = key
-      periodoBtns.forEach((b, i) => b.classList.toggle('active', PERIODOS[i].key === periodoFiltro))
-      refresh()
-    })
-    return btn
+  const picker = createPeriodoPicker({
+    initialPreset: 'este-mes',
+    onChange: p => { periodo = p; refresh() },
   })
-  const periodoRow = el('div', { class: 'periodo-row' }, ...periodoBtns)
-
-  const monthNavLabel = el('span', { class: 'month-nav-label' })
-  const prevBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '‹')
-  const nextBtn = el('button', { type: 'button', class: 'month-nav-btn' }, '›')
-  prevBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, -1); refresh() })
-  nextBtn.addEventListener('click', () => { currentMonth = shiftMonth(currentMonth, +1); refresh() })
 
   const kpisRow = el('div', { class: 'pedidos-stats' },
     el('div', { class: 'pedido-stat' }, el('div', { class: 'pedido-stat-label' }, 'Pedidos'),   totalEl, el('div', { class: 'pedido-stat-sub' }, subLabel)),
@@ -209,7 +170,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   const toolbar = el('div', { class: 'toolbar' },
     el('div', { style: 'display:flex;gap:10px;align-items:center' },
       newBtn,
-      el('div', { class: 'month-nav' }, prevBtn, monthNavLabel, nextBtn)
+      picker.el,
     ),
     countBadge
   )
@@ -267,16 +228,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
   function filteredList() {
     const q = searchInp.value.trim().toLowerCase()
-    let list = pedidos.filter(p => monthKey(p.dataContato || p.data || '') === currentMonth)
-    if (currentMonth === nowMonth()) {
-      if (periodoFiltro === 'hoje') {
-        const today = todayISO()
-        list = list.filter(p => (p.dataContato || p.data || '').slice(0, 10) === today)
-      } else if (periodoFiltro === 'semana') {
-        const { start, end } = weekRange()
-        list = list.filter(p => { const d = (p.dataContato || p.data || '').slice(0, 10); return d >= start && d <= end })
-      }
-    }
+    let list = pedidos.filter(p => {
+      const d = (p.dataContato || p.data || '').slice(0, 10)
+      return d && d >= periodo.de && d <= periodo.ate
+    })
     if (q) list = list.filter(p => {
       const cli  = (p.cliente || p.clienteNome || '').toLowerCase()
       const pros = (p.produtos || []).map(pr => [pr.nome, pr.aparelho].filter(Boolean).join(' ')).join(' ').toLowerCase()
@@ -286,13 +241,9 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   }
 
   function refresh() {
-    monthNavLabel.textContent = monthLabel(currentMonth)
-    const isCurrent = currentMonth === nowMonth()
-    periodoRow.style.display = isCurrent ? '' : 'none'
-    if (!isCurrent) periodoFiltro = 'mes'
     const list = filteredList()
     countBadge.textContent = list.length
-    updateKpis(list, isCurrent ? periodoFiltro : null)
+    updateKpis(list)
     renderTable(list)
   }
 
@@ -1000,7 +951,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
   // ── Novo/Editar Pedido — página cheia em vez de modal ────────────────────
   const pageSwitch = createFullPageSwitcher(container)
-  mount(pageSwitch.listWrap, periodoRow, kpisRow, toolbar, searchInp, tableWrap, emptyState)
+  mount(pageSwitch.listWrap, kpisRow, toolbar, searchInp, tableWrap, emptyState)
 
   function abrirFormularioPedido(p) {
     pageSwitch.showForm(p ? 'Editar Pedido' : 'Novo Pedido',
