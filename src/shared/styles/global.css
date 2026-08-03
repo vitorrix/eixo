@@ -1947,8 +1947,8 @@ html, body {
 }
 
 /* ── Zebra rows ──────────────────────────────────── */
-.data-table tbody tr:nth-child(even) td { background: #eef5f6; }
-.data-table tbody tr:nth-child(even):hover td { background: #ddeef1; }
+.data-table tbody tr:nth-child(even):not(.dre-row-total):not(.dre-row-final):not(.dre-row-bloco) td { background: #eef5f6; }
+.data-table tbody tr:nth-child(even):not(.dre-row-total):not(.dre-row-final):not(.dre-row-bloco):hover td { background: #ddeef1; }
 
 .th-sortable { cursor: pointer; user-select: none; }
 .th-sortable:hover { color: var(--color-primary); }
@@ -2891,7 +2891,7 @@ html, body {
 .venda-det-cliente { font-weight: 700; }
 .venda-det-meta { font-size: 13px; color: var(--color-muted); }
 .venda-det-card .table-wrapper { border: none; border-radius: 0; }
-.venda-det-table tbody tr:nth-child(even) td { background: transparent; }
+.venda-det-table tbody tr:nth-child(even):not(.dre-row-total):not(.dre-row-final):not(.dre-row-bloco) td { background: transparent; }
 .venda-det-total-geral { margin-top: 16px; }
 
 /* ── E-gestor ────────────────────────────────── */
@@ -2916,7 +2916,7 @@ html, body {
 }
 
 /* ── DRE ─────────────────────────────────── */
-.dre-table tbody tr:nth-child(even) td { background: transparent; }
+.dre-table tbody tr:nth-child(even):not(.dre-row-total):not(.dre-row-final):not(.dre-row-bloco) td { background: transparent; }
 
 .dre-row-bloco td {
   font-weight: 700;
