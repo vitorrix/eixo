@@ -204,7 +204,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
 
       const row = el('tr', {},
         el('td', { class: 'td-date' }, String(l.numero || '—')),
-        el('td', { class: 'td-name' }, descricao || '—'),
+        el('td', { class: 'td-name', title: descricao || '' }, descricao || '—'),
         el('td', {}, l.contato || '—'),
         el('td', {}, l.conta || '—'),
         el('td', { class: 'td-date' }, dateStr),

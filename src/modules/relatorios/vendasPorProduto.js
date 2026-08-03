@@ -109,7 +109,7 @@ function buildRelatorio(vendas, periodo) {
   ranking.forEach((r, i) => {
     tbody.appendChild(el('tr', {},
       el('td', { class: 'td-date' }, String(i + 1)),
-      el('td', { class: 'td-name' }, r.nome),
+      el('td', { class: 'td-name', title: r.nome || '' }, r.nome),
       el('td', { class: 'td-money' }, String(r.quantidade)),
       el('td', { class: 'td-money' }, brl(r.valor)),
     ))

@@ -84,7 +84,7 @@ function buildRelatorio(vendas, compras, produtos, periodo) {
     const tbody = document.createElement('tbody')
     itens.forEach(it => {
       tbody.appendChild(el('tr', {},
-        el('td', { class: 'td-name' }, it.nome),
+        el('td', { class: 'td-name', title: it.nome || '' }, it.nome),
         el('td', { class: 'td-money' }, brl(it.custo)),
         el('td', { class: 'td-money' }, brl(it.venda)),
         el('td', { class: 'td-money' }, brl(it.venda - it.custo)),

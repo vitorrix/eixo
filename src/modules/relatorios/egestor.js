@@ -178,7 +178,7 @@ function _init(container) {
       const reciboBtn = el('button', { type: 'button', class: 'btn btn-sm btn-outline' }, 'Recibo')
       reciboBtn.addEventListener('click', () => abrirReciboModal(v))
 
-      const clienteCell = el('td', { class: 'td-name' },
+      const clienteCell = el('td', { class: 'td-name', title: v.cliente || '' },
         el('div', {}, v.cliente || '—'),
         el('div', { class: 'egestor-codigo' }, `Nº E-${v.codigoOriginal}`),
       )

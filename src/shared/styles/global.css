@@ -1311,7 +1311,7 @@ html, body {
   padding: 7px 12px !important;
 }
 .td-date  { white-space: nowrap; font-size: 13px; color: var(--color-muted); }
-.td-name  { font-weight: 600; white-space: nowrap; }
+.td-name  { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
 .td-money { text-align: right; white-space: nowrap; font-size: 13px; }
 .td-pgto  { white-space: nowrap; font-size: 16px; letter-spacing: 1px; }
 .data-table th.th-money { text-align: right; }

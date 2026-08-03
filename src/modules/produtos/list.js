@@ -205,7 +205,7 @@ export function renderProdutoList(container, produtos) {
       }
 
       const row = el('tr', {},
-        el('td', { class: 'td-name' }, p.nome),
+        el('td', { class: 'td-name', title: p.nome || '' }, p.nome),
         el('td', {}, p.categoria || '—'),
         el('td', { class: 'td-money' }, brl(p.precoCusto)),
         el('td', { class: 'td-money' }, brl(p.precoVenda)),

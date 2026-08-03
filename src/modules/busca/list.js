@@ -231,7 +231,7 @@ export function renderBuscaList(container, ofertas) {
 
     for (const o of pageSlice) {
       const { capacidade, ram, tamanho, origem, cor } = o
-      const produtoCell = el('td', { class: 'td-name' },
+      const produtoCell = el('td', { class: 'td-name', title: o.produtoNome || '' },
         el('div', { class: 'busca-produto-cell' },
           el('img', {
             src: `${import.meta.env.BASE_URL}${produtoIconFile(o.produtoNome)}`,

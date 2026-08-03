@@ -135,7 +135,7 @@ export function renderFornecedorList(container, fornecedores) {
       const { status } = validationStatus(f.lastValidatedAt)
       const validationBadge = el('span', { class: `badge badge-validation-${status}` }, VALIDATION_LABELS[status])
 
-      const nameCell = el('td', { class: 'td-name' }, f.name)
+      const nameCell = el('td', { class: 'td-name', title: f.name || '' }, f.name)
       if (status === 'ok') {
         nameCell.appendChild(el('img', {
           src: `${import.meta.env.BASE_URL}verified-badge.png`,

@@ -348,7 +348,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
       const row = el('tr', {},
         el('td', { class: 'td-date' }, shortDate(p.dataContato || p.data || '')),
-        el('td', { class: 'td-name' }, p.cliente || p.clienteNome || '—'),
+        el('td', { class: 'td-name', title: p.cliente || p.clienteNome || '' }, p.cliente || p.clienteNome || '—'),
         prodsCell,
         el('td', { class: 'td-money' }, brl(valor)),
         el('td', { class: 'td-pgto' }, (() => {

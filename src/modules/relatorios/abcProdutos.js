@@ -126,7 +126,7 @@ function buildRelatorio(vendas, compras, produtos, periodo) {
       const mix = vendaCat > 0 ? (p.venda / vendaCat) * 100 : 0
       const precoMedio = p.quantidade > 0 ? p.venda / p.quantidade : 0
       tbody.appendChild(el('tr', {},
-        el('td', { class: 'td-name' }, p.nome),
+        el('td', { class: 'td-name', title: p.nome || '' }, p.nome),
         el('td', { class: 'td-money' }, String(p.quantidade)),
         el('td', { class: 'td-money' }, brl(precoMedio)),
         el('td', { class: 'td-money' }, brl(p.venda)),

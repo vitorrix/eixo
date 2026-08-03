@@ -277,7 +277,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
 
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
-        el('td', { class: 'td-name' }, v.cliente || '—'),
+        el('td', { class: 'td-name', title: v.cliente || '' }, v.cliente || '—'),
         el('td', {}, vendaProdutoResumo(v)),
         el('td', { class: 'td-money' }, brl(toNumero(v.valorVenda))),
         el('td', {}, pagLabel),

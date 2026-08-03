@@ -182,7 +182,7 @@ export function renderClienteList(container, clientes) {
       }, c.type === 'pf' ? 'PF' : 'PJ')
 
       const cells = [
-        el('td', { class: 'td-name' }, c.name),
+        el('td', { class: 'td-name', title: c.name || '' }, c.name),
         el('td', {}, typeBadge),
         el('td', {}, docFormatted),
         el('td', {}, maskPhone(c.phone)),
