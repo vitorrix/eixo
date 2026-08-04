@@ -1343,7 +1343,7 @@ html, body {
 .pedido-produto-line .dot { font-size: 8px; color: var(--color-muted); position: relative; top: -1px; }
 .pedido-produto-nome {
   display: inline-block;
-  max-width: 420px;
+  max-width: 260px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -37,8 +37,21 @@ const PAID_STATUSES   = new Set(['pago', 'motoboy', 'retirada', 'correio', 'entr
 const ACTIVE_STATUSES = new Set(['negociando', 'aguardando_pagamento'])
 const DELIVERY_STATUSES = new Set(['motoboy', 'retirada', 'correio'])
 
-const PAG_LABEL = { pix: '🏦 PIX', dinheiro: '💰 Dinheiro', cartao: '💳 Cartão', link: '🏪 Link' }
-const PAG_ICON  = { pix: '🏦', dinheiro: '💰', cartao: '💳', link: '🏪' }
+// A forma de pagamento grava o nome configurado em Configurações (ex: "Cartão
+// de Crédito"), não uma chave fixa — então o ícone é por palavra-chave dentro
+// do nome, não por igualdade exata. Cobre qualquer nome que o Vitor configurar
+// (ex: "Cartão de Débito" também bate em "cartão"), com um ícone genérico pra
+// forma que não bater em nada.
+const PAG_ICON_RULES = [
+  [/pix/i,               '🏦'],
+  [/dinheiro|cash/i,      '💰'],
+  [/cart[aã]o|cr[eé]dito|d[eé]bito/i, '💳'],
+  [/link/i,               '🏪'],
+  [/boleto/i,              '📄'],
+]
+function iconForForma(nome) {
+  return PAG_ICON_RULES.find(([re]) => re.test(nome))?.[1] || '💵'
+}
 
 // ── Ícones SVG ────────────────────────────────────────────────────────────────
 const PATHS = {
@@ -352,9 +365,12 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         el('td', { class: 'td-name', title: p.cliente || p.clienteNome || '' }, p.cliente || p.clienteNome || '—'),
         prodsCell,
         el('td', { class: 'td-money' }, brl(valor)),
-        el('td', { class: 'td-pgto' }, (() => {
+        el('td', { class: 'td-pgto', title: (() => {
           const fps = Array.isArray(p.formasPagamento) ? p.formasPagamento : (p.formaPagamento ? [p.formaPagamento] : [])
-          return fps.length ? fps.map(f => PAG_ICON[f] || PAG_LABEL[f] || f).join(' ') : '—'
+          return fps.join(' + ')
+        })() }, (() => {
+          const fps = Array.isArray(p.formasPagamento) ? p.formasPagamento : (p.formaPagamento ? [p.formaPagamento] : [])
+          return fps.length ? fps.map(iconForForma).join(' ') : '—'
         })()),
         el('td', {}, el('span', { class: `status-badge ${meta.cls}` }, meta.label)),
         ...(canEdit || canDelete ? [actionsCell] : []),
@@ -641,7 +657,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         ['Data', shortDate(p.dataContato || p.data || '')],
         ['Produtos', produtosTxt],
         ['Valor', brl(valor)],
-        ['Forma de pagamento', fps.length ? fps.map(f => PAG_LABEL[f] || f).join(' + ') : '—'],
+        ['Forma de pagamento', fps.length ? fps.join(' + ') : '—'],
         ['Status', meta.label],
         p.observacoes ? ['Observações', p.observacoes] : null,
       ],
