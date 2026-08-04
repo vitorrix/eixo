@@ -4,6 +4,7 @@ import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
+import { createChipSelect } from '../../shared/components/ChipSelect.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { createComprasEmLote, atualizarStatusCompra, updateCompra, updateCompraItens, deleteCompra } from './service.js'
 import { createClienteRapido } from '../clientes/service.js'
@@ -119,7 +120,7 @@ function criarEditorItens(produtoNomes, produtosCatalogo, itensIniciais) {
   return { itensWrap, addItemBtn, getItens: () => itens }
 }
 
-export function renderComprasList(container, compras, { fornecedores, produtosCatalogo, clientes }) {
+export function renderComprasList(container, compras, { fornecedores, produtosCatalogo, clientes, formasPagamento }) {
   let clientesList = [...clientes]
   const canCreate = can('compras', 'create')
   const canEdit   = can('compras', 'edit')
@@ -417,6 +418,11 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           statusSelNew.className = `status-inline-sel ${STATUS_META[statusSelNew.value]?.cls || ''}`
         })
 
+        // Compra lançada aqui já nasce paga (não existe "aguardando" nesse
+        // formulário) — a forma de pagamento gera o Pagamento no Financeiro
+        // junto com a Compra, sem precisar lançar os dois separado.
+        const pagChips = createChipSelect(formasPagamento.map(f => f.nome), { value: formasPagamento[0]?.nome || '' })
+
         const aparelhoInp = el('textarea', { rows: '3', class: 'field-textarea',
           placeholder: 'Specs, serial, IMEI... (se já souber — aparece no recibo do cliente; deixe em branco pra lote sem serial, ex: acessório)' })
 
@@ -443,6 +449,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
                 cliente:     clienteSelecionado ? clienteSelecionado.name : '',
                 status:      statusSelNew.value,
                 observacoes: aparelhoInp.value,
+                formaPagamento: pagChips.getValue(),
               },
               validos.map(it => ({
                 produtoId:  it.produtoId,
@@ -471,6 +478,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           itensWrap,
           el('div', { class: 'form-grid' },
             el('div', { class: 'field' }, el('label', {}, 'Status'), statusSelNew),
+            el('div', { class: 'field field-full' }, el('label', {}, 'Forma de pagamento'), pagChips.el),
             el('div', { class: 'field field-full' }, el('label', {}, 'Dados do aparelho'), aparelhoInp),
           ),
           el('div', { class: 'modal-footer' }, cancelBtn, okBtn)

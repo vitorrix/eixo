@@ -3,8 +3,43 @@ import {
   doc, onSnapshot, query, orderBy, where, getDocs, serverTimestamp, writeBatch, increment,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
+import { getOperacoes, proximoNumeroFinanceiro } from '../configuracoes/service.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 
 const COL = 'compras'
+
+// Gera o Pagamento no Financeiro de uma Compra lançada direto neste menu (sem
+// vir de Pedido) — mesma lógica do Pedido (criarCompraEVenda), só que sem
+// pedidoId na origem. Compra lançada aqui já é uma compra fechada (não existe
+// "aguardando" nesse formulário), então o pagamento já nasce liquidado, com
+// vencimento/liquidação hoje. Sem forma de pagamento escolhida ou custo zerado
+// (brinde/erro), não lança nada.
+async function gerarPagamentoCompra(compraId, { custo, produto, fornecedor, cliente, formaPagamento }) {
+  if (!(custo > 0) || !formaPagamento) return null
+  const operacoes = await getOperacoes()
+  const categoriaPagar = operacoes.categorias?.find(c => c.tipo === 'pagar' && c.grupo === 'Custo dos Produtos Vendidos (CMV)')?.nome
+  const conta = operacoes.formasPagamento?.find(f => f.nome === formaPagamento)?.contaPadrao || ''
+  const hoje = isoLocal(new Date())
+  const numero = await proximoNumeroFinanceiro()
+  return {
+    numero, tipo: 'pagar',
+    descricao:       `Compra: ${produto}`,
+    valor:           custo,
+    contato:         fornecedor || cliente || '',
+    categoria:       categoriaPagar,
+    conta,
+    formaPagamento,
+    liquidado:       true,
+    dataVencimento:  hoje,
+    dataLiquidacao:  hoje,
+    numeroDocumento: '',
+    observacoes:     '',
+    parcela:         { numero: 1, total: 1 },
+    origem:          { tipo: 'compra', id: compraId },
+    recorrencia:     null,
+    criadoEm:        serverTimestamp(),
+  }
+}
 
 export function subscribeCompras(callback, onError) {
   const q = query(collection(db, COL), orderBy('criadoEm', 'desc'))
@@ -75,13 +110,15 @@ export async function createComprasEmLote(comum, linhas) {
       quantidade: parseInt(l.quantidade) || 1,
       custo:      parseFloat(l.custo) || 0,
     }))
+    const custoTotal = itens.reduce((s, i) => s + i.custo, 0)
+    const produtoLabel = itens.map(i => i.produto).join(', ')
     const ref = doc(collection(db, COL))
     batch.set(ref, {
       ...base,
       produtoId:       null,
-      produto:         itens.map(i => i.produto).join(', '),
+      produto:         produtoLabel,
       itens,
-      custo:           itens.reduce((s, i) => s + i.custo, 0),
+      custo:           custoTotal,
       estoqueAplicado: jaRecebida,
     })
     if (jaRecebida) {
@@ -89,23 +126,29 @@ export async function createComprasEmLote(comum, linhas) {
         if (i.produtoId) batch.update(doc(db, 'produtos', i.produtoId), { estoqueAtual: increment(i.quantidade) })
       })
     }
+    const pagamento = await gerarPagamentoCompra(ref.id, { custo: custoTotal, produto: produtoLabel, fornecedor: base.fornecedor, cliente: base.cliente, formaPagamento: comum.formaPagamento })
+    if (pagamento) batch.set(doc(collection(db, 'financeiro')), pagamento)
     return batch.commit()
   }
 
   const l = linhas[0]
   const quantidade = parseInt(l.quantidade) || 1
+  const custoLinha = parseFloat(l.custo) || 0
+  const produtoLinha = (l.produto || '').trim()
   const ref = doc(collection(db, COL))
   batch.set(ref, {
     ...base,
     produtoId:       l.produtoId || null,
-    produto:         (l.produto || '').trim(),
-    custo:           parseFloat(l.custo) || 0,
+    produto:         produtoLinha,
+    custo:           custoLinha,
     quantidade,
     estoqueAplicado: jaRecebida && !!l.produtoId,
   })
   if (jaRecebida && l.produtoId) {
     batch.update(doc(db, 'produtos', l.produtoId), { estoqueAtual: increment(quantidade) })
   }
+  const pagamento = await gerarPagamentoCompra(ref.id, { custo: custoLinha, produto: produtoLinha, fornecedor: base.fornecedor, cliente: base.cliente, formaPagamento: comum.formaPagamento })
+  if (pagamento) batch.set(doc(collection(db, 'financeiro')), pagamento)
   return batch.commit()
 }
 
