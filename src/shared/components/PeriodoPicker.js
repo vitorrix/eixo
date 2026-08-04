@@ -1,5 +1,5 @@
 import { el } from '../utils/dom.js'
-import { PRESETS, presetRange, periodoLabel } from '../utils/periodo.js'
+import { PRESETS, presetRange, periodoLabel, isoLocal, primeiroDiaMes, ultimoDiaMes } from '../utils/periodo.js'
 
 // Seletor de período reutilizável nos relatórios: um select de presets
 // (Hoje, Últimos 7 dias, Este mês...) + campos De/Até que aparecem quando o
@@ -52,8 +52,38 @@ export function createPeriodoPicker({ initialPreset = 'este-mes', onChange } = {
   deInp.addEventListener('change', onCustomChange)
   ateInp.addEventListener('change', onCustomChange)
 
+  // Setas pra pular pro mês anterior/seguinte sem reabrir o dropdown — usa o
+  // mês de "de" como referência, então funciona mesmo vindo de um preset que
+  // não é "Este mês" (ex: usuário filtrou uma semana e quer ver o mês todo).
+  // Sincroniza o select com "Este mês"/"Mês passado" quando o mês resultante
+  // bate com um desses presets, senão cai em "Escolher datas".
+  function shiftMonth(delta) {
+    const ref = new Date(`${de}T00:00:00`)
+    const alvo = new Date(ref.getFullYear(), ref.getMonth() + delta, 1)
+    de = isoLocal(primeiroDiaMes(alvo))
+    ate = isoLocal(ultimoDiaMes(alvo))
+
+    const hoje = new Date()
+    const mesPassadoRef = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1)
+    if (alvo.getFullYear() === hoje.getFullYear() && alvo.getMonth() === hoje.getMonth()) {
+      sel.value = 'este-mes'
+    } else if (alvo.getFullYear() === mesPassadoRef.getFullYear() && alvo.getMonth() === mesPassadoRef.getMonth()) {
+      sel.value = 'mes-passado'
+    } else {
+      sel.value = 'custom'
+    }
+    customWrap.style.display = sel.value === 'custom' ? '' : 'none'
+    if (sel.value === 'custom') { deInp.value = de; ateInp.value = ate }
+    emit()
+  }
+
+  const prevBtn = el('button', { type: 'button', class: 'month-nav-btn', title: 'Mês anterior' }, '‹')
+  const nextBtn = el('button', { type: 'button', class: 'month-nav-btn', title: 'Próximo mês' }, '›')
+  prevBtn.addEventListener('click', () => shiftMonth(-1))
+  nextBtn.addEventListener('click', () => shiftMonth(1))
+
   const root = el('div', { class: 'periodo-picker' },
-    el('div', { class: 'periodo-picker-row' }, sel, label),
+    el('div', { class: 'periodo-picker-row' }, prevBtn, sel, nextBtn, label),
     customWrap,
   )
 

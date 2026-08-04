@@ -21,10 +21,10 @@ function inicioSemana(d) {
   return addDays(d, -dow)
 }
 
-function primeiroDiaMes(d) {
+export function primeiroDiaMes(d) {
   return new Date(d.getFullYear(), d.getMonth(), 1)
 }
-function ultimoDiaMes(d) {
+export function ultimoDiaMes(d) {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0)
 }
 
