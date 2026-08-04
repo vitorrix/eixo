@@ -74,10 +74,22 @@ export function createAutocomplete({
     onSelect?.(value)
   }
 
+  // Ordena pela posição do match (não pela ordem original de items) antes de
+  // cortar em maxResults — sem isso, um item cujo match cai só no fim da
+  // string (ex: "Ping 4313 - Palácio das capas" batendo com "capas" só no
+  // final) podia ser cortado do dropdown por causa de dezenas de outros itens
+  // cujo match cai bem no início (ex: "Shopping" batendo com "ping" logo no
+  // nome de "ABE Cell 2233 - SHOPping Oriental"), mesmo esses sendo menos
+  // relevantes pro que a pessoa realmente digitou.
   function filter(q) {
     if (!q.trim()) return []
     const lq = q.toLowerCase()
-    return items.filter(s => s.toLowerCase().includes(lq)).slice(0, maxResults)
+    return items
+      .map(s => ({ s, idx: s.toLowerCase().indexOf(lq) }))
+      .filter(x => x.idx !== -1)
+      .sort((a, b) => a.idx - b.idx)
+      .slice(0, maxResults)
+      .map(x => x.s)
   }
 
   // ── Eventos ───────────────────────────────────────────────────────────────

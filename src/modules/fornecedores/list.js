@@ -182,6 +182,15 @@ export function renderFornecedorList(container, fornecedores) {
       (qDigits && ((f.document || '').includes(qDigits) || (f.phone || '').includes(qDigits)))
     )
     filtered.sort((a, b) => {
+      // Com busca ativa, nome batendo vem sempre antes de quem só bateu por
+      // box/email/vendedor (ex: "Shopping" bate com a busca "ping" — sem essa
+      // prioridade, o fornecedor certo fica perdido no meio de dezenas de
+      // "Shopping Oriental" que não têm nada a ver com o que foi digitado).
+      if (q) {
+        const an = a.name.toLowerCase().includes(q) ? 0 : 1
+        const bn = b.name.toLowerCase().includes(q) ? 0 : 1
+        if (an !== bn) return an - bn
+      }
       const va = sortValue(a, sortCol)
       const vb = sortValue(b, sortCol)
       let cmp
