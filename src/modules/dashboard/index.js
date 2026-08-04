@@ -6,10 +6,12 @@ import { subscribeAniversariantes } from '../clientes/service.js'
 import { subscribeBotStatus } from '../configuracoes/service.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
 import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 import { collection, query, where, getCountFromServer } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 
 const MODULE_CARDS = [
+  { label: 'Busca',        sub: 'Preços dos fornecedores', path: '/busca',         color: '#8b5cf6', icon: 'busca'        },
   { label: 'Pedidos',      sub: 'Gerenciar pedidos',       path: '/pedidos',       color: '#6366f1', icon: 'pedidos'      },
   { label: 'Clientes',     sub: 'Cadastro de clientes',    path: '/clientes',      color: '#10B981', icon: 'clientes'     },
   { label: 'Fornecedores', sub: 'Cadastro de fornecedores',path: '/fornecedores',  color: '#f59e0b', icon: 'fornecedores' },
@@ -28,6 +30,7 @@ const ICON_PATHS = {
   fornecedores: ['M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z','M9 22V12h6v10'],
   financeiro:   ['M12 2v20M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6'],
   produtos:     ['M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z','M7 7h.01'],
+  busca:        ['M11 19a8 8 0 100-16 8 8 0 000 16z','M21 21l-4.35-4.35'],
 }
 
 function buildIcon(key, color) {
@@ -130,6 +133,61 @@ function recadoBotStatus(status) {
   }
 
   return null
+}
+
+function detalharAction() {
+  return el('a', { href: '#/financeiro', class: 'mural-item-action mural-item-action-text' }, 'Detalhar')
+}
+
+// Domingo da semana corrente (segunda como início), pra somar "o que vence
+// essa semana" olhando pra frente a partir de hoje — diferente do preset
+// "Esta semana" dos relatórios, que olha pra trás (do início da semana até
+// hoje). Aqui é o oposto: de hoje até o fim da semana.
+function fimDaSemana(hoje = new Date()) {
+  const dow = (hoje.getDay() + 6) % 7 // 0 = segunda
+  const d = new Date(hoje)
+  d.setDate(d.getDate() + (6 - dow))
+  return d
+}
+
+// Pagamentos/recebimentos ainda não liquidados com vencimento hoje ou nesta
+// semana (de hoje até domingo) — o que realmente precisa de atenção agora,
+// não o histórico do mês inteiro.
+function recadosFinanceiro(lancamentos) {
+  const hoje = new Date()
+  const hojeISO = isoLocal(hoje)
+  const fimSemanaISO = isoLocal(fimDaSemana(hoje))
+
+  let pagarHoje = 0, receberHoje = 0, pagarSemana = 0, receberSemana = 0
+  lancamentos.forEach(l => {
+    if (l.liquidado) return
+    const venc = l.dataVencimento
+    if (!venc || venc > fimSemanaISO) return
+    const valor = toNumero(l.valor)
+    if (venc === hojeISO) {
+      if (l.tipo === 'pagar') pagarHoje += valor
+      else if (l.tipo === 'receber') receberHoje += valor
+    }
+    if (venc >= hojeISO) {
+      if (l.tipo === 'pagar') pagarSemana += valor
+      else if (l.tipo === 'receber') receberSemana += valor
+    }
+  })
+
+  const recados = []
+  if (pagarHoje > 0) {
+    recados.push({ tipo: 'pagamento', titulo: `Você tem ${brl(pagarHoje)} em pagamentos para hoje`, detalhe: 'Vencimento hoje, ainda não pago.', action: detalharAction() })
+  }
+  if (receberHoje > 0) {
+    recados.push({ tipo: 'recebimento', titulo: `Você tem ${brl(receberHoje)} para receber hoje`, detalhe: 'Vencimento hoje, ainda não recebido.', action: detalharAction() })
+  }
+  if (pagarSemana > pagarHoje) {
+    recados.push({ tipo: 'pagamento', titulo: `${brl(pagarSemana)} em pagamentos essa semana`, detalhe: 'Total a pagar até domingo (inclui o de hoje).', action: detalharAction() })
+  }
+  if (receberSemana > receberHoje) {
+    recados.push({ tipo: 'recebimento', titulo: `${brl(receberSemana)} a receber essa semana`, detalhe: 'Total a receber até domingo (inclui o de hoje).', action: detalharAction() })
+  }
+  return recados
 }
 
 function buildMural(recados) {
@@ -283,14 +341,17 @@ export function render(container) {
     el('div', { class: 'dashboard-section dashboard-row' }, muralWrap, chartWrap)
   )
 
+  let lancamentos = []
+
   const unsubFinanceiro = subscribeFinanceiro(
-    lancamentos => mount(chartWrap, buildRevenueChart(lancamentos)),
+    list => { lancamentos = list; mount(chartWrap, buildRevenueChart(list)); renderMural() },
     () => mount(chartWrap, buildRevenueChart([]))
   )
 
-  // O Mural junta duas fontes assíncronas (aniversariantes + status do bot);
-  // cada uma guarda seu estado e redesenha o conjunto quando muda. Alerta do
-  // bot vem primeiro — é operacional e urgente, aniversário não.
+  // O Mural junta três fontes assíncronas (financeiro + aniversariantes +
+  // status do bot); cada uma guarda seu estado e redesenha o conjunto quando
+  // muda. Ordem: alerta do bot (operacional, urgente) → pagamentos/recebimentos
+  // (dinheiro, prazo curto) → aniversário (não urgente).
   let aniversariantes = []
   let botStatus = null
 
@@ -298,6 +359,8 @@ export function render(container) {
     const recados = []
     const alertaBot = recadoBotStatus(botStatus)
     if (alertaBot) recados.push(alertaBot)
+
+    recados.push(...recadosFinanceiro(lancamentos))
 
     aniversariantes.forEach(c => {
       const phone = c.phone || ''

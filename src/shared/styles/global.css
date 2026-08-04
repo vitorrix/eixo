@@ -995,6 +995,17 @@ html, body {
 }
 .mural-item-action:hover { background: #d1f4e3; }
 
+.mural-item-action-text {
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
 .mural-empty {
   display: flex;
   flex-direction: column;
