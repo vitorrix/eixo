@@ -1106,7 +1106,6 @@ html, body {
 }
 .chart-axis-label {
   flex: 1;
-  max-width: 34px;
   text-align: center;
   font-size: 11px;
   color: var(--color-muted);
