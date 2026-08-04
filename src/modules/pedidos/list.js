@@ -8,7 +8,9 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
   deletePedido, patchPedido, confirmarPagamento, confirmarPagamentoSemCompra, efetuarCompra,
   definirLogistica, salvarRoteiro, marcarEntregue, produtoLabel,
+  normalizarFormasPagamento, temDivisaoPorForma,
 } from './service.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 import { renderPedidoForm } from './form.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import {
@@ -26,6 +28,7 @@ const STATUS_META = {
   negociando:           { label: 'Negociando',   cls: 'badge-negociando'    },
   aguardando_pagamento: { label: 'Aguard. Pgto', cls: 'badge-aguard-pgto'   },
   pago:                 { label: 'Pago',          cls: 'badge-pago'          },
+  pago_parcial:         { label: 'Pago parcial',  cls: 'badge-pago-parcial'  },
   motoboy:              { label: '🏍️ Motoboy',    cls: 'badge-motoboy'       },
   retirada:             { label: '🏠 Retirada',   cls: 'badge-retirada'      },
   correio:              { label: '📬 Correio',    cls: 'badge-correio'       },
@@ -33,7 +36,7 @@ const STATUS_META = {
   cancelado:            { label: 'Cancelado',     cls: 'badge-cancelado'     },
 }
 
-const PAID_STATUSES   = new Set(['pago', 'motoboy', 'retirada', 'correio', 'entregue'])
+const PAID_STATUSES   = new Set(['pago', 'pago_parcial', 'motoboy', 'retirada', 'correio', 'entregue'])
 const ACTIVE_STATUSES = new Set(['negociando', 'aguardando_pagamento'])
 const DELIVERY_STATUSES = new Set(['motoboy', 'retirada', 'correio'])
 
@@ -339,7 +342,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         actionsInner.appendChild(actionBtn('check', 'Efetuar Compra', 'btn-success', () => abrirConfirmarPagamentoModal(p, { jaConfirmado: true })))
       }
 
-      if (canEdit && p.status === 'pago') {
+      if (canEdit && (p.status === 'pago' || p.status === 'pago_parcial')) {
         actionsInner.appendChild(actionBtn('truck', 'Logística', 'btn-outline-blue', () => abrirLogisticaModal(p)))
       }
 
@@ -365,13 +368,11 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         el('td', { class: 'td-name', title: p.cliente || p.clienteNome || '' }, p.cliente || p.clienteNome || '—'),
         prodsCell,
         el('td', { class: 'td-money' }, brl(valor)),
-        el('td', { class: 'td-pgto', title: (() => {
-          const fps = Array.isArray(p.formasPagamento) ? p.formasPagamento : (p.formaPagamento ? [p.formaPagamento] : [])
-          return fps.join(' + ')
-        })() }, (() => {
-          const fps = Array.isArray(p.formasPagamento) ? p.formasPagamento : (p.formaPagamento ? [p.formaPagamento] : [])
-          return fps.length ? fps.map(iconForForma).join(' ') : '—'
-        })()),
+        el('td', { class: 'td-pgto', title: normalizarFormasPagamento(p).map(f => f.nome).join(' + ') },
+          (() => {
+            const nomes = normalizarFormasPagamento(p).map(f => f.nome).filter(Boolean)
+            return nomes.length ? nomes.map(iconForForma).join(' ') : '—'
+          })()),
         el('td', {}, el('span', { class: `status-badge ${meta.cls}` }, meta.label)),
         ...(canEdit || canDelete ? [actionsCell] : []),
       )
@@ -467,6 +468,44 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           const itensCompraveis = pedido.produtos.filter(p => p.tipo !== 'acessorio')
           const itens = itensCompraveis.map(() => ({ fornecedor: '', custo: '', observacoes: '', estoqueCompraId: null }))
 
+          // Pedido com 2+ formas de pagamento e valor dividido (validado lá no
+          // form) — pergunta, forma por forma, se já foi pago agora ou se vai
+          // pagar depois (com vencimento). Forma única não pergunta nada, vale
+          // o total inteiro e já nasce paga, como sempre foi.
+          const splitValido = temDivisaoPorForma(pedido)
+          const pagamentosPorForma = splitValido
+            ? normalizarFormasPagamento(pedido).map(f => ({ nome: f.nome, valor: f.valor, liquidado: true, dataVencimento: isoLocal(new Date()) }))
+            : null
+
+          const pagamentoBlock = splitValido
+            ? el('div', { class: 'form-section' },
+                el('p', { class: 'form-section-title' }, 'Pagamento'),
+                ...pagamentosPorForma.map((pf, i) => {
+                  const pagoBtn = el('button', { type: 'button', class: 'type-btn type-btn-sm active' }, 'Pago')
+                  const pendBtn = el('button', { type: 'button', class: 'type-btn type-btn-sm' }, 'Pendente')
+                  const vencInp = el('input', { type: 'date' })
+                  vencInp.value = pf.dataVencimento
+                  vencInp.style.display = 'none'
+                  vencInp.addEventListener('change', () => { pagamentosPorForma[i].dataVencimento = vencInp.value })
+                  pagoBtn.addEventListener('click', () => {
+                    pagamentosPorForma[i].liquidado = true
+                    pagoBtn.classList.add('active'); pendBtn.classList.remove('active')
+                    vencInp.style.display = 'none'
+                  })
+                  pendBtn.addEventListener('click', () => {
+                    pagamentosPorForma[i].liquidado = false
+                    pendBtn.classList.add('active'); pagoBtn.classList.remove('active')
+                    vencInp.style.display = ''
+                  })
+                  return el('div', { class: 'form-produto-row3' },
+                    el('div', { class: 'field' }, el('label', {}, pf.nome), el('div', { class: 'field-total-readonly' }, brl(pf.valor))),
+                    el('div', { class: 'field' }, el('label', {}, 'Situação'), el('div', { class: 'type-toggle type-toggle-sm' }, pagoBtn, pendBtn)),
+                    el('div', { class: 'field' }, el('label', {}, 'Vencimento (se pendente)'), vencInp),
+                  )
+                })
+              )
+            : el('div', {})
+
           const itemBlocks = itensCompraveis.map((p, i) => {
             const fornAc = createAutocomplete({
               placeholder: 'Fornecedor',
@@ -539,10 +578,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
             okBtn.disabled = true; okBtn.textContent = 'Aguarde...'
             try {
               if (jaConfirmado) {
-                await efetuarCompra(pedido, itens)
+                await efetuarCompra(pedido, itens, pagamentosPorForma)
                 toastSuccess('Compra e venda geradas.')
               } else {
-                await confirmarPagamento(pedido, itens)
+                await confirmarPagamento(pedido, itens, pagamentosPorForma)
                 toastSuccess('Pagamento confirmado. Compra e venda geradas.')
               }
               closeModal()
@@ -556,6 +595,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           mount(body,
             el('p', { class: 'text-muted', style: 'margin-bottom:12px;font-size:13px' },
               'Informe o fornecedor e o custo de cada item — a compra e a venda são geradas automaticamente. Se o aparelho já estava em estoque (comprado antes, ex: direto de um cliente), marque "Já em estoque" e selecione-o em vez de lançar uma compra nova.'),
+            pagamentoBlock,
             ...itemBlocks,
             el('div', { class: 'modal-footer' }, cancelBtn, okBtn)
           )
@@ -647,7 +687,11 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     const meta = STATUS_META[p.status] || { label: p.status || '—' }
     const valor = p.valorNegociado ?? p.totalVenda ?? 0
     const produtosTxt = (p.produtos || []).map(pr => produtoLabel(pr)).join(', ') || '—'
-    const fps = Array.isArray(p.formasPagamento) ? p.formasPagamento : (p.formaPagamento ? [p.formaPagamento] : [])
+    const formasNorm = normalizarFormasPagamento(p)
+    const splitValido = temDivisaoPorForma(p)
+    const formasTxt = splitValido
+      ? formasNorm.map(f => `${f.nome} (${brl(f.valor)})`).join(' + ')
+      : formasNorm.map(f => f.nome).join(' + ')
     const pago = PAID_STATUSES.has(p.status)
 
     abrirDetalhesModal({
@@ -657,7 +701,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         ['Data', shortDate(p.dataContato || p.data || '')],
         ['Produtos', produtosTxt],
         ['Valor', brl(valor)],
-        ['Forma de pagamento', fps.length ? fps.join(' + ') : '—'],
+        ['Forma de pagamento', formasTxt || '—'],
         ['Status', meta.label],
         p.observacoes ? ['Observações', p.observacoes] : null,
       ],

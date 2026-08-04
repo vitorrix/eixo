@@ -859,6 +859,7 @@ html, body {
 .field-error { font-size: 12px; color: var(--color-danger); min-height: 16px; }
 .input-error { border-color: var(--color-danger) !important; }
 .field-hint  { font-size: 13px; color: var(--color-muted); }
+.field-hint-error { color: var(--color-danger); font-weight: 600; }
 
 /* Checkboxes em pílula (categorias de fornecedor) */
 .checkbox-row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1851,6 +1852,7 @@ html, body {
 .badge-negociando    { background: #fef3c7; color: #92400e; }
 .badge-aguard-pgto   { background: #dbeafe; color: #1e40af; }
 .badge-pago          { background: #d1fae5; color: #065f46; }
+.badge-pago-parcial  { background: #fed7aa; color: #9a3412; }
 .badge-motoboy       { background: #ffedd5; color: #9a3412; }
 .badge-retirada      { background: #ede9fe; color: #5b21b6; }
 .badge-correio       { background: #e0f2fe; color: #075985; }

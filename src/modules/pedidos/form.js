@@ -54,10 +54,19 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   // trocar o tipo no dropdown só reformata os campos da própria linha.
   produtos.push({ tipo: 'produto', nome: '', cor: '', valor: '', quantidade: 1, desconto: 0 })
 
-  let formasPagamento = Array.isArray(pedido?.formasPagamento)
-    ? [...pedido.formasPagamento]
-    : (pedido?.formaPagamento ? [pedido.formaPagamento] : [])
+  // formasPagamento guarda só os nomes (ordem de seleção); valoresPorForma
+  // guarda o valor de cada uma quando tem 2+ (pedido antigo, com 1 forma só
+  // ou salvo no formato string[] de antes, não tem valor dividido — a única
+  // forma sempre vale o total do pedido, não precisa perguntar nada).
+  let formasPagamento = []
+  let valoresPorForma = {}
+  ;(Array.isArray(pedido?.formasPagamento) ? pedido.formasPagamento : (pedido?.formaPagamento ? [pedido.formaPagamento] : []))
+    .forEach(f => {
+      if (typeof f === 'string') { formasPagamento.push(f) }
+      else if (f && f.nome) { formasPagamento.push(f.nome); valoresPorForma[f.nome] = f.valor !== undefined ? String(f.valor) : '' }
+    })
   let trocaAtiva = normalizarTrocasPedido(pedido || {}).length > 0
+  let diffLabel = null // referência pro aviso "falta dividir X" — só existe quando tem 2+ formas
 
   const produtoNomes     = produtosCatalogo.map(p => p.nome)
   const produtoNomesSN   = produtosCatalogo.map(p => p.nome).filter(n => n.trim().toUpperCase().endsWith('S/N'))
@@ -167,6 +176,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   function updateTotal() {
     const t = calcTotal()
     totalDisplay.textContent = t > 0 ? `Total: ${brl(t)}` : ''
+    updateDiffLabel()
   }
 
   // Linha de Quantidade/Desconto/Total — igual pros 3 tipos de item. valorInp
@@ -383,6 +393,42 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   renderProdutos()
 
   // ── Negociação ────────────────────────────────────────────────────────────
+  // Com 1 forma só, ela vale o total inteiro — não tem o que dividir. Com 2+
+  // (ex: Pix + Cartão), pede quanto vai em cada uma, pra depois o Confirmar
+  // Pagamento poder liquidar cada forma separado (uma paga agora, outra só
+  // daqui uns dias).
+  const valoresPorFormaWrap = el('div', {})
+
+  function updateDiffLabel() {
+    if (!diffLabel) return
+    const somaFormas = formasPagamento.reduce((s, nome) => s + (parseFloat(valoresPorForma[nome]) || 0), 0)
+    const falta = calcTotal() - somaFormas
+    const bateu = Math.abs(falta) < 0.01
+    diffLabel.textContent = bateu
+      ? 'Valores batem com o total do pedido.'
+      : `Falta dividir ${brl(falta)} do total (${brl(calcTotal())}).`
+    diffLabel.classList.toggle('field-hint-error', !bateu)
+  }
+
+  function renderValoresPorForma() {
+    valoresPorFormaWrap.replaceChildren()
+    if (formasPagamento.length < 2) { diffLabel = null; return }
+
+    const rows = formasPagamento.map(nome => {
+      const inp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
+      inp.value = valoresPorForma[nome] || ''
+      inp.addEventListener('input', () => { valoresPorForma[nome] = inp.value; updateDiffLabel() })
+      return el('div', { class: 'field' }, el('label', {}, `${nome} R$`), inp)
+    })
+
+    diffLabel = el('span', { class: 'field-hint' })
+    mount(valoresPorFormaWrap,
+      el('div', { class: 'form-grid' }, ...rows),
+      diffLabel
+    )
+    updateDiffLabel()
+  }
+
   function makePagChips() {
     const wrap = el('div', { class: 'status-chips-row' })
     if (!formasPagamentoConfig.length) {
@@ -396,13 +442,16 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       btn.addEventListener('click', () => {
         const idx = formasPagamento.indexOf(nome)
         if (idx === -1) formasPagamento.push(nome)
-        else formasPagamento.splice(idx, 1)
+        else { formasPagamento.splice(idx, 1); delete valoresPorForma[nome] }
         btn.classList.toggle('active', formasPagamento.includes(nome))
+        renderValoresPorForma()
       })
       wrap.appendChild(btn)
     })
     return wrap
   }
+
+  renderValoresPorForma() // popula de cara se o pedido (edição) já tinha 2+ formas
 
   // ── Troca ─────────────────────────────────────────────────────────────────
   // Cliente pode dar mais de um aparelho na troca — lista igual à de produtos,
@@ -502,6 +551,22 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     if (!cliente) { toastError('Informe o nome do cliente.'); return }
     if (!dataInp.value) { toastError('Informe a data.'); return }
 
+    // 1 forma só vale o total inteiro (nada pra dividir); 2+ formas precisam
+    // somar exatamente o total, senão o Confirmar Pagamento não sabe quanto
+    // cobrar em cada uma.
+    const total = calcTotal()
+    const formasPagamentoFinal = formasPagamento.map(nome => ({
+      nome,
+      valor: formasPagamento.length === 1 ? total : (parseFloat(valoresPorForma[nome]) || 0),
+    }))
+    if (formasPagamentoFinal.length > 1) {
+      const soma = formasPagamentoFinal.reduce((s, f) => s + f.valor, 0)
+      if (Math.abs(soma - total) >= 0.01) {
+        toastError(`A soma das formas de pagamento (${brl(soma)}) precisa bater com o total do pedido (${brl(total)}).`)
+        return
+      }
+    }
+
     const trocasFinal = trocaAtiva
       ? trocas
           .map(t => ({
@@ -517,7 +582,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
     try {
       const produtosFinal = produtos.filter(p => !linhaVazia(p))
-      const data = { dataContato: dataInp.value, cliente, produtos: produtosFinal, formasPagamento, trocas: trocasFinal, observacoes: obsInp.value }
+      const data = { dataContato: dataInp.value, cliente, produtos: produtosFinal, formasPagamento: formasPagamentoFinal, trocas: trocasFinal, observacoes: obsInp.value }
       if (isEdit) {
         await editarPedido(pedido.id, data)
         const voltou = pedido.status && pedido.status !== 'negociando'
@@ -554,6 +619,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       el('div', { class: 'form-section' },
         el('p', { class: 'form-section-title' }, 'Negociação'),
         el('div', { class: 'field' }, el('label', {}, 'Forma de pagamento'), makePagChips()),
+        valoresPorFormaWrap,
         trocaToggleRow,
         trocaSection,
       ),

@@ -1,10 +1,11 @@
 import {
   collection, updateDoc, deleteDoc,
-  doc, onSnapshot, query, orderBy, serverTimestamp, writeBatch,
+  doc, getDoc, getDocs, onSnapshot, query, orderBy, where, serverTimestamp, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
 import { proximoNumeroFinanceiro } from '../configuracoes/service.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 
 const COL = 'financeiro'
 
@@ -94,10 +95,37 @@ export async function updateLancamento(id, fields) {
 }
 
 export async function marcarLiquidado(id, liquidado) {
-  return updateDoc(doc(db, COL, id), {
+  const ref = doc(db, COL, id)
+  await updateDoc(ref, {
     liquidado,
-    dataLiquidacao: liquidado ? new Date().toISOString().slice(0, 10) : null,
+    dataLiquidacao: liquidado ? isoLocal(new Date()) : null,
   })
+  if (!liquidado) return
+  await promoverPedidoSeQuitado(ref)
+}
+
+// Pedido com forma de pagamento dividida (Pix + Cartão, por ex.) nasce como
+// "pago_parcial" quando pelo menos uma forma ainda tá pendente — assim que a
+// última for liquidada aqui no Financeiro, o pedido sobe sozinho pra "pago",
+// sem precisar lembrar de voltar lá e mudar na mão.
+async function promoverPedidoSeQuitado(lancamentoRef) {
+  const snap = await getDoc(lancamentoRef)
+  const origem = snap.data()?.origem
+  if (origem?.tipo !== 'venda' || !origem?.pedidoId) return
+
+  const irmaosSnap = await getDocs(query(
+    collection(db, COL),
+    where('origem.tipo', '==', 'venda'),
+    where('origem.pedidoId', '==', origem.pedidoId)
+  ))
+  const todasLiquidadas = irmaosSnap.docs.every(d => d.data().liquidado)
+  if (!todasLiquidadas) return
+
+  const pedidoRef = doc(db, 'pedidos', origem.pedidoId)
+  const pedidoSnap = await getDoc(pedidoRef)
+  if (pedidoSnap.data()?.status === 'pago_parcial') {
+    await updateDoc(pedidoRef, { status: 'pago', atualizadoEm: serverTimestamp() })
+  }
 }
 
 export async function deleteLancamento(id) {

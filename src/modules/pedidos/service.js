@@ -124,11 +124,12 @@ async function limparCompraEVenda(pedidoId, batch) {
 // pedido inteiro (vinculado à Venda) — todos marcados como já liquidados, já
 // que "confirmar pagamento"/"efetuar compra" representa o dinheiro já ter
 // saído/entrado nesse momento.
-async function criarCompraEVenda(batch, pedido, itensCompra) {
+async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma) {
   const hoje = new Date().toISOString().slice(0, 10)
   const operacoes = await getOperacoes()
-  const formaPag = (pedido.formasPagamento || [])[0] || ''
-  const contaPadrao = operacoes.formasPagamento?.find(f => f.nome === formaPag)?.contaPadrao || ''
+  const formasNorm = normalizarFormasPagamento(pedido)
+  const formaPag = formasNorm.map(f => f.nome).filter(Boolean).join(' + ')
+  const contaPadrao = operacoes.formasPagamento?.find(f => f.nome === formasNorm[0]?.nome)?.contaPadrao || ''
   const categoriaReceber = operacoes.categorias?.find(c => c.tipo === 'receber')?.nome || ''
   const categoriaPagar = operacoes.categorias?.find(c => c.tipo === 'pagar' && c.grupo === 'Custo dos Produtos Vendidos (CMV)')?.nome
     || operacoes.categorias?.find(c => c.tipo === 'pagar')?.nome || ''
@@ -286,35 +287,67 @@ async function criarCompraEVenda(batch, pedido, itensCompra) {
     criadoEm:       serverTimestamp(),
   })
 
-  const numeroReceber = await proximoNumeroFinanceiro()
-  batch.set(doc(collection(db, 'financeiro')), {
-    numero: numeroReceber, tipo: 'receber',
-    descricao:       `Venda — ${pedido.cliente}`,
-    valor:           valorVenda,
-    contato:         pedido.cliente,
-    categoria:       categoriaReceber,
-    conta:           contaPadrao,
-    formaPagamento:  formaPag,
-    liquidado:       true,
-    dataVencimento:  hoje,
-    dataLiquidacao:  hoje,
-    numeroDocumento: '',
-    observacoes:     '',
-    parcela:         { numero: 1, total: 1 },
-    origem:          { tipo: 'venda', id: vendaRef.id, pedidoId: pedido.id },
-    recorrencia:     null,
-    criadoEm:        serverTimestamp(),
-  })
+  // Pedido com 2+ formas e valor dividido (validado no form): 1 Recebimento
+  // por forma, cada um podendo já nascer liquidado ou pendente (ex: Pix pago
+  // na hora, Cartão só daqui uns dias) — dá pra liquidar cada um separado
+  // depois, direto no Financeiro. Sem divisão (forma única, ou pedido no
+  // formato antigo), continua exatamente como sempre foi: 1 Recebimento só,
+  // já liquidado.
+  if (pagamentosPorForma?.length > 1) {
+    for (const pf of pagamentosPorForma) {
+      const contaPf = operacoes.formasPagamento?.find(f => f.nome === pf.nome)?.contaPadrao || ''
+      const numero = await proximoNumeroFinanceiro()
+      batch.set(doc(collection(db, 'financeiro')), {
+        numero, tipo: 'receber',
+        descricao:       `Venda — ${pedido.cliente}`,
+        valor:           pf.valor,
+        contato:         pedido.cliente,
+        categoria:       categoriaReceber,
+        conta:           contaPf,
+        formaPagamento:  pf.nome,
+        liquidado:       pf.liquidado,
+        dataVencimento:  pf.dataVencimento || hoje,
+        dataLiquidacao:  pf.liquidado ? hoje : null,
+        numeroDocumento: '',
+        observacoes:     '',
+        parcela:         { numero: 1, total: 1 },
+        origem:          { tipo: 'venda', id: vendaRef.id, pedidoId: pedido.id },
+        recorrencia:     null,
+        criadoEm:        serverTimestamp(),
+      })
+    }
+  } else {
+    const numeroReceber = await proximoNumeroFinanceiro()
+    batch.set(doc(collection(db, 'financeiro')), {
+      numero: numeroReceber, tipo: 'receber',
+      descricao:       `Venda — ${pedido.cliente}`,
+      valor:           valorVenda,
+      contato:         pedido.cliente,
+      categoria:       categoriaReceber,
+      conta:           contaPadrao,
+      formaPagamento:  formaPag,
+      liquidado:       true,
+      dataVencimento:  hoje,
+      dataLiquidacao:  hoje,
+      numeroDocumento: '',
+      observacoes:     '',
+      parcela:         { numero: 1, total: 1 },
+      origem:          { tipo: 'venda', id: vendaRef.id, pedidoId: pedido.id },
+      recorrencia:     null,
+      criadoEm:        serverTimestamp(),
+    })
+  }
 }
 
 // Confirma o pagamento e já efetua a compra (fluxo "Sim, efetuar compra agora").
 // Limpa qualquer Compra/Venda/financeiro antigos desse pedido antes de gerar
 // os novos — cobre o caso de reconfirmação após edição, sem nunca duplicar.
-export async function confirmarPagamento(pedido, itensCompra) {
+export async function confirmarPagamento(pedido, itensCompra, pagamentosPorForma) {
   const batch = writeBatch(db)
   await limparCompraEVenda(pedido.id, batch)
-  batch.update(doc(db, COL, pedido.id), { status: 'pago', compraFeita: true, atualizadoEm: serverTimestamp() })
-  await criarCompraEVenda(batch, pedido, itensCompra)
+  const status = pagamentosPorForma?.some(pf => !pf.liquidado) ? 'pago_parcial' : 'pago'
+  batch.update(doc(db, COL, pedido.id), { status, compraFeita: true, atualizadoEm: serverTimestamp() })
+  await criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
   return batch.commit()
 }
 
@@ -334,11 +367,12 @@ export async function confirmarPagamentoSemCompra(pedido) {
 // Também limpa antes, pelo mesmo motivo de confirmarPagamento — sem isso,
 // clicar "Efetuar Compra" duas vezes (ou depois de reeditar o pedido) geraria
 // registros duplicados de novo.
-export async function efetuarCompra(pedido, itensCompra) {
+export async function efetuarCompra(pedido, itensCompra, pagamentosPorForma) {
   const batch = writeBatch(db)
   await limparCompraEVenda(pedido.id, batch)
-  batch.update(doc(db, COL, pedido.id), { compraFeita: true, atualizadoEm: serverTimestamp() })
-  await criarCompraEVenda(batch, pedido, itensCompra)
+  const status = pagamentosPorForma?.some(pf => !pf.liquidado) ? 'pago_parcial' : 'pago'
+  batch.update(doc(db, COL, pedido.id), { status, compraFeita: true, atualizadoEm: serverTimestamp() })
+  await criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
   return batch.commit()
 }
 
@@ -402,6 +436,25 @@ export function normalizarTrocasPedido(pedido) {
   if (Array.isArray(pedido.trocas)) return pedido.trocas.filter(t => t?.produto)
   if (pedido.troca?.produto) return [pedido.troca]
   return []
+}
+
+// Lê formasPagamento aceitando os dois formatos: novo ({nome, valor}[], com o
+// valor de cada forma dividido) ou antigo (string[], de pedido criado antes de
+// dividir por forma — nesse caso "valor" fica null, sinalizando "desconhecido/
+// vale o total", já que o formato antigo nunca guardou a divisão).
+export function normalizarFormasPagamento(pedido) {
+  const raw = Array.isArray(pedido?.formasPagamento) ? pedido.formasPagamento
+    : (pedido?.formaPagamento ? [pedido.formaPagamento] : [])
+  return raw.map(f => typeof f === 'string' ? { nome: f, valor: null } : { nome: f?.nome || '', valor: f?.valor ?? null })
+}
+
+// true só quando dá pra confiar na divisão de valor por forma — 2+ formas,
+// todas com valor numérico > 0 (pedido novo, passou pela validação do form).
+// 1 forma só nunca precisa de divisão (vale o total inteiro); formato antigo
+// (valor null) também cai fora — trata como forma única, igual sempre foi.
+export function temDivisaoPorForma(pedido) {
+  const formas = normalizarFormasPagamento(pedido)
+  return formas.length > 1 && formas.every(f => typeof f.valor === 'number' && f.valor > 0)
 }
 
 function sanitize(d) {
