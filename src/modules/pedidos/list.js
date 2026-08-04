@@ -261,10 +261,11 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       const prodsCell = el('td', { class: 'td-produtos' })
       ;(p.produtos || []).forEach(pr => {
         if (pr.tipo === 'manutencao') {
+          const nomeM = produtoLabel(pr)
           prodsCell.appendChild(
             el('div', { class: 'pedido-produto-line' },
               el('span', { class: 'dot' }, '🛠️'),
-              el('span', { class: 'pedido-produto-nome' }, produtoLabel(pr) || '—'),
+              el('span', { class: 'pedido-produto-nome', title: nomeM || '' }, nomeM || '—'),
             )
           )
           return
@@ -273,7 +274,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           prodsCell.appendChild(
             el('div', { class: 'pedido-produto-line' },
               el('span', { class: 'dot' }, '🎒'),
-              el('span', { class: 'pedido-produto-nome' }, pr.nome || '—'),
+              el('span', { class: 'pedido-produto-nome', title: pr.nome || '' }, pr.nome || '—'),
             )
           )
           return
@@ -282,7 +283,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
         prodsCell.appendChild(
           el('div', { class: 'pedido-produto-line' },
             el('span', { class: 'dot' }, '●'),
-            el('span', { class: 'pedido-produto-nome' }, info || '—'),
+            el('span', { class: 'pedido-produto-nome', title: info || '' }, info || '—'),
           )
         )
         if (pr.acessorios?.length) {
