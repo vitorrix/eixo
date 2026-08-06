@@ -1866,6 +1866,12 @@ html, body {
 .badge-aguardando    { background: #fef3c7; color: #92400e; }
 .badge-estoque       { background: #d1fae5; color: #065f46; }
 .badge-concluido     { background: #f3f4f6; color: #6b7280; }
+.badge-em-andamento      { background: #dbeafe; color: #1e40af; }
+.badge-prioridade-baixa  { background: #f3f4f6; color: #6b7280; }
+.badge-prioridade-media  { background: #dbeafe; color: #1e40af; }
+.badge-prioridade-alta   { background: #fee2e2; color: #991b1b; }
+
+.tarefa-prazo-atrasado { color: #d93025; font-weight: 600; }
 
 /* ── Inline status select (looks like a badge) ────── */
 .status-inline-sel {

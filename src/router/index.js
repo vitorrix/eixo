@@ -14,6 +14,7 @@ const routes = {
   '/orcamentos':    { module: null,             loader: () => import('../modules/orcamentos/index.js') },
   '/relatorios':    { module: 'relatorios',    loader: () => import('../modules/relatorios/index.js') },
   '/financeiro':    { module: 'financeiro',    loader: () => import('../modules/financeiro/index.js') },
+  '/tarefas':       { module: null,             loader: () => import('../modules/tarefas/index.js') },
   '/configuracoes': { module: 'configuracoes', loader: () => import('../modules/configuracoes/index.js') },
   '/usuarios':      { module: 'usuarios',      loader: () => import('../modules/usuarios/index.js') },
   '/ajuda':         { module: null,             loader: () => import('../modules/ajuda/index.js') },

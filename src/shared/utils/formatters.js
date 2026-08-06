@@ -95,6 +95,12 @@ export function fullDate(iso) {
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
 }
 
+// A partir de 'YYYY-MM-DDTHH:mm' (valor cru de <input type="datetime-local">)
+export function shortDateTime(iso) {
+  if (!iso || iso.length < 16) return iso || '—'
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`
+}
+
 // Aceita Firestore Timestamp, Date ou string/number — retorna "há X min/h/dias"
 export function relativeTime(timestamp) {
   if (!timestamp) return '—'

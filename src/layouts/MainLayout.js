@@ -17,6 +17,7 @@ const PAGE_LABELS = {
   '/orcamentos':    'Orçamentos',
   '/relatorios':    'Relatórios',
   '/financeiro':    'Financeiro',
+  '/tarefas':       'Tarefas',
   '/configuracoes': 'Configurações',
   '/usuarios':      'Usuários',
   '/ajuda':         'Ajuda & Tutorial',
@@ -54,6 +55,10 @@ const NAV_ICONS = {
   financeiro: [
     'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'
   ],
+  tarefas: [
+    'M9 11l3 3L22 4',
+    'M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'
+  ],
   fornecedores: [
     'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z',
     'M9 22V12h6v10'
@@ -83,6 +88,7 @@ const NAV_ICONS = {
 const NAV_ITEMS = [
   { path: '/',              label: 'Dashboard',      module: null,            iconKey: 'dashboard'     },
   { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro' },
+  { path: '/tarefas',       label: 'Tarefas',        module: null,            iconKey: 'tarefas' },
   { path: '/orcamentos',    label: 'Orçamentos',     module: null,            iconKey: 'orcamentos'    },
   { path: '/pedidos',       label: 'Pedidos',        module: 'pedidos',       iconKey: 'pedidos'       },
   { path: '/compras',       label: 'Compras',        module: 'compras',       iconKey: 'compras'       },

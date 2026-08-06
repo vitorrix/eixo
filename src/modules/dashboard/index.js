@@ -1,10 +1,11 @@
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { getCurrentProfile } from '../../auth/session.js'
-import { maskPhone, brl, relativeTime, toNumero } from '../../shared/utils/formatters.js'
+import { maskPhone, brl, relativeTime, toNumero, shortDateTime } from '../../shared/utils/formatters.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { subscribeAniversariantes } from '../clientes/service.js'
 import { subscribeBotStatus } from '../configuracoes/service.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
+import { subscribeTarefas, nomesResponsaveis } from '../tarefas/service.js'
 import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { isoLocal } from '../../shared/utils/periodo.js'
 import { collection, query, where, getCountFromServer } from 'firebase/firestore'
@@ -56,6 +57,7 @@ const RECADO_TIPOS = {
   pagamento:   { color: '#d93025', paths: ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M16 12l-4-4-4 4', 'M12 16V8'] },
   aviso:       { color: '#3b82f6', paths: ['M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 01-3.46 0'] },
   alerta:      { color: '#d93025', paths: ['M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z', 'M12 9v4', 'M12 17h.01'] },
+  tarefa:      { color: '#3b82f6', paths: ['M9 11l3 3L22 4', 'M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'] },
 }
 
 function buildRecadoIcon(tipo) {
@@ -137,6 +139,31 @@ function recadoBotStatus(status) {
 
 function detalharAction() {
   return el('a', { href: '#/financeiro', class: 'mural-item-action mural-item-action-text' }, 'Detalhar')
+}
+
+function detalharTarefaAction() {
+  return el('a', { href: '#/tarefas', class: 'mural-item-action mural-item-action-text' }, 'Detalhar')
+}
+
+// Uma tarefa vira recado quando não está concluída e o prazo já venceu ou é
+// hoje — igual à lógica de pagamentos/recebimentos, mas item a item (não dá
+// pra somar "3 tarefas" num valor único como dá pra somar dinheiro).
+function recadosTarefas(tarefas) {
+  const agora = new Date()
+  const nowDT = isoLocal(agora) + 'T' + String(agora.getHours()).padStart(2, '0') + ':' + String(agora.getMinutes()).padStart(2, '0')
+  const hojeISO = isoLocal(agora)
+
+  return tarefas
+    .filter(t => t.status !== 'concluida' && t.prazo && t.prazo.slice(0, 10) <= hojeISO)
+    .map(t => {
+      const atrasada = t.prazo < nowDT
+      return {
+        tipo: atrasada ? 'alerta' : 'tarefa',
+        titulo: t.titulo,
+        detalhe: `${nomesResponsaveis(t.responsaveis)} · prazo ${atrasada ? 'venceu' : 'hoje'} às ${shortDateTime(t.prazo).slice(-5)}`,
+        action: detalharTarefaAction(),
+      }
+    })
 }
 
 // Domingo da semana corrente (segunda como início), pra somar "o que vence
@@ -348,12 +375,14 @@ export function render(container) {
     () => mount(chartWrap, buildRevenueChart([]))
   )
 
-  // O Mural junta três fontes assíncronas (financeiro + aniversariantes +
-  // status do bot); cada uma guarda seu estado e redesenha o conjunto quando
-  // muda. Ordem: alerta do bot (operacional, urgente) → pagamentos/recebimentos
-  // (dinheiro, prazo curto) → aniversário (não urgente).
+  // O Mural junta quatro fontes assíncronas (financeiro + tarefas +
+  // aniversariantes + status do bot); cada uma guarda seu estado e redesenha
+  // o conjunto quando muda. Ordem: alerta do bot (operacional, urgente) →
+  // pagamentos/recebimentos (dinheiro, prazo curto) → tarefas (prazo curto)
+  // → aniversário (não urgente).
   let aniversariantes = []
   let botStatus = null
+  let tarefas = []
 
   function renderMural() {
     const recados = []
@@ -361,6 +390,7 @@ export function render(container) {
     if (alertaBot) recados.push(alertaBot)
 
     recados.push(...recadosFinanceiro(lancamentos))
+    recados.push(...recadosTarefas(tarefas))
 
     aniversariantes.forEach(c => {
       const phone = c.phone || ''
@@ -394,6 +424,11 @@ export function render(container) {
     err => console.error('Erro ao acompanhar o status do bot:', err)
   )
 
+  const unsubTarefas = subscribeTarefas(
+    lista => { tarefas = lista; renderMural() },
+    err => console.error('Erro ao acompanhar tarefas:', err)
+  )
+
   // O alerta é por tempo decorrido ("sem sinal há 15min"), então precisa ser
   // reavaliado mesmo sem evento novo do Firestore — senão a tela fica dizendo
   // que está tudo bem enquanto o sinal envelhece.
@@ -403,6 +438,7 @@ export function render(container) {
     unsubBirthday?.()
     unsubFinanceiro?.()
     unsubBotStatus?.()
+    unsubTarefas?.()
     clearInterval(revisaoStatus)
   }
 }

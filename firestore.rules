@@ -124,6 +124,13 @@ service cloud.firestore {
       allow delete: if isMaster(); // mesmo padrão de compras/vendas — limpeza ao reconfirmar pagamento também usa isso
     }
 
+    // ── /tarefas ──────────────────────────────────────────────────────────
+    // Só Vitor e Ana usam o Eixo por enquanto — acesso liberado a qualquer
+    // usuário ativo, sem checar permissions[] (mesmo padrão de /configuracoes).
+    match /tarefas/{id} {
+      allow read, write: if isActive();
+    }
+
     // ── /ofertas (gerada pelo robô de leitura do WhatsApp — somente leitura) ──
     match /ofertas/{id} {
       allow read:  if hasPermission('busca', 'view');
