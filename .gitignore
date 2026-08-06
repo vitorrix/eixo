@@ -10,7 +10,10 @@ dist/
 whatsapp-bot/node_modules/
 whatsapp-bot/auth/
 whatsapp-bot/auth-backup-*/
+whatsapp-bot/auth.bak-*/
+.firebase/
 whatsapp-bot/serviceAccountKey.json
+whatsapp-bot/secretinaServiceAccountKey.json
 whatsapp-bot/qr.png
 
 # planilhas de trabalho (dados de clientes/produtos, não versionar)

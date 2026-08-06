@@ -8,7 +8,8 @@
     "list-groups": "node src/discoverGroups.js",
     "match-fornecedores": "node src/matchFornecedores.js",
     "ingest": "node --env-file=.env src/ingestManual.js",
-    "test-aniversario": "node --env-file=.env src/testAniversario.js"
+    "test-aniversario": "node --env-file=.env src/testAniversario.js",
+    "test-secretina": "node --env-file=.env src/secretina/testSecretina.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
