@@ -51,3 +51,8 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Pages andou lento pra publicar (chegou a passar de "na fila" pra
+          # "publicando" e ainda assim estourou o timeout padrão de 10min) —
+          # dobra o prazo em vez de ficar cancelando no meio do processo.
+          timeout: 1200
