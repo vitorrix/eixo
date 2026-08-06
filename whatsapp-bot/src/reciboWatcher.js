@@ -85,7 +85,7 @@ async function processarRecibo(sock, doc) {
   }
 }
 
-const brl = v => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+const brl = v => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 // Escreve um "eyebrow" (rótulo pequeno maiúsculo + régua fina embaixo) e
 // devolve o y onde o conteúdo da seção deve começar.
