@@ -1,144 +1,12 @@
 import { el, mount } from '../../shared/utils/dom.js'
-import { openModal, openConfirm } from '../../shared/components/Modal.js'
+import { openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { shortDateTime } from '../../shared/utils/formatters.js'
-import {
-  RESPONSAVEIS, nomesResponsaveis,
-  createTarefa, updateTarefa, deleteTarefa, marcarStatus,
-} from './service.js'
-
-const PRIORIDADES = [
-  { key: 'baixa', label: 'Baixa' },
-  { key: 'media', label: 'Média' },
-  { key: 'alta',  label: 'Alta' },
-]
-const STATUS_META = {
-  pendente:     { label: 'Pendente',     cls: 'badge-pendente' },
-  em_andamento: { label: 'Em andamento', cls: 'badge-em-andamento' },
-  concluida:    { label: 'Concluída',    cls: 'badge-concluido' },
-}
-const STATUS_ORDER = ['pendente', 'em_andamento', 'concluida']
-const PRIORIDADE_META = {
-  baixa: { label: 'Baixa', cls: 'badge-prioridade-baixa' },
-  media: { label: 'Média', cls: 'badge-prioridade-media' },
-  alta:  { label: 'Alta',  cls: 'badge-prioridade-alta' },
-}
-// Sentinela alta o bastante pra empurrar tarefa sem prazo pro fim da lista
-// quando ordenado por prazo, sem precisar tratar null/undefined à parte.
-const SEM_PRAZO = '9999-12-31T23:59'
-
-function nowLocalDT() {
-  const d = new Date()
-  const p = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
-}
-
-function isAtrasada(t) {
-  return !!t.prazo && t.status !== 'concluida' && t.prazo < nowLocalDT()
-}
-
-function abrirFormModal(tarefa) {
-  const isEdit = !!tarefa
-
-  openModal({
-    title: isEdit ? 'Editar tarefa' : 'Nova tarefa',
-    size: 'md',
-    renderBody: (body) => {
-      const tituloInp = el('input', { type: 'text', class: 'field-input', placeholder: 'Ex: Ligar pro fornecedor X' })
-      tituloInp.value = tarefa?.titulo || ''
-
-      const descInp = el('textarea', { rows: '3', class: 'field-textarea' })
-      descInp.value = tarefa?.descricao || ''
-
-      const respState = new Set(tarefa?.responsaveis || [])
-      const respBtns = RESPONSAVEIS.map(r => {
-        const btn = el('button', { type: 'button', class: 'status-chip-btn' }, r.nome)
-        if (respState.has(r.uid)) btn.classList.add('active')
-        btn.addEventListener('click', () => {
-          if (respState.has(r.uid)) respState.delete(r.uid)
-          else respState.add(r.uid)
-          btn.classList.toggle('active', respState.has(r.uid))
-        })
-        return btn
-      })
-      const respRow = el('div', { class: 'status-chips-row' }, ...respBtns)
-
-      let prioridade = tarefa?.prioridade || 'media'
-      const prioBtns = PRIORIDADES.map(p => {
-        const btn = el('button', { type: 'button', class: 'status-chip-btn' }, p.label)
-        if (p.key === prioridade) btn.classList.add('active')
-        btn.addEventListener('click', () => {
-          prioridade = p.key
-          prioBtns.forEach(b => b.classList.remove('active'))
-          btn.classList.add('active')
-        })
-        return btn
-      })
-      const prioRow = el('div', { class: 'status-chips-row' }, ...prioBtns)
-
-      const prazoInp = el('input', { type: 'datetime-local', class: 'field-input' })
-      prazoInp.value = tarefa?.prazo || ''
-
-      mount(body,
-        el('div', { class: 'field' }, el('label', {}, 'Título'), tituloInp),
-        el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'Descrição'), descInp),
-        el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'Responsável'), respRow),
-        el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'Prioridade'), prioRow),
-        el('div', { class: 'field', style: 'margin-top:14px' },
-          el('label', {}, 'Prazo (dispara lembrete no WhatsApp nesse horário)'), prazoInp),
-      )
-
-      body._getPayload = () => ({
-        titulo: tituloInp.value.trim(),
-        descricao: descInp.value.trim(),
-        responsaveis: [...respState],
-        prioridade,
-        prazo: prazoInp.value,
-      })
-    },
-    footer: (close, footerEl) => {
-      const cancelBtn = el('button', { class: 'btn btn-ghost', type: 'button' }, 'Cancelar')
-      const saveBtn   = el('button', { class: 'btn btn-primary', type: 'button' }, isEdit ? 'Salvar' : 'Criar tarefa')
-
-      cancelBtn.addEventListener('click', close)
-      saveBtn.addEventListener('click', async () => {
-        const body = document.querySelector('.modal-body')
-        const payload = body?._getPayload?.()
-        if (!payload) return
-
-        if (!payload.titulo) return toastError('Informe o título da tarefa.')
-        if (!payload.responsaveis.length) return toastError('Marque ao menos um responsável.')
-
-        saveBtn.disabled = true
-        saveBtn.textContent = 'Salvando...'
-        try {
-          if (isEdit) {
-            await updateTarefa(tarefa.id, payload)
-            toastSuccess('Tarefa atualizada.')
-          } else {
-            await createTarefa(payload)
-            toastSuccess('Tarefa criada.')
-          }
-          close()
-        } catch (err) {
-          console.error(err)
-          toastError('Erro ao salvar tarefa.')
-          saveBtn.disabled = false
-          saveBtn.textContent = isEdit ? 'Salvar' : 'Criar tarefa'
-        }
-      })
-
-      footerEl.append(cancelBtn, saveBtn)
-    },
-  })
-}
-
-function proximoStatus(atual) {
-  const i = STATUS_ORDER.indexOf(atual)
-  return STATUS_ORDER[(i + 1) % STATUS_ORDER.length]
-}
+import { RESPONSAVEIS, nomesResponsaveis, deleteTarefa, marcarStatus } from './service.js'
+import { abrirTarefaFormModal } from './form.js'
+import { STATUS_META, STATUS_ORDER, PRIORIDADE_META, SEM_PRAZO, isAtrasada, proximoStatus } from './constants.js'
 
 export function renderTarefasList(container, tarefas) {
   let filtroResp = 'todos' // 'todos' | uid
@@ -163,7 +31,7 @@ export function renderTarefasList(container, tarefas) {
   const concluidasLabel = el('label', { class: 'perm-label' }, concluidasCheck, 'Mostrar concluídas')
 
   const newBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Nova Tarefa')
-  newBtn.addEventListener('click', () => abrirFormModal())
+  newBtn.addEventListener('click', () => abrirTarefaFormModal())
 
   const countBadge = el('span', { class: 'count-badge' })
   const toolbar = el('div', { class: 'toolbar' },
@@ -234,7 +102,7 @@ export function renderTarefasList(container, tarefas) {
       const actions = renderRowActions({
         canEdit: true,
         canDelete: true,
-        onEdit: () => abrirFormModal(t),
+        onEdit: () => abrirTarefaFormModal(t),
         onDelete: () => {
           openConfirm({
             title: 'Excluir tarefa?',

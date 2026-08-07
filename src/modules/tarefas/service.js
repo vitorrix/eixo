@@ -6,13 +6,20 @@ const COL = 'tarefas'
 
 // Só Vitor e Ana usam o Eixo na Baruk hoje — lista fixa em vez de consultar
 // /users (que também tem outras contas, ex: funcionária de outra loja).
+// `cor` identifica cada um visualmente (avatar do widget do Dashboard) —
+// verde-petróleo (cor da marca) pro Vitor, âmbar (mesmo tom já usado em
+// aniversário) pra Ana, só pra não repetir a mesma cor pros dois.
 export const RESPONSAVEIS = [
-  { uid: 'YtNG0UQEo6WAc8c75qvg1yR2NwW2', nome: 'Vitor' },
-  { uid: '9tYvt0hqmsSumb0ysqLJPprmS0J3', nome: 'Ana' },
+  { uid: 'YtNG0UQEo6WAc8c75qvg1yR2NwW2', nome: 'Vitor', cor: '#123C43' },
+  { uid: '9tYvt0hqmsSumb0ysqLJPprmS0J3', nome: 'Ana',   cor: '#f59e0b' },
 ]
 
 export function nomeResponsavel(uid) {
   return RESPONSAVEIS.find(r => r.uid === uid)?.nome || '—'
+}
+
+export function responsavel(uid) {
+  return RESPONSAVEIS.find(r => r.uid === uid) || null
 }
 
 export function nomesResponsaveis(uids = []) {

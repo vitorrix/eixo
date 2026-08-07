@@ -88,7 +88,6 @@ const NAV_ICONS = {
 const NAV_ITEMS = [
   { path: '/',              label: 'Dashboard',      module: null,            iconKey: 'dashboard'     },
   { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro' },
-  { path: '/tarefas',       label: 'Tarefas',        module: null,            iconKey: 'tarefas' },
   { path: '/orcamentos',    label: 'Orçamentos',     module: null,            iconKey: 'orcamentos'    },
   { path: '/pedidos',       label: 'Pedidos',        module: 'pedidos',       iconKey: 'pedidos'       },
   { path: '/compras',       label: 'Compras',        module: 'compras',       iconKey: 'compras'       },
@@ -248,9 +247,25 @@ export function renderLayout(container, profile) {
   const helpFab = el('button', { class: 'help-fab', title: 'Dicas rápidas' }, '?')
   helpFab.addEventListener('click', openHelp)
 
+  // Disponível em qualquer tela — não precisa navegar até Tarefas pra
+  // registrar uma. Import dinâmico: o form de tarefa só pesa no bundle de
+  // quem realmente clica, igual o lazy-load das rotas do router.
+  const tarefaFabIcon = svgEl('svg', {
+    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    'stroke-width': '2.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    width: '20', height: '20',
+  })
+  tarefaFabIcon.append(svgEl('path', { d: 'M12 5v14M5 12h14' }))
+  const tarefaFab = el('button', { class: 'tarefa-fab', title: 'Nova tarefa' }, tarefaFabIcon)
+  tarefaFab.addEventListener('click', async () => {
+    const { abrirTarefaFormModal } = await import('../modules/tarefas/form.js')
+    abrirTarefaFormModal()
+  })
+
   const main = el('main', { class: 'main-area' },
     topHeader,
     el('div', { class: 'main-content' }, moduleContent),
+    tarefaFab,
     helpFab,
   )
 

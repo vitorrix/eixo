@@ -1119,6 +1119,114 @@ html, body {
   font-style: italic;
 }
 
+/* ── Dashboard — Widget de Tarefas ──────────────
+   Reaproveita .mural-card/.mural-header/.mural-title/.count-badge (mesmo
+   visual de card já usado no Mural) e soma só o que é específico daqui:
+   lista em estilo checklist, avatar por responsável e o botão de status. */
+.tarefa-widget-wrap { display: flex; }
+.tarefa-widget-card { width: 100%; }
+
+.tarefa-widget-add-btn { margin-left: auto; }
+
+.tarefa-widget-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.tarefa-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background .15s;
+}
+.tarefa-row:hover { background: var(--color-bg); }
+
+.tarefa-row-body { flex: 1; min-width: 0; }
+
+.tarefa-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tarefa-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.tarefa-row-avatars { display: flex; gap: 4px; margin-left: auto; }
+
+.tarefa-avatar-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* Círculo de status clicável — anel vazio (pendente), meio preenchido
+   (em andamento); ao concluir a tarefa some da lista (widget só mostra
+   as em aberto), então não precisa de um terceiro estado visual aqui. */
+.tarefa-status-toggle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color .15s, background .15s;
+}
+.tarefa-status-toggle:hover { border-color: #10B981; }
+.tarefa-status-toggle--meio {
+  border-color: #3b82f6;
+  background: linear-gradient(90deg, #3b82f6 50%, transparent 50%);
+}
+
+.tarefa-widget-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 0;
+  color: var(--color-muted);
+  text-align: center;
+  font-size: 13px;
+}
+
+.tarefa-widget-footer-link {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: #10B981;
+  text-decoration: none;
+}
+.tarefa-widget-footer-link:hover { text-decoration: underline; }
+
 /* ── Configurações module ────────────────────── */
 .config-tab-bar {
   display: flex;
@@ -2372,6 +2480,12 @@ html, body {
 /* ── Help FAB ───────────────────────────────────── */
 .help-fab { position: fixed; bottom: 28px; right: 28px; width: 44px; height: 44px; border-radius: 50%; background: var(--color-sidebar-bg); color: #fff; border: none; font-size: 20px; font-weight: 900; font-family: var(--font); cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.25); display: flex; align-items: center; justify-content: center; transition: transform .15s, opacity .15s; z-index: 900; }
 .help-fab:hover { transform: scale(1.1); opacity: .9; }
+
+/* Empilhado acima do help-fab — mesmo raio, cor de destaque (verde
+   esmeralda) pra se diferenciar do "?" e chamar atenção como ação
+   principal (criar tarefa de qualquer tela, sem precisar navegar). */
+.tarefa-fab { position: fixed; bottom: 84px; right: 28px; width: 48px; height: 48px; border-radius: 50%; background: var(--color-primary); color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(16,185,129,.4); display: flex; align-items: center; justify-content: center; transition: transform .15s, box-shadow .15s; z-index: 900; }
+.tarefa-fab:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(16,185,129,.5); }
 
 /* ── Help Panel (secretina) ─────────────────────── */
 .help-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 1000; opacity: 0; pointer-events: none; transition: opacity .2s; }
