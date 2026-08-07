@@ -2,6 +2,7 @@ import { collection, onSnapshot, query, where, getDocs } from 'firebase/firestor
 import { db } from '../../firebase.js'
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate, maskMoeda, moedaParaNumero, toNumero } from '../../shared/utils/formatters.js'
+import { iconForForma } from '../../shared/utils/formaPagamento.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
@@ -41,21 +42,6 @@ const PAID_STATUSES   = new Set(['pago', 'pago_parcial', 'motoboy', 'retirada', 
 const ACTIVE_STATUSES = new Set(['negociando', 'aguardando_pagamento'])
 const DELIVERY_STATUSES = new Set(['motoboy', 'retirada', 'correio'])
 
-// A forma de pagamento grava o nome configurado em Configurações (ex: "Cartão
-// de Crédito"), não uma chave fixa — então o ícone é por palavra-chave dentro
-// do nome, não por igualdade exata. Cobre qualquer nome que o Vitor configurar
-// (ex: "Cartão de Débito" também bate em "cartão"), com um ícone genérico pra
-// forma que não bater em nada.
-const PAG_ICON_RULES = [
-  [/pix/i,               '🏦'],
-  [/dinheiro|cash/i,      '💰'],
-  [/cart[aã]o|cr[eé]dito|d[eé]bito/i, '💳'],
-  [/link/i,               '🏪'],
-  [/boleto/i,              '📄'],
-]
-function iconForForma(nome) {
-  return PAG_ICON_RULES.find(([re]) => re.test(nome))?.[1] || '💵'
-}
 
 // ── Ícones SVG ────────────────────────────────────────────────────────────────
 const PATHS = {

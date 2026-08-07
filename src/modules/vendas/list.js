@@ -2,6 +2,7 @@ import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'fire
 import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate, toNumero } from '../../shared/utils/formatters.js'
+import { iconesFormaPagamento } from '../../shared/utils/formaPagamento.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
@@ -31,8 +32,6 @@ const ENTREGA_META = {
 }
 
 const ENTREGA_ORDER = ['aguardando', 'retirada', 'motoboy', 'correio', 'entregue']
-
-const PAG_LABEL = { pix: '🏦 PIX', dinheiro: '💰 Dinheiro', cartao: '💳 Cartão', link: '🏪 Link' }
 
 // Venda vinda de pedido tem vários itens (v.itens); venda avulsa tem só um
 // produto (v.produto). Normaliza pra sempre trabalhar com uma lista.
@@ -154,7 +153,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         case 'cliente': return v.cliente || ''
         case 'produto': return vendaProdutoResumo(v)
         case 'valor':   return toNumero(v.valorVenda)
-        case 'pgto':    return PAG_LABEL[v.formaPagamento] || v.formaPagamento || ''
+        case 'pgto':    return v.formaPagamento || ''
         case 'entrega': return ENTREGA_META[v.statusEntrega]?.label || v.statusEntrega || ''
         case 'recibo':  return v.reciboEmitido ? 1 : 0
         default:        return ''
@@ -261,7 +260,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       }
 
       const dateStr = v.criadoEm?.toDate ? shortDate(v.criadoEm.toDate().toISOString().slice(0,10)) : '—'
-      const pagLabel = PAG_LABEL[v.formaPagamento] || v.formaPagamento || '—'
+      const pagIcones = iconesFormaPagamento(v.formaPagamento)
 
       const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
         canEdit: canEdit && !v.pedidoId, // venda de pedido se edita pelo Pedido, não aqui
@@ -273,9 +272,9 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
         el('td', { class: 'td-name', title: v.cliente || '' }, v.cliente || '—'),
-        el('td', { class: 'td-name', title: vendaProdutoResumo(v) }, vendaProdutoResumo(v)),
+        el('td', { class: 'td-produto-nome', title: vendaProdutoResumo(v) }, vendaProdutoResumo(v)),
         el('td', { class: 'td-money' }, brl(toNumero(v.valorVenda))),
-        el('td', {}, pagLabel),
+        el('td', { class: 'td-pgto', title: v.formaPagamento || '' }, pagIcones),
         el('td', {}, entregaSel),
         reciboCell,
         ...(canEdit || canDelete ? [actionsCell] : []),
@@ -494,7 +493,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   // ── Detalhes (consulta) ──────────────────────────────────────────────────
   function abrirDetalhesVendaModal(v) {
     const entregaMeta = ENTREGA_META[v.statusEntrega] || ENTREGA_META.aguardando
-    const pagLabel = PAG_LABEL[v.formaPagamento] || v.formaPagamento || '—'
+    const pagLabel = v.formaPagamento || '—'
     const dateStr = v.criadoEm?.toDate ? shortDate(v.criadoEm.toDate().toISOString().slice(0, 10)) : '—'
     const podeRecibo = v.statusEntrega === 'entregue'
 

@@ -8,8 +8,6 @@ import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 import { dataVenda, vendasNoPeriodo, indexComprasPorPedido, itensComCusto } from './vendasCalc.js'
 
-const PAG_LABEL = { pix: 'PIX', dinheiro: 'Dinheiro', cartao: 'Cartão', link: 'Link' }
-
 export function renderVendasDetalhadas(container) {
   mount(container, el('div', { class: 'loading' }, 'Carregando vendas...'))
   return _init(container)
@@ -97,7 +95,7 @@ function buildRelatorio(vendas, compras, produtos, periodo) {
       el('td', { class: 'td-money' }, brl(lucroVenda)),
     ))
 
-    const pag = PAG_LABEL[v.formaPagamento] || v.formaPagamento || '—'
+    const pag = v.formaPagamento || '—'
     cards.push(el('div', { class: 'venda-det-card' },
       el('div', { class: 'venda-det-head' },
         el('span', { class: 'venda-det-cliente' }, v.cliente || '—'),

@@ -23,8 +23,6 @@ const TIPO_META = {
   pagar:   { label: 'Pagamentos',   novo: '+ Novo Pagamento',    situacaoOk: 'Paga',      contatoLabel: 'Pago para' },
 }
 
-const PAG_LABEL = { pix: '🏦 PIX', dinheiro: '💰 Dinheiro', cartao: '💳 Cartão', link: '🏪 Link' }
-
 function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -279,7 +277,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
         ['Valor', brl(toNumero(l.valor))],
         ['Categoria', l.categoria],
         ['Conta', l.conta],
-        ['Forma de pagamento', PAG_LABEL[l.formaPagamento] || l.formaPagamento],
+        ['Forma de pagamento', l.formaPagamento],
         ['Vencimento', l.dataVencimento ? shortDate(l.dataVencimento) : '—'],
         ['Situação', l.liquidado ? meta.situacaoOk : 'Pendente'],
         l.numeroDocumento ? ['Nº do documento', l.numeroDocumento] : null,

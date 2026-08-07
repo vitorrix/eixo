@@ -286,7 +286,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
         el('td', {}, c.cliente || '—'),
-        el('td', { class: 'td-name', title: compraProdutoResumo(c) }, compraProdutoResumo(c)),
+        el('td', { class: 'td-produto-nome', title: compraProdutoResumo(c) }, compraProdutoResumo(c)),
         el('td', {}, c.fornecedor || '—'),
         el('td', { class: 'td-money' }, brl(toNumero(c.custo))),
         el('td', {}, statusSel),
