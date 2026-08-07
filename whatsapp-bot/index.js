@@ -7,7 +7,6 @@ import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
 import { watchRecibosFila } from './src/reciboWatcher.js'
 import { registrarStatus, notificarMac } from './src/botStatus.js'
 import { checkAndSendAniversarios } from './src/aniversario.js'
-import { checkAndSendLembretesTarefas } from './src/tarefasLembrete.js'
 import { handleSecretinaMessage } from './src/secretina/handler.js'
 
 // Uma promise rejeitada sem .catch() em qualquer lugar (inclusive dentro do
@@ -30,9 +29,6 @@ const HEARTBEAT_MS = 5 * 60 * 1000 // 5min
 // depois das 10h — pega no próximo tick em vez de esperar o dia seguinte.
 const ANIVERSARIO_CHECK_MS = 10 * 60 * 1000 // 10min
 const ANIVERSARIO_HORA = 10
-// Tarefa tem horário exato (não só o dia, como aniversário), então o
-// intervalo é mais curto pra não atrasar o lembrete em relação ao prazo.
-const TAREFAS_CHECK_MS = 5 * 60 * 1000 // 5min
 
 let groups = JSON.parse(readFileSync(GROUPS_PATH))
 function reloadGroups() {
@@ -114,7 +110,6 @@ let heartbeatStarted = false
 let syncedOnce = false
 let aniversarioCheckStarted = false
 let ultimoDiaAniversario = ''
-let tarefasCheckStarted = false
 
 // Estado real da conexão. O heartbeat antigo gravava `conectado: true` fixo, sem
 // nunca olhar o socket: na madrugada de 21/07/26 o bot flapou a noite toda e o
@@ -196,17 +191,6 @@ async function onOpen(sock) {
     setInterval(checarAniversarios, ANIVERSARIO_CHECK_MS)
     checarAniversarios() // cobre o boot já acontecendo depois das 10h
   }
-  if (!tarefasCheckStarted) {
-    tarefasCheckStarted = true
-    setInterval(checarTarefas, TAREFAS_CHECK_MS)
-    checarTarefas() // cobre o boot já acontecendo depois do prazo
-  }
-}
-
-function checarTarefas() {
-  checkAndSendLembretesTarefas(() => currentSock, db).catch(err => {
-    console.error('[tarefas] erro ao checar/enviar lembretes:', err)
-  })
 }
 
 function hojeLocalISO(d = new Date()) {

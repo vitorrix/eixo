@@ -55,7 +55,7 @@ export function abrirTarefaFormModal(tarefa) {
         el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'Responsável'), respRow),
         el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'Prioridade'), prioRow),
         el('div', { class: 'field', style: 'margin-top:14px' },
-          el('label', {}, 'Prazo (dispara lembrete no WhatsApp nesse horário)'), prazoInp),
+          el('label', {}, 'Prazo'), prazoInp),
       )
 
       body._getPayload = () => ({

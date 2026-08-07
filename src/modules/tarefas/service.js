@@ -38,25 +38,21 @@ export function subscribeTarefas(callback, onError) {
 export async function createTarefa(data) {
   const { uid } = getCurrentProfile()
   return addDoc(collection(db, COL), {
-    titulo:          (data.titulo || '').trim(),
-    descricao:       (data.descricao || '').trim(),
-    responsaveis:    data.responsaveis || [],
-    prioridade:      data.prioridade || 'media',
-    status:          'pendente',
-    prazo:           data.prazo || '',
-    lembreteEnviado: false,
-    criadoPor:       uid,
-    criadoEm:        serverTimestamp(),
-    atualizadoEm:    serverTimestamp(),
-    concluidaEm:     null,
+    titulo:       (data.titulo || '').trim(),
+    descricao:    (data.descricao || '').trim(),
+    responsaveis: data.responsaveis || [],
+    prioridade:   data.prioridade || 'media',
+    status:       'pendente',
+    prazo:        data.prazo || '',
+    criadoPor:    uid,
+    criadoEm:     serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+    concluidaEm:  null,
   })
 }
 
 export async function updateTarefa(id, fields) {
-  const patch = { ...fields, atualizadoEm: serverTimestamp() }
-  // Prazo mudou → reabre a janela do lembrete pro bot mandar de novo no horário novo.
-  if ('prazo' in fields) patch.lembreteEnviado = false
-  return updateDoc(doc(db, COL, id), patch)
+  return updateDoc(doc(db, COL, id), { ...fields, atualizadoEm: serverTimestamp() })
 }
 
 export async function marcarStatus(id, status) {
