@@ -4,7 +4,7 @@ import { getCurrentProfile } from '../../auth/session.js'
 import { el, mount } from '../utils/dom.js'
 import { brl, fullDate, maskPhone, linhasEndereco, toNumero } from '../utils/formatters.js'
 import { proximoNumeroRecibo } from '../../modules/configuracoes/service.js'
-import { produtoLabel } from '../../modules/pedidos/service.js'
+import { produtoLabel, normalizarFormasPagamento } from '../../modules/pedidos/service.js'
 
 const PAG_TEXTO = { pix: 'Pix', dinheiro: 'Dinheiro', cartao: 'Cartão', link: 'Link' }
 const PAID_STATUSES = new Set(['pago', 'motoboy', 'retirada', 'correio', 'entregue'])
@@ -151,7 +151,7 @@ export function montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNo
       numParcela:     '1/1',
       valor:          totalValor,
       dataPgto:       fullDate(pedido.dataContato),
-      formaPagamento: (pedido.formasPagamento || []).map(f => PAG_TEXTO[f] || f).join(' + ') || '—',
+      formaPagamento: normalizarFormasPagamento(pedido).map(f => f.nome).filter(Boolean).join(' + ') || '—',
       situacao:       pago ? 'Já pago' : 'Pendente',
     }],
     observacoes: montarObservacoesPedido(pedido, comprasPedido),
