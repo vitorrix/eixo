@@ -2331,9 +2331,10 @@ html, body {
 
 /* ── Orçamentos ──────────────────────────────────────────────────── */
 .orc-wrap { max-width: 1080px; }
-.orc-tabs { display: flex; gap: 4px; background: var(--color-sidebar-bg); border-radius: 10px; padding: 4px; width: fit-content; margin-bottom: 20px; }
-.orc-tab-btn { padding: 9px 20px; background: transparent; border: none; color: rgba(255,255,255,.45); font-weight: 700; font-size: 13px; font-family: var(--font); border-radius: 7px; cursor: pointer; transition: all .15s; }
-.orc-tab-btn.active { background: var(--color-primary); color: #fff; }
+/* .config-tab-bar (mesmo componente do Financeiro/Configurações) é
+   left-aligned por padrão — aqui centralizado porque o conteúdo abaixo
+   (.orc-cols) também é centralizado, então os dois ficam alinhados. */
+.orc-tabs-center { display: flex; justify-content: center; margin-bottom: 20px; }
 .orc-section { display: none; }
 .orc-section.active { display: block; }
 .orc-cols { display: flex; flex-direction: column; max-width: 680px; margin: 0 auto; gap: 0; }

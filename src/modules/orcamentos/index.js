@@ -755,8 +755,8 @@ export async function render(container) {
   const { sec: parcSec, cliInp: parcCli, getItems: parcGetItems, syncItems: parcSyncItems } = buildParc(prodData)
   const { sec: trocaSec, cliInp: trocaCli, getNovos: trocaGetNovos, syncNovos: trocaSyncNovos } = buildTroca(prodData)
 
-  const tabParc = el('button', { type: 'button', class: 'orc-tab-btn active' }, '💳 Parcelamento')
-  const tabTroc = el('button', { type: 'button', class: 'orc-tab-btn' }, '🔄 Troca')
+  const tabParc = el('button', { type: 'button', class: 'config-tab-btn active' }, 'Parcelamento')
+  const tabTroc = el('button', { type: 'button', class: 'config-tab-btn' }, 'Troca')
 
   tabParc.addEventListener('click', () => {
     parcCli.value = trocaCli.value
@@ -773,7 +773,7 @@ export async function render(container) {
 
   mount(container,
     el('div', { class: 'orc-wrap' },
-      el('div', { class: 'orc-tabs' }, tabParc, tabTroc),
+      el('div', { class: 'orc-tabs-center' }, el('div', { class: 'config-tab-bar' }, tabParc, tabTroc)),
       parcSec,
       trocaSec,
     )
