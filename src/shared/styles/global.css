@@ -1463,7 +1463,7 @@ html, body {
 .money-margem { font-weight: 700; color: #10b981; }
 
 /* Produto rows in table */
-.td-produtos  { vertical-align: top; min-width: 200px; }
+.td-produtos  { vertical-align: top; min-width: 160px; }
 .pedido-produto-line {
   display: flex;
   align-items: baseline;
@@ -1475,7 +1475,7 @@ html, body {
 .pedido-produto-line .dot { font-size: 8px; color: var(--color-muted); position: relative; top: -1px; }
 .pedido-produto-nome {
   display: inline-block;
-  max-width: 260px;
+  max-width: 180px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
