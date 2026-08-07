@@ -12,6 +12,7 @@ import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 
 const STATUS_META = {
@@ -172,13 +173,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   newBtn.addEventListener('click', () => abrirNovaCompraModal())
 
   const countBadge = el('span', { class: 'count-badge' })
-  const toolbar = el('div', { class: 'toolbar' },
-    el('div', { style: 'display:flex;gap:10px;align-items:center' },
-      newBtn,
-      picker.el,
-    ),
-    countBadge
-  )
+  const toolbar = toolbarCard(newBtn, searchWithIcon(searchInp), toolbarMeta(picker.el, countBadge))
 
   // ── Tabela ─────────────────────────────────────────────────────────────────
   const sortHead = createSortableHead([
@@ -642,7 +637,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
   }
 
   const pageSwitch = createFullPageSwitcher(container)
-  mount(pageSwitch.listWrap, kpisRow, toolbar, searchInp, tableWrap, emptyState)
+  mount(pageSwitch.listWrap, kpisRow, toolbar, tableWrap, emptyState)
   refresh()
 
   return {

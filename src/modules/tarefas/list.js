@@ -6,6 +6,7 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { shortDateTime } from '../../shared/utils/formatters.js'
 import { RESPONSAVEIS, nomesResponsaveis, deleteTarefa, marcarStatus } from './service.js'
 import { abrirTarefaFormModal } from './form.js'
+import { toolbarCard, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { STATUS_META, STATUS_ORDER, PRIORIDADE_META, SEM_PRAZO, isAtrasada, proximoStatus } from './constants.js'
 
 export function renderTarefasList(container, tarefas) {
@@ -34,10 +35,7 @@ export function renderTarefasList(container, tarefas) {
   newBtn.addEventListener('click', () => abrirTarefaFormModal())
 
   const countBadge = el('span', { class: 'count-badge' })
-  const toolbar = el('div', { class: 'toolbar' },
-    el('div', { style: 'display:flex;gap:16px;align-items:center' }, newBtn, concluidasLabel),
-    countBadge,
-  )
+  const toolbar = toolbarCard(newBtn, concluidasLabel, toolbarMeta(countBadge))
 
   const sortHead = createSortableHead([
     { key: 'prioridade', label: 'Prioridade' },

@@ -17,6 +17,7 @@ import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 import { createChipSelect } from '../../shared/components/ChipSelect.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 import { patchPedido } from '../pedidos/service.js'
 import { createVenda, patchVenda, deleteVenda } from './service.js'
@@ -132,13 +133,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   newBtn.addEventListener('click', () => abrirNovaVendaModal())
 
   const countBadge = el('span', { class: 'count-badge' })
-  const toolbar = el('div', { class: 'toolbar' },
-    el('div', { style: 'display:flex;gap:10px;align-items:center' },
-      newBtn,
-      picker.el,
-    ),
-    countBadge
-  )
+  const toolbar = toolbarCard(newBtn, searchWithIcon(searchInp), toolbarMeta(picker.el, countBadge))
 
   // ── Tabela ─────────────────────────────────────────────────────────────────
   const sortHead = createSortableHead([
@@ -613,7 +608,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   }
 
   const pageSwitch = createFullPageSwitcher(container)
-  mount(pageSwitch.listWrap, kpisRow, toolbar, searchInp, tableWrap, emptyState)
+  mount(pageSwitch.listWrap, kpisRow, toolbar, tableWrap, emptyState)
   refresh()
 
   return {

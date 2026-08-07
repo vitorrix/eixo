@@ -10,6 +10,7 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 import { createChipSelect } from '../../shared/components/ChipSelect.js'
 import { presetRange } from '../../shared/utils/periodo.js'
@@ -100,13 +101,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   newBtn.addEventListener('click', () => abrirFormModal())
 
   const countBadge = el('span', { class: 'count-badge' })
-  const toolbar = el('div', { class: 'toolbar' },
-    el('div', { style: 'display:flex;gap:10px;align-items:center' },
-      newBtn,
-      picker.el,
-    ),
-    countBadge
-  )
+  const toolbar = toolbarCard(newBtn, searchWithIcon(searchInp), toolbarMeta(picker.el, countBadge))
 
   // ── Tabela ───────────────────────────────────────────────────────────────
   const sortHead = createSortableHead([
@@ -464,7 +459,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   }
 
   const pageSwitch = createFullPageSwitcher(container)
-  mount(pageSwitch.listWrap, kpisRow, tabBar, toolbar, searchInp, tableWrap, emptyState)
+  mount(pageSwitch.listWrap, kpisRow, tabBar, toolbar, tableWrap, emptyState)
   refresh()
 
   return {

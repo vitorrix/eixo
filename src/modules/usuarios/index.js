@@ -4,6 +4,7 @@ import { collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp } from 
 import { db, firebaseConfig } from '../../firebase.js'
 import { isMaster } from '../../auth/session.js'
 import { el, mount } from '../../shared/utils/dom.js'
+import { toolbarCard } from '../../shared/components/ToolbarCard.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
@@ -222,10 +223,7 @@ export function render(container) {
   addBtn.addEventListener('click', openUserForm)
 
   mount(container,
-    el('div', { class: 'toolbar' },
-      el('h2', {}, 'Usuários'),
-      addBtn,
-    ),
+    toolbarCard(addBtn),
     el('div', { class: 'table-wrapper' }, table),
   )
 

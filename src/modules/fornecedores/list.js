@@ -1,4 +1,5 @@
 import { el, mount } from '../../shared/utils/dom.js'
+import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { can } from '../../auth/session.js'
 import { findCountryByDial, maskPhoneForCountry } from '../../shared/utils/countries.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
@@ -23,14 +24,12 @@ export function renderFornecedorList(container, fornecedores) {
   })
 
   const countBadge = el('span', { class: 'count-badge' }, `${fornecedores.length}`)
-  const title = el('h2', {}, 'Fornecedores ', countBadge)
-  const toolbar = el('div', { class: 'toolbar' }, title)
 
-  if (canCreate) {
-    const addBtn = el('button', { class: 'btn btn-primary', type: 'button' }, '+ Novo Fornecedor')
-    addBtn.addEventListener('click', () => openFornecedorModal(null))
-    toolbar.appendChild(addBtn)
-  }
+  const addBtn = el('button', { class: 'btn btn-primary', type: 'button' }, '+ Novo Fornecedor')
+  addBtn.style.display = canCreate ? '' : 'none'
+  addBtn.addEventListener('click', () => openFornecedorModal(null))
+
+  const toolbar = toolbarCard(addBtn, searchWithIcon(searchInput), toolbarMeta(countBadge))
 
   let sortCol = 'name'
   let sortDir = 'asc'
@@ -95,7 +94,7 @@ export function renderFornecedorList(container, fornecedores) {
     el('p', {}, '😕 Nenhum fornecedor encontrado.')
   )
 
-  mount(container, toolbar, searchInput, tableWrapper, emptyState)
+  mount(container, toolbar, tableWrapper, emptyState)
 
   function renderRows(list) {
     countBadge.textContent = list.length

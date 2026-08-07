@@ -1,4 +1,5 @@
 import { el, mount } from '../../shared/utils/dom.js'
+import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { can } from '../../auth/session.js'
 import { maskCPF, maskCNPJ, maskPhone } from '../../shared/utils/formatters.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
@@ -21,7 +22,6 @@ export function renderClienteList(container, clientes) {
   })
 
   const countBadge = el('span', { class: 'count-badge' }, `${clientes.length}`)
-  const title = el('h2', {}, 'Clientes ', countBadge)
 
   const addBtn = el('button', { class: 'btn btn-primary', type: 'button' }, '+ Novo Cliente')
   addBtn.style.display = canCreate ? '' : 'none'
@@ -113,10 +113,10 @@ export function renderClienteList(container, clientes) {
     }
   })
 
-  const toolbar = el('div', { class: 'toolbar' },
-    el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' },
-      title, addBtn, importBtn, xlsInput),
-    searchInput
+  const toolbar = toolbarCard(
+    el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, addBtn, importBtn, xlsInput),
+    searchWithIcon(searchInput),
+    toolbarMeta(countBadge),
   )
 
   // ── Tabela ───────────────────────────────────────────────────────────────

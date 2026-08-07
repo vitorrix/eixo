@@ -21,6 +21,7 @@ import {
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 
 // ── Status ────────────────────────────────────────────────────────────────────
@@ -175,17 +176,6 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   )
 
   // ── Toolbar ───────────────────────────────────────────────────────────────
-  // Um card só (mesmo peso visual de .mural-card/.table-wrapper) em vez de
-  // botão + período soltos numa linha e a busca solta embaixo — sem isso os
-  // controles ficavam sem "casa" na página, boiando no fundo cinza entre os
-  // KPIs e a tabela, os dois já dentro de card.
-  const searchIcon = svgEl('svg', {
-    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-    'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-    width: '15', height: '15', class: 'toolbar-card-search-icon',
-  })
-  searchIcon.append(svgEl('path', { d: 'M11 19a8 8 0 100-16 8 8 0 000 16z' }), svgEl('path', { d: 'M21 21l-4.35-4.35' }))
-
   const searchInp = el('input', { type: 'text', class: 'search-input', placeholder: 'Buscar por cliente ou produto...' })
   searchInp.addEventListener('input', () => refresh())
 
@@ -194,11 +184,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   newBtn.addEventListener('click', () => abrirFormularioPedido(null))
 
   const countBadge = el('span', { class: 'count-badge' })
-  const toolbar = el('div', { class: 'toolbar-card' },
-    newBtn,
-    el('div', { class: 'toolbar-card-search' }, searchIcon, searchInp),
-    el('div', { class: 'toolbar-card-meta' }, picker.el, countBadge),
-  )
+  const toolbar = toolbarCard(newBtn, searchWithIcon(searchInp), toolbarMeta(picker.el, countBadge))
 
   // ── Tabela ────────────────────────────────────────────────────────────────
   const SORT_DEFS = [

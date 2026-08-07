@@ -1,4 +1,5 @@
 import { el, mount } from '../../shared/utils/dom.js'
+import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { brl } from '../../shared/utils/formatters.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
@@ -115,10 +116,10 @@ export function renderProdutoList(container, produtos) {
 
   const countBadge = el('span', { class: 'count-badge' })
 
-  const toolbar = el('div', { class: 'toolbar' },
-    el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' },
-      newBtn, importBtn, xlsInput, searchInp),
-    countBadge
+  const toolbar = toolbarCard(
+    el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' }, newBtn, importBtn, xlsInput),
+    searchWithIcon(searchInp),
+    toolbarMeta(countBadge),
   )
 
   // ── Tabela ────────────────────────────────────────────────────────────────
