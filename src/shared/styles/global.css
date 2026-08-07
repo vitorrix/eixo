@@ -539,6 +539,29 @@ html, body {
   color: var(--color-muted);
 }
 
+/* ── Toolbar card (protótipo Pedidos) ───────────
+   Junta botão de ação + busca + período + contador num card só, com o
+   mesmo peso visual de .mural-card/.table-wrapper — antes ficavam soltos
+   direto no fundo cinza da página, sem "casa", entre os KPIs e a tabela
+   (que já são card). Aprovado aqui, replica pro resto (Compras, Vendas,
+   Financeiro...). */
+.toolbar-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.toolbar-card-search { position: relative; flex: 1 1 200px; min-width: 160px; }
+.toolbar-card-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--color-muted); pointer-events: none; }
+.toolbar-card-search .search-input { width: 100%; max-width: none; margin-bottom: 0; padding-left: 32px; }
+.toolbar-card-meta { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+
 /* ── Search ──────────────────────────────────── */
 .search-input {
   width: 100%;
