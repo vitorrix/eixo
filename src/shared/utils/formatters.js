@@ -46,10 +46,18 @@ export function brl(v) {
 }
 
 // Máscara pra campo de custo/valor digitado — número contínuo (1234) vira
-// "R$ 1.234" enquanto digita, sem casas decimais (mesmo padrão do brl()).
+// "R$ 1.234" enquanto digita, sem casas decimais. Formata sozinha (não chama
+// brl()) de propósito: brl() agora inclui ",00" no texto exibido, e como esta
+// função relê os dígitos do próprio valor já mascarado a cada tecla, os
+// zeros dos centavos eram reabsorvidos como se o usuário tivesse digitado —
+// o número inflava a cada tecla (bug real: "R$ 50.030.000.003,00").
 export function maskMoeda(v) {
   const digits = rawDigits(v || '')
-  return digits ? brl(parseInt(digits, 10)) : ''
+  if (!digits) return ''
+  return parseInt(digits, 10).toLocaleString('pt-BR', {
+    style: 'currency', currency: 'BRL',
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  })
 }
 
 export function moedaParaNumero(v) {
