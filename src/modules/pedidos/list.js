@@ -3,6 +3,7 @@ import { db } from '../../firebase.js'
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate, maskMoeda, moedaParaNumero, toNumero } from '../../shared/utils/formatters.js'
 import { iconForForma } from '../../shared/utils/formaPagamento.js'
+import { buildNomeMap, nomeVivo } from '../../shared/utils/nomeVivo.js'
 import { can } from '../../auth/session.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
@@ -99,6 +100,14 @@ function formatRoteiro({ retiradas = [], entrega = {} }, dataISO = '') {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export function renderPedidoList(container, pedidos, { clientes, produtosCatalogo, fornecedores, usuariosPorUid = {}, empresa = {}, operacoes = {} }) {
+  // Nome sempre atual do cadastro (por id) em vez do texto congelado na hora
+  // que o Pedido foi criado — assim renomear um cliente já reflete em tudo.
+  const clientesMap = buildNomeMap(clientes)
+  const nomeClienteVivo = p => nomeVivo(p.clienteId, p.cliente || p.clienteNome, clientesMap)
+  // Idem, mas devolve o cadastro inteiro (telefone/endereço) — por id quando
+  // tem, senão cai pro nome (pedido antigo, sem id salvo).
+  const resolverCliente = p => (p.clienteId ? clientes.find(c => c.id === p.clienteId) : clientes.find(c => c.name === p.cliente))
+
   const canCreate = can('pedidos', 'create')
   const canEdit   = can('pedidos', 'edit')
   const canDelete = can('pedidos', 'delete')
@@ -230,7 +239,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       return d && d >= periodo.de && d <= periodo.ate
     })
     if (q) list = list.filter(p => {
-      const cli  = (p.cliente || p.clienteNome || '').toLowerCase()
+      const cli  = nomeClienteVivo(p).toLowerCase()
       const pros = (p.produtos || []).map(pr => [pr.nome, pr.aparelho].filter(Boolean).join(' ')).join(' ').toLowerCase()
       return cli.includes(q) || pros.includes(q)
     })
@@ -346,7 +355,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
       const row = el('tr', {},
         el('td', { class: 'td-date' }, shortDate(p.dataContato || p.data || '')),
-        el('td', { class: 'td-name', title: p.cliente || p.clienteNome || '' }, p.cliente || p.clienteNome || '—'),
+        el('td', { class: 'td-name', title: nomeClienteVivo(p) }, nomeClienteVivo(p) || '—'),
         prodsCell,
         el('td', { class: 'td-money' }, brl(valor)),
         el('td', { class: 'td-pgto', title: normalizarFormasPagamento(p).map(f => f.nome).join(' + ') },
@@ -433,6 +442,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
 
   function abrirConfirmarPagamentoModal(pedido, { jaConfirmado = false } = {}) {
     const fornecedorNomes = fornecedores.map(f => f.box ? `${f.name} - ${f.box}` : f.name)
+    const fornecedorIdPorNome = nome => fornecedores.find(f => (f.box ? `${f.name} - ${f.box}` : f.name) === nome)?.id || null
 
     openModal({
       title: jaConfirmado ? 'Efetuar Compra' : 'Confirmar Pagamento',
@@ -447,7 +457,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           // filtragem usada em criarCompraEVenda (pedidos/service.js), senão os
           // índices de "itens" (posição i) ficam dessincronizados dos produtos.
           const itensCompraveis = pedido.produtos.filter(p => p.tipo !== 'acessorio')
-          const itens = itensCompraveis.map(() => ({ fornecedor: '', custo: '', observacoes: '', estoqueCompraId: null }))
+          const itens = itensCompraveis.map(() => ({ fornecedor: '', fornecedorId: null, custo: '', observacoes: '', estoqueCompraId: null }))
 
           // Pedido com 2+ formas de pagamento e valor dividido (validado lá no
           // form) — pergunta, forma por forma, se já foi pago agora ou se vai
@@ -491,10 +501,13 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
             const fornAc = createAutocomplete({
               placeholder: 'Fornecedor',
               items:       fornecedorNomes,
-              onSelect:    v => { itens[i].fornecedor = v },
+              onSelect:    v => { itens[i].fornecedor = v; itens[i].fornecedorId = fornecedorIdPorNome(v) },
             })
             fornAc.el.style.width = '100%'
-            fornAc.el.addEventListener('input', () => { itens[i].fornecedor = fornAc.getValue() })
+            fornAc.el.addEventListener('input', () => {
+              itens[i].fornecedor = fornAc.getValue()
+              itens[i].fornecedorId = fornecedorIdPorNome(itens[i].fornecedor)
+            })
 
             const custoInp = el('input', { type: 'text', inputmode: 'numeric', placeholder: 'R$ 0' })
             custoInp.addEventListener('input', () => {
@@ -591,7 +604,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   // ── Recibo ────────────────────────────────────────────────────────────────
   async function montarReciboCompleto(pedido) {
     const numero = await garantirNumeroRecibo(pedido, patchPedido)
-    const cliente = clientes.find(c => c.name === pedido.cliente)
+    const cliente = resolverCliente(pedido)
     const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
     const comprasSnap = await getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
     const comprasPedido = comprasSnap.docs.map(d => d.data())
@@ -599,7 +612,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   }
 
   async function enviarReciboWhatsapp(pedido, dados) {
-    const cliente = clientes.find(c => c.name === pedido.cliente)
+    const cliente = resolverCliente(pedido)
     const telefone = toWhatsappNumber(cliente?.phone)
     if (!telefone) throw new Error('Cliente sem telefone cadastrado.')
     return enviarReciboFila({ dados, telefone, pedidoId: pedido.id })
@@ -617,7 +630,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           renderReciboPreview(previewWrap, dados)
           if (autoImprimir) imprimirReciboAutomaticamente(previewWrap)
 
-          const cliente = clientes.find(c => c.name === pedido.cliente)
+          const cliente = resolverCliente(pedido)
           const temTelefone = !!toWhatsappNumber(cliente?.phone)
 
           const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
@@ -678,7 +691,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     abrirDetalhesModal({
       title: 'Detalhes do Pedido',
       campos: [
-        ['Cliente', p.cliente || p.clienteNome],
+        ['Cliente', nomeClienteVivo(p)],
         ['Data', shortDate(p.dataContato || p.data || '')],
         ['Produtos', produtosTxt],
         ['Valor', brl(valor)],
@@ -707,7 +720,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   function cancelarPedido(p) {
     openConfirm({
       title: 'Cancelar pedido',
-      message: `Cancelar pedido de "${p.cliente || p.clienteNome}"?`,
+      message: `Cancelar pedido de "${nomeClienteVivo(p)}"?`,
       confirmLabel: 'Cancelar pedido',
       danger: true,
       onConfirm: () => advanceStatus(p.id, 'cancelado'),
@@ -722,7 +735,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   function confirmDelete(p) {
     openConfirm({
       title: 'Excluir pedido',
-      message: `Excluir pedido de "${p.cliente || p.clienteNome}"? Compra(s), Venda e lançamentos financeiros vinculados também são excluídos. Não pode ser desfeito.`,
+      message: `Excluir pedido de "${nomeClienteVivo(p)}"? Compra(s), Venda e lançamentos financeiros vinculados também são excluídos. Não pode ser desfeito.`,
       confirmLabel: 'Excluir',
       danger: true,
       onConfirm: async () => {
@@ -773,8 +786,12 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
   }
 
   // ── Modal roteiro ─────────────────────────────────────────────────────────
-  function enderecoDoCliente(nomeCliente) {
-    const c = clientes.find(c => (c.name || '').toLowerCase() === (nomeCliente || '').toLowerCase())
+  // Por id quando o Pedido tem (não quebra se o cliente foi renomeado depois);
+  // cai pro nome como antes só em pedido antigo, sem id salvo.
+  function enderecoDoCliente(clienteId, nomeCliente) {
+    const c = clienteId
+      ? clientes.find(c => c.id === clienteId)
+      : clientes.find(c => (c.name || '').toLowerCase() === (nomeCliente || '').toLowerCase())
     if (!c?.address) return ''
     const { logradouro, numero, complemento, bairro, cidade, estado } = c.address
     return [
@@ -810,8 +827,8 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
             loja: '',
           }))
           entrega = {
-            endereco: enderecoDoCliente(pedido.cliente),
-            cliente:  pedido.cliente || '',
+            endereco: enderecoDoCliente(pedido.clienteId, pedido.cliente),
+            cliente:  nomeClienteVivo(pedido),
           }
         }
 

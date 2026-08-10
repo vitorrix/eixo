@@ -14,7 +14,7 @@ const COL = 'compras'
 // "aguardando" nesse formulário), então o pagamento já nasce liquidado, com
 // vencimento/liquidação hoje. Sem forma de pagamento escolhida ou custo zerado
 // (brinde/erro), não lança nada.
-async function gerarPagamentoCompra(compraId, { custo, produto, fornecedor, cliente, formaPagamento }) {
+async function gerarPagamentoCompra(compraId, { custo, produto, fornecedor, fornecedorId, cliente, clienteId, formaPagamento }) {
   if (!(custo > 0) || !formaPagamento) return null
   const operacoes = await getOperacoes()
   const categoriaPagar = operacoes.categorias?.find(c => c.tipo === 'pagar' && c.grupo === 'Custo dos Produtos Vendidos (CMV)')?.nome
@@ -26,6 +26,8 @@ async function gerarPagamentoCompra(compraId, { custo, produto, fornecedor, clie
     descricao:       `Compra: ${produto}`,
     valor:           custo,
     contato:         fornecedor || cliente || '',
+    contatoId:       fornecedor ? (fornecedorId || null) : (clienteId || null),
+    contatoTipo:     fornecedor ? 'fornecedor' : 'cliente',
     categoria:       categoriaPagar,
     conta,
     formaPagamento,
@@ -96,9 +98,11 @@ export async function createComprasEmLote(comum, linhas) {
   const jaRecebida = status === STATUS_EM_ESTOQUE
   const base = {
     fornecedor:      (comum.fornecedor || '').trim(),
+    fornecedorId:    comum.fornecedorId || null,
     status,
     observacoes:     (comum.observacoes || '').trim(),
     cliente:         (comum.cliente || '').trim(),
+    clienteId:       comum.clienteId || null,
     pedidoId:        null,
     criadoEm:        serverTimestamp(),
   }
@@ -126,7 +130,7 @@ export async function createComprasEmLote(comum, linhas) {
         if (i.produtoId) batch.update(doc(db, 'produtos', i.produtoId), { estoqueAtual: increment(i.quantidade) })
       })
     }
-    const pagamento = await gerarPagamentoCompra(ref.id, { custo: custoTotal, produto: produtoLabel, fornecedor: base.fornecedor, cliente: base.cliente, formaPagamento: comum.formaPagamento })
+    const pagamento = await gerarPagamentoCompra(ref.id, { custo: custoTotal, produto: produtoLabel, fornecedor: base.fornecedor, fornecedorId: base.fornecedorId, cliente: base.cliente, clienteId: base.clienteId, formaPagamento: comum.formaPagamento })
     if (pagamento) batch.set(doc(collection(db, 'financeiro')), pagamento)
     return batch.commit()
   }
@@ -147,7 +151,7 @@ export async function createComprasEmLote(comum, linhas) {
   if (jaRecebida && l.produtoId) {
     batch.update(doc(db, 'produtos', l.produtoId), { estoqueAtual: increment(quantidade) })
   }
-  const pagamento = await gerarPagamentoCompra(ref.id, { custo: custoLinha, produto: produtoLinha, fornecedor: base.fornecedor, cliente: base.cliente, formaPagamento: comum.formaPagamento })
+  const pagamento = await gerarPagamentoCompra(ref.id, { custo: custoLinha, produto: produtoLinha, fornecedor: base.fornecedor, fornecedorId: base.fornecedorId, cliente: base.cliente, clienteId: base.clienteId, formaPagamento: comum.formaPagamento })
   if (pagamento) batch.set(doc(collection(db, 'financeiro')), pagamento)
   return batch.commit()
 }

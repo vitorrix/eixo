@@ -20,6 +20,7 @@ import { createChipSelect } from '../../shared/components/ChipSelect.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { presetRange } from '../../shared/utils/periodo.js'
+import { buildNomeMap, nomeVivo } from '../../shared/utils/nomeVivo.js'
 import { patchPedido } from '../pedidos/service.js'
 import { createVenda, patchVenda, deleteVenda } from './service.js'
 
@@ -56,6 +57,13 @@ function dataLocal(ts) {
 }
 
 export function renderVendasList(container, vendas, { produtosCatalogo, clientes, usuariosPorUid = {}, empresa = {}, operacoes = {} } = {}) {
+  // Nome sempre atual do cadastro — mesma lógica de Pedidos/Compras.
+  const clientesMap = buildNomeMap(clientes)
+  const nomeClienteVivo = v => nomeVivo(v.clienteId, v.cliente, clientesMap)
+  // Idem, mas devolve o cadastro inteiro (telefone/endereço) — por id quando
+  // tem, senão cai pro nome (registro antigo, sem id salvo).
+  const resolverClientePorIdOuNome = (id, nome) => (id ? clientes.find(c => c.id === id) : clientes.find(c => c.name === nome))
+
   const formasPagamentoConfig = operacoes.formasPagamento || []
   // Forma de pagamento em botões (chips), igual ao Pedido, só que de escolha
   // única — a Venda só tem uma forma, não junta como o Pedido permite.
@@ -150,7 +158,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     sortValue: (v, key) => {
       switch (key) {
         case 'data':    return v.criadoEm?.toDate ? v.criadoEm.toDate().getTime() : 0
-        case 'cliente': return v.cliente || ''
+        case 'cliente': return nomeClienteVivo(v)
         case 'produto': return vendaProdutoResumo(v)
         case 'valor':   return toNumero(v.valorVenda)
         case 'pgto':    return v.formaPagamento || ''
@@ -183,7 +191,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       return d && d >= periodo.de && d <= periodo.ate
     })
     if (q) list = list.filter(v =>
-      (v.cliente || '').toLowerCase().includes(q) ||
+      nomeClienteVivo(v).toLowerCase().includes(q) ||
       vendaItens(v).some(it => (it.produto || '').toLowerCase().includes(q))
     )
     return sortHead.sort(list)
@@ -271,7 +279,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
 
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
-        el('td', { class: 'td-name', title: v.cliente || '' }, v.cliente || '—'),
+        el('td', { class: 'td-name', title: nomeClienteVivo(v) }, nomeClienteVivo(v) || '—'),
         el('td', { class: 'td-produto-nome', title: vendaProdutoResumo(v) }, vendaProdutoResumo(v)),
         el('td', { class: 'td-money' }, brl(toNumero(v.valorVenda))),
         el('td', { class: 'td-pgto', title: v.formaPagamento || '' }, pagIcones),
@@ -287,7 +295,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   function confirmDelete(v) {
     openConfirm({
       title:        'Excluir venda',
-      message:      `Excluir venda de "${vendaProdutoResumo(v)}"${v.cliente ? ` para ${v.cliente}` : ''}?${v.pedidoId ? ' O lançamento financeiro (Recebimento) vinculado também será excluído.' : ''}`,
+      message:      `Excluir venda de "${vendaProdutoResumo(v)}"${nomeClienteVivo(v) ? ` para ${nomeClienteVivo(v)}` : ''}?${v.pedidoId ? ' O lançamento financeiro (Recebimento) vinculado também será excluído.' : ''}`,
       confirmLabel: 'Excluir',
       danger:       true,
       onConfirm:    async () => {
@@ -309,7 +317,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
       if (!snap.exists()) throw new Error('Pedido de origem não encontrado.')
       const pedido = { id: snap.id, ...snap.data() }
       const numero = await garantirNumeroRecibo(pedido, patchPedido)
-      const cliente = clientes.find(c => c.name === pedido.cliente)
+      const cliente = resolverClientePorIdOuNome(pedido.clienteId, pedido.cliente)
       const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
       const comprasSnap = await getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
       const comprasPedido = comprasSnap.docs.map(d => d.data())
@@ -317,7 +325,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     }
 
     const numero = await garantirNumeroRecibo(venda, patchVenda)
-    const cliente = clientes.find(c => c.name === venda.cliente)
+    const cliente = resolverClientePorIdOuNome(venda.clienteId, venda.cliente)
     const vendedorNome = usuariosPorUid[venda.criadoPor] || '—'
     let compra = null
     if (venda.produtoId) {
@@ -346,8 +354,9 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
           renderReciboPreview(previewWrap, dados)
           if (autoImprimir) imprimirReciboAutomaticamente(previewWrap)
 
-          const clienteNome = tipo === 'pedido' ? entidade.cliente : venda.cliente
-          const cliente = clientes.find(c => c.name === clienteNome)
+          const cliente = tipo === 'pedido'
+            ? resolverClientePorIdOuNome(entidade.clienteId, entidade.cliente)
+            : resolverClientePorIdOuNome(venda.clienteId, venda.cliente)
           const temTelefone = !!toWhatsappNumber(cliente?.phone)
 
           const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
@@ -442,9 +451,12 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
           if (!produto) { toastError('Selecione o produto.'); return }
           okBtn.disabled = true
           try {
+            const clienteNome = clienteAc.getValue()
+            const clienteId = (clientes || []).find(c => c.name === clienteNome)?.id || null
             await patchVenda(venda.id, {
               produtoId, produto,
-              cliente:        clienteAc.getValue(),
+              cliente:        clienteNome,
+              clienteId,
               valorVenda:     valorInp.value,
               formaPagamento: pagChips.getValue(),
               ...(venda.pedidoId ? {} : { statusEntrega: entregaSelEdit.value }),
@@ -507,7 +519,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
     abrirDetalhesModal({
       title: 'Detalhes da Venda',
       campos: [
-        ['Cliente', v.cliente],
+        ['Cliente', nomeClienteVivo(v)],
         ['Data', dateStr],
         ['Produto', produtoValor],
         ['Valor', brl(toNumero(v.valorVenda))],
@@ -558,9 +570,12 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
           if (!produto) { toastError('Selecione o produto.'); return }
           okBtn.disabled = true
           try {
+            const clienteNome = clienteAc.getValue()
+            const clienteId = (clientes || []).find(c => c.name === clienteNome)?.id || null
             await createVenda({
               produtoId, produto,
-              cliente:        clienteAc.getValue(),
+              cliente:        clienteNome,
+              clienteId,
               valorVenda:     valorInp.value,
               formaPagamento: pagChips.getValue(),
               statusEntrega:  entregaSelNew.value,

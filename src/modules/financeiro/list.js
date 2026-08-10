@@ -14,6 +14,7 @@ import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/component
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 import { createChipSelect } from '../../shared/components/ChipSelect.js'
 import { presetRange } from '../../shared/utils/periodo.js'
+import { buildNomeMap, nomeVivo } from '../../shared/utils/nomeVivo.js'
 import { createLancamento, updateLancamento, deleteLancamento, marcarLiquidado } from './service.js'
 import { deleteVenda } from '../vendas/service.js'
 import { deleteCompra } from '../compras/service.js'
@@ -33,6 +34,25 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   const canDelete = can('financeiro', 'delete')
 
   const contatoNomes = [...new Set([...clientes.map(c => c.name), ...fornecedores.map(f => f.name)])]
+  // Contato pode ser cliente OU fornecedor — busca cliente primeiro porque
+  // Recebimento (mais comum de ter contato cadastrado) é sempre de cliente.
+  function contatoIdETipo(nome) {
+    const cli = clientes.find(c => c.name === nome)
+    if (cli) return { contatoId: cli.id, contatoTipo: 'cliente' }
+    const forn = fornecedores.find(f => f.name === nome)
+    if (forn) return { contatoId: forn.id, contatoTipo: 'fornecedor' }
+    return { contatoId: null, contatoTipo: null }
+  }
+
+  // Nome sempre atual do cadastro — mesma lógica de Pedidos/Compras/Vendas,
+  // só que o contato pode ser cliente OU fornecedor (contatoTipo decide).
+  const clientesMap = buildNomeMap(clientes)
+  const fornecedoresMap = buildNomeMap(fornecedores)
+  function nomeContatoVivo(l) {
+    const mapa = l.contatoTipo === 'fornecedor' ? fornecedoresMap : clientesMap
+    return nomeVivo(l.contatoId, l.contato, mapa)
+  }
+
   const contas = operacoes.contas || []
   const formasPagamento = operacoes.formasPagamento || []
   const categorias = operacoes.categorias || []
@@ -118,7 +138,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       switch (key) {
         case 'cod':       return l.numero ?? 0
         case 'descricao': return l.descricao || ''
-        case 'contato':   return l.contato || ''
+        case 'contato':   return nomeContatoVivo(l)
         case 'conta':     return l.conta || ''
         case 'data':      return l.dataVencimento || ''
         case 'situacao':  return l.liquidado ? 1 : 0
@@ -145,7 +165,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       && (l.dataVencimento || '') >= periodo.de && (l.dataVencimento || '') <= periodo.ate)
     if (q) list = list.filter(l =>
       (l.descricao || '').toLowerCase().includes(q) ||
-      (l.contato || '').toLowerCase().includes(q)
+      nomeContatoVivo(l).toLowerCase().includes(q)
     )
     return sortHead.sort(list)
   }
@@ -198,7 +218,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       const row = el('tr', {},
         el('td', { class: 'td-date' }, String(l.numero || '—')),
         el('td', { class: 'td-name', title: descricao || '' }, descricao || '—'),
-        el('td', {}, l.contato || '—'),
+        el('td', {}, nomeContatoVivo(l) || '—'),
         el('td', {}, l.conta || '—'),
         el('td', { class: 'td-date' }, dateStr),
         el('td', {}, situacaoCell(l)),
@@ -254,7 +274,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   function confirmDeleteAvulso(l) {
     openConfirm({
       title:        'Excluir lançamento',
-      message:      `Excluir "${l.descricao}"${l.contato ? ` de ${l.contato}` : ''}?`,
+      message:      `Excluir "${l.descricao}"${nomeContatoVivo(l) ? ` de ${nomeContatoVivo(l)}` : ''}?`,
       confirmLabel: 'Excluir',
       danger:       true,
       onConfirm:    async () => {
@@ -273,7 +293,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       campos: [
         ['Cód', String(l.numero || '—')],
         ['Descrição', l.descricao],
-        [meta.contatoLabel, l.contato],
+        [meta.contatoLabel, nomeContatoVivo(l)],
         ['Valor', brl(toNumero(l.valor))],
         ['Categoria', l.categoria],
         ['Conta', l.conta],
@@ -399,10 +419,12 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
           }
           okBtn.disabled = true; okBtn.textContent = 'Salvando...'
           try {
+            const contatoNome = contatoAc.getValue()
             const payload = {
               tipo, descricao,
               valor:           valorInp.value,
-              contato:         contatoAc.getValue(),
+              contato:         contatoNome,
+              ...contatoIdETipo(contatoNome),
               categoria:       categoriaSel.value,
               conta:           contaSel.value,
               formaPagamento:  pagChips.getValue(),

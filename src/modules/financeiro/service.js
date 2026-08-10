@@ -61,6 +61,8 @@ export async function createLancamento(data) {
     descricao:       (data.descricao || '').trim(),
     valor:           parseFloat(data.valor) || 0,
     contato:         (data.contato || '').trim(),
+    contatoId:       data.contatoId || null,
+    contatoTipo:     data.contatoTipo || null,
     categoria:       data.categoria || '',
     conta:           data.conta || '',
     formaPagamento:  data.formaPagamento || '',

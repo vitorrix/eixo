@@ -156,7 +156,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
       const compraRef = doc(db, 'compras', item.estoqueCompraId)
       const compraSnap = await getDoc(compraRef)
       const compraData = compraSnap.data() || {}
-      batch.update(compraRef, { pedidoId: pedido.id, cliente: pedido.cliente, status: 'concluido' })
+      batch.update(compraRef, { pedidoId: pedido.id, cliente: pedido.cliente, clienteId: pedido.clienteId || null, status: 'concluido' })
       if (compraData.produtoId) {
         batch.update(doc(db, 'produtos', compraData.produtoId), { estoqueAtual: increment(-1) })
       }
@@ -167,14 +167,17 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
     const label = produtoLabel(p)
     const custo = parseFloat(item.custo) || 0
     const fornecedor = (item.fornecedor || '').trim()
+    const fornecedorId = item.fornecedorId || null
 
     const compraRef = doc(collection(db, 'compras'))
     batch.set(compraRef, {
       pedidoId:    pedido.id,
       cliente:     pedido.cliente,
+      clienteId:   pedido.clienteId || null,
       produto:     label,
       tipo:        p.tipo || 'produto',
       fornecedor,
+      fornecedorId,
       custo,
       status:      'aguardando',
       observacoes: (item.observacoes || '').trim(),
@@ -188,6 +191,8 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
         descricao:       `Compra: ${label}`,
         valor:           custo,
         contato:         fornecedor,
+        contatoId:       fornecedorId,
+        contatoTipo:     'fornecedor',
         categoria:       categoriaPagar,
         conta:           contaPagamentoAparelho,
         formaPagamento:  '',
@@ -238,16 +243,18 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
 
     const compraTrocaRef = doc(collection(db, 'compras'))
     batch.set(compraTrocaRef, {
-      pedidoId:    pedido.id,
-      cliente:     pedido.cliente,
-      produto:     troca.produto,
-      tipo:        'produto',
-      fornecedor:  pedido.cliente,
-      custo:       creditoTroca,
-      status:      'aguardando',
-      origemTroca: true,
-      observacoes: (troca.observacoes || '').trim(),
-      criadoEm:    serverTimestamp(),
+      pedidoId:     pedido.id,
+      cliente:      pedido.cliente,
+      clienteId:    pedido.clienteId || null,
+      produto:      troca.produto,
+      tipo:         'produto',
+      fornecedor:   pedido.cliente,
+      fornecedorId: pedido.clienteId || null,
+      custo:        creditoTroca,
+      status:       'aguardando',
+      origemTroca:  true,
+      observacoes:  (troca.observacoes || '').trim(),
+      criadoEm:     serverTimestamp(),
     })
 
     if (creditoTroca > 0) {
@@ -257,6 +264,8 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
         descricao:       `Troca: ${troca.produto}`,
         valor:           creditoTroca,
         contato:         pedido.cliente,
+        contatoId:       pedido.clienteId || null,
+        contatoTipo:     'cliente',
         categoria:       categoriaPagar,
         conta:           contaPagamentoAparelho,
         formaPagamento:  '',
@@ -278,6 +287,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
   batch.set(vendaRef, {
     pedidoId:       pedido.id,
     cliente:        pedido.cliente,
+    clienteId:      pedido.clienteId || null,
     itens:          itensVenda,
     valorVenda,
     formaPagamento: formaPag,
@@ -302,6 +312,8 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
         descricao:       `Venda — ${pedido.cliente}`,
         valor:           pf.valor,
         contato:         pedido.cliente,
+        contatoId:       pedido.clienteId || null,
+        contatoTipo:     'cliente',
         categoria:       categoriaReceber,
         conta:           contaPf,
         formaPagamento:  pf.nome,
@@ -323,6 +335,8 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
       descricao:       `Venda — ${pedido.cliente}`,
       valor:           valorVenda,
       contato:         pedido.cliente,
+      contatoId:       pedido.clienteId || null,
+      contatoTipo:     'cliente',
       categoria:       categoriaReceber,
       conta:           contaPadrao,
       formaPagamento:  formaPag,
@@ -484,6 +498,7 @@ function sanitize(d) {
   return {
     dataContato:    d.dataContato || '',
     cliente:        (d.cliente    || '').trim(),
+    clienteId:      d.clienteId   || null,
     produtos,
     valorNegociado,
     temManutencao,

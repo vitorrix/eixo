@@ -14,6 +14,7 @@ import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { presetRange } from '../../shared/utils/periodo.js'
+import { buildNomeMap, nomeVivo } from '../../shared/utils/nomeVivo.js'
 
 const STATUS_META = {
   aguardando: { label: 'Aguardando', cls: 'badge-aguardando' },
@@ -123,6 +124,12 @@ function criarEditorItens(produtoNomes, produtosCatalogo, itensIniciais) {
 
 export function renderComprasList(container, compras, { fornecedores, produtosCatalogo, clientes, formasPagamento }) {
   let clientesList = [...clientes]
+  // Nome sempre atual do cadastro — mesma lógica de Pedidos.
+  const clientesMap = buildNomeMap(clientes)
+  const fornecedoresMap = buildNomeMap(fornecedores, f => f.box ? `${f.name} - ${f.box}` : f.name)
+  const nomeClienteVivo    = c => nomeVivo(c.clienteId, c.cliente, clientesMap)
+  const nomeFornecedorVivo = c => nomeVivo(c.fornecedorId, c.fornecedor, fornecedoresMap)
+
   const canCreate = can('compras', 'create')
   const canEdit   = can('compras', 'edit')
   const canDelete = can('compras', 'delete')
@@ -189,9 +196,9 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
     sortValue: (c, key) => {
       switch (key) {
         case 'data':       return c.criadoEm?.toDate ? c.criadoEm.toDate().getTime() : 0
-        case 'cliente':    return c.cliente || ''
+        case 'cliente':    return nomeClienteVivo(c)
         case 'produto':    return compraProdutoResumo(c)
-        case 'fornecedor': return c.fornecedor || ''
+        case 'fornecedor': return nomeFornecedorVivo(c)
         case 'custo':      return toNumero(c.custo)
         case 'status':     return c.status || ''
         default:           return ''
@@ -224,8 +231,8 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
     })
     if (q) list = list.filter(c =>
       (c.produto || '').toLowerCase().includes(q) ||
-      (c.fornecedor || '').toLowerCase().includes(q) ||
-      (c.cliente || '').toLowerCase().includes(q)
+      nomeFornecedorVivo(c).toLowerCase().includes(q) ||
+      nomeClienteVivo(c).toLowerCase().includes(q)
     )
     return sortHead.sort(list)
   }
@@ -285,9 +292,9 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
 
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
-        el('td', {}, c.cliente || '—'),
+        el('td', {}, nomeClienteVivo(c) || '—'),
         el('td', { class: 'td-produto-nome', title: compraProdutoResumo(c) }, compraProdutoResumo(c)),
-        el('td', {}, c.fornecedor || '—'),
+        el('td', {}, nomeFornecedorVivo(c) || '—'),
         el('td', { class: 'td-money' }, brl(toNumero(c.custo))),
         el('td', {}, statusSel),
         ...(canEdit || canDelete ? [actionsCell] : []),
@@ -304,12 +311,12 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
     abrirDetalhesModal({
       title: 'Detalhes da Compra',
       campos: [
-        ['Cliente', c.cliente],
+        ['Cliente', nomeClienteVivo(c)],
         temItens
           ? ['Itens', c.itens.map(i => `${i.produto} (${i.quantidade}x ${brl(toNumero(i.custo))})`).join(' · ')]
           : ['Produto', c.produto],
         !temItens && c.quantidade > 1 ? ['Quantidade', String(c.quantidade)] : null,
-        ['Fornecedor', c.fornecedor],
+        ['Fornecedor', nomeFornecedorVivo(c)],
         ['Custo', brl(toNumero(c.custo))],
         ['Status', meta.label],
         c.observacoes ? ['Dados do aparelho', c.observacoes] : null,
@@ -337,8 +344,12 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         }
 
         let clienteSelecionado = null
+        let fornecedorSelecionado = null
         function atualizarClienteSelecionado() {
-          clienteSelecionado = clientesList.find(c => c.name === fornAc.getValue()) || null
+          const valor = fornAc.getValue()
+          clienteSelecionado = clientesList.find(c => c.name === valor) || null
+          fornecedorSelecionado = clienteSelecionado ? null
+            : fornecedores.find(f => (f.box ? `${f.name} - ${f.box}` : f.name) === valor) || null
         }
 
         function abrirCadastroRapidoCliente(nomeInicial) {
@@ -440,8 +451,10 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
           try {
             await createComprasEmLote(
               {
-                fornecedor:  clienteSelecionado ? '' : fornAc.getValue(),
-                cliente:     clienteSelecionado ? clienteSelecionado.name : '',
+                fornecedor:   clienteSelecionado ? '' : fornAc.getValue(),
+                fornecedorId: fornecedorSelecionado?.id || null,
+                cliente:      clienteSelecionado ? clienteSelecionado.name : '',
+                clienteId:    clienteSelecionado?.id || null,
                 status:      statusSelNew.value,
                 observacoes: aparelhoInp.value,
                 formaPagamento: pagChips.getValue(),

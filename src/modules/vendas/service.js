@@ -25,6 +25,7 @@ export async function createVenda(data) {
     produtoId:      data.produtoId || null,
     produto:        (data.produto || '').trim(),
     cliente:        (data.cliente || '').trim(),
+    clienteId:      data.clienteId || null,
     valorVenda:     parseFloat(data.valorVenda) || 0,
     formaPagamento: data.formaPagamento || '',
     statusEntrega:  data.statusEntrega || 'aguardando',

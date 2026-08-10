@@ -549,6 +549,10 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   submitBtn.addEventListener('click', async () => {
     const cliente = clienteAc.getValue().trim()
     if (!cliente) { toastError('Informe o nome do cliente.'); return }
+    // Guarda o id junto do nome — permite mostrar sempre o nome atual do
+    // cadastro depois, mesmo que alguém edite o cliente no futuro (sem id,
+    // como pedido lançado antes dessa mudança, cai pro nome congelado).
+    const clienteId = clientesList.find(c => c.name === cliente)?.id || null
     if (!dataInp.value) { toastError('Informe a data.'); return }
 
     // 1 forma só vale o total inteiro (nada pra dividir); 2+ formas precisam
@@ -582,7 +586,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
     try {
       const produtosFinal = produtos.filter(p => !linhaVazia(p))
-      const data = { dataContato: dataInp.value, cliente, produtos: produtosFinal, formasPagamento: formasPagamentoFinal, trocas: trocasFinal, observacoes: obsInp.value }
+      const data = { dataContato: dataInp.value, cliente, clienteId, produtos: produtosFinal, formasPagamento: formasPagamentoFinal, trocas: trocasFinal, observacoes: obsInp.value }
       if (isEdit) {
         await editarPedido(pedido.id, data)
         const voltou = pedido.status && pedido.status !== 'negociando'
