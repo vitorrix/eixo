@@ -3,6 +3,7 @@ import { brl } from '../../shared/utils/formatters.js'
 import { subscribeVendas } from '../vendas/service.js'
 import { toastError } from '../../shared/components/Toast.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
+import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 
 export function renderVendasPorProduto(container) {
@@ -20,10 +21,21 @@ function _init(container) {
     onChange: p => { periodo = p; update() },
   })
 
+  const sortHead = createSortableHead([
+    { key: 'nome',       label: 'Produto' },
+    { key: 'quantidade', label: 'Qtd. vendida', cls: 'th-money' },
+    { key: 'valor',      label: 'Valor total',  cls: 'th-money' },
+  ], {
+    initialCol: 'quantidade',
+    initialDir: 'desc',
+    sortValue: (r, key) => key === 'nome' ? (r.nome || '') : r[key],
+    onSort: () => update(),
+  })
+
   const reportWrap = el('div', {})
 
   function update() {
-    reportWrap.replaceChildren(buildRelatorio(vendas, periodo))
+    reportWrap.replaceChildren(buildRelatorio(vendas, periodo, sortHead))
   }
 
   function renderScreen() {
@@ -88,9 +100,9 @@ function agruparPorProduto(vendasMes) {
   return [...mapa.values()].sort((a, b) => b.quantidade - a.quantidade || b.valor - a.valor)
 }
 
-function buildRelatorio(vendas, periodo) {
+function buildRelatorio(vendas, periodo, sortHead) {
   const vendasMes = vendasNoPeriodo(vendas, periodo.de, periodo.ate)
-  const ranking = agruparPorProduto(vendasMes)
+  const ranking = sortHead.sort(agruparPorProduto(vendasMes))
 
   const totalUnidades = ranking.reduce((s, r) => s + r.quantidade, 0)
   const totalValor = ranking.reduce((s, r) => s + r.valor, 0)
@@ -117,12 +129,7 @@ function buildRelatorio(vendas, periodo) {
   const table = el('div', { class: 'table-wrapper' },
     el('table', { class: 'data-table' },
       el('thead', {},
-        el('tr', {},
-          el('th', {}, '#'),
-          el('th', {}, 'Produto'),
-          el('th', { class: 'th-money' }, 'Qtd. vendida'),
-          el('th', { class: 'th-money' }, 'Valor total'),
-        )
+        el('tr', {}, el('th', {}, '#'), ...sortHead.ths)
       ),
       tbody
     )

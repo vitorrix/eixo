@@ -3010,6 +3010,10 @@ html, body {
 /* ── Relatórios ──────────────────────────────────── */
 .relatorio-toolbar { margin-bottom: 16px; }
 
+.relatorio-header-ativo { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.relatorio-header-ativo h3 { font-size: 18px; font-weight: 700; color: var(--color-text); margin: 0; }
+.relatorio-voltar { flex-shrink: 0; }
+
 /* Cabeçalho da empresa: só existe pra impressão (ver @media print) */
 .relatorio-print-header { display: none; }
 

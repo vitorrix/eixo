@@ -10,6 +10,7 @@ import { criarBotaoImprimir } from '../../shared/components/Recibo.js'
 import { montarDadosExtrato, renderExtratoPreview } from '../../shared/components/ExtratoContato.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { createChipSelect } from '../../shared/components/ChipSelect.js'
+import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { presetRange, periodoLabel } from '../../shared/utils/periodo.js'
 import { lancamentosNoPeriodo } from './financeiroCalc.js'
 import { buildNomeMap, nomeVivo } from '../../shared/utils/nomeVivo.js'
@@ -53,11 +54,29 @@ function _init(container) {
   const searchInp = el('input', { type: 'text', class: 'search-input', placeholder: 'Buscar...', style: 'margin-bottom:0' })
   searchInp.addEventListener('input', () => update())
 
+  const sortHead = createSortableHead([
+    { key: 'nome',  label: 'Nome' },
+    { key: 'qtd',   label: 'Lançamentos', cls: 'th-money' },
+    { key: 'valor', label: 'Total',       cls: 'th-money' },
+  ], {
+    initialCol: 'valor',
+    initialDir: 'desc',
+    sortValue: (r, key) => {
+      switch (key) {
+        case 'nome':  return r.nome || ''
+        case 'qtd':   return r.qtd
+        case 'valor': return r.valor
+        default:      return ''
+      }
+    },
+    onSort: () => update(),
+  })
+
   const reportWrap = el('div', {})
 
   function update() {
     reportWrap.replaceChildren(buildRelatorio({
-      lancamentos, clientes, fornecedores, empresa, periodo, tipo, agrupador,
+      lancamentos, clientes, fornecedores, empresa, periodo, tipo, agrupador, sortHead,
       busca: searchInp.value.trim().toLowerCase(),
     }))
   }
@@ -137,7 +156,7 @@ function abrirDrillDownModal(grupo, { tipoMeta, agrupador, periodo, empresa, cli
   })
 }
 
-function buildRelatorio({ lancamentos, clientes, fornecedores, empresa, periodo, tipo, agrupador, busca }) {
+function buildRelatorio({ lancamentos, clientes, fornecedores, empresa, periodo, tipo, agrupador, sortHead, busca }) {
   const tipoMeta = TIPO_META[tipo]
   const clientesMap = buildNomeMap(clientes)
   const fornecedoresMap = buildNomeMap(fornecedores)
@@ -145,6 +164,7 @@ function buildRelatorio({ lancamentos, clientes, fornecedores, empresa, periodo,
   const doPeriodo = lancamentosNoPeriodo(lancamentos, periodo.de, periodo.ate).filter(l => l.tipo === tipo)
   let ranking = agrupar(doPeriodo, agrupador, clientesMap, fornecedoresMap)
   if (busca) ranking = ranking.filter(r => r.nome.toLowerCase().includes(busca))
+  ranking = sortHead.sort(ranking)
 
   const totalGeral = doPeriodo.reduce((s, l) => s + (Number(l.valor) || 0), 0)
 
@@ -171,11 +191,7 @@ function buildRelatorio({ lancamentos, clientes, fornecedores, empresa, periodo,
 
   const table = el('div', { class: 'table-wrapper' },
     el('table', { class: 'data-table' },
-      el('thead', {}, el('tr', {},
-        el('th', {}, agrupador === 'categoria' ? 'Categoria' : 'Contato'),
-        el('th', { class: 'th-money' }, 'Lançamentos'),
-        el('th', { class: 'th-money' }, 'Total'),
-      )),
+      el('thead', {}, el('tr', {}, ...sortHead.ths)),
       tbody,
     )
   )
