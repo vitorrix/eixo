@@ -53,7 +53,7 @@ export async function enviarReciboFila({ dados, telefone, pedidoId = null, venda
   })
 }
 
-function montarEmpresa(empresa) {
+export function montarEmpresa(empresa) {
   return {
     razao:          empresa?.razao    || '',
     fantasia:       empresa?.fantasia || '',

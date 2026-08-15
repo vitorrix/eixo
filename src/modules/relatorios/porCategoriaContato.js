@@ -1,13 +1,16 @@
 import { el, mount } from '../../shared/utils/dom.js'
-import { brl, shortDate } from '../../shared/utils/formatters.js'
+import { brl } from '../../shared/utils/formatters.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
 import { subscribeClientes } from '../clientes/service.js'
 import { subscribeFornecedores } from '../fornecedores/service.js'
+import { getEmpresa } from '../configuracoes/service.js'
 import { toastError } from '../../shared/components/Toast.js'
 import { openModal } from '../../shared/components/Modal.js'
+import { criarBotaoImprimir } from '../../shared/components/Recibo.js'
+import { montarDadosExtrato, renderExtratoPreview } from '../../shared/components/ExtratoContato.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { createChipSelect } from '../../shared/components/ChipSelect.js'
-import { presetRange } from '../../shared/utils/periodo.js'
+import { presetRange, periodoLabel } from '../../shared/utils/periodo.js'
 import { lancamentosNoPeriodo } from './financeiroCalc.js'
 import { buildNomeMap, nomeVivo } from '../../shared/utils/nomeVivo.js'
 
@@ -25,10 +28,13 @@ function _init(container) {
   let lancamentos = []
   let clientes = []
   let fornecedores = []
+  let empresa = {}
   let periodo = presetRange('este-mes')
   let tipo = 'pagar'
   let agrupador = 'categoria' // 'categoria' | 'contato'
   let firstLoad = true
+
+  getEmpresa().then(e => { empresa = e }).catch(() => {}) // extrato imprime sem cabeçalho da empresa se falhar
 
   const picker = createPeriodoPicker({
     initialPreset: 'este-mes',
@@ -51,7 +57,7 @@ function _init(container) {
 
   function update() {
     reportWrap.replaceChildren(buildRelatorio({
-      lancamentos, clientes, fornecedores, periodo, tipo, agrupador,
+      lancamentos, clientes, fornecedores, empresa, periodo, tipo, agrupador,
       busca: searchInp.value.trim().toLowerCase(),
     }))
   }
@@ -101,40 +107,37 @@ function agrupar(lancamentosPeriodo, agrupador, clientesMap, fornecedoresMap) {
   return [...mapa.values()].sort((a, b) => b.valor - a.valor)
 }
 
-function abrirDrillDownModal(grupo, tipoMeta, clientesMap, fornecedoresMap) {
+// Mesmo documento visual do Recibo (cabeçalho da empresa, tabela, rodapé
+// Eixo) — dá pra imprimir ou salvar em PDF e mandar pro fornecedor/cliente,
+// igual já se faz com o recibo de venda.
+function abrirDrillDownModal(grupo, { tipoMeta, agrupador, periodo, empresa, clientesMap, fornecedoresMap }) {
   openModal({
     title: grupo.nome,
-    size: 'md',
+    size: 'lg',
     renderBody: (body) => {
-      const itensOrdenados = [...grupo.itens].sort((a, b) => (b.dataLiquidacao || '').localeCompare(a.dataLiquidacao || ''))
-      const tbody = document.createElement('tbody')
-      itensOrdenados.forEach(l => {
-        const contatoNome = nomeVivo(l.contatoId, l.contato, l.contatoTipo === 'fornecedor' ? fornecedoresMap : clientesMap)
-        tbody.appendChild(el('tr', {},
-          el('td', { class: 'td-date' }, shortDate(l.dataLiquidacao)),
-          el('td', { class: 'td-name', title: l.descricao || '' }, l.descricao || '—'),
-          el('td', { class: 'td-name', title: contatoNome }, contatoNome || '—'),
-          el('td', { class: 'td-money' }, brl(l.valor)),
-        ))
+      const itensComContato = agrupador === 'categoria'
+        ? grupo.itens.map(l => ({ ...l, contato: nomeVivo(l.contatoId, l.contato, l.contatoTipo === 'fornecedor' ? fornecedoresMap : clientesMap) }))
+        : grupo.itens
+
+      const dados = montarDadosExtrato({
+        empresa,
+        titulo: grupo.nome,
+        tipoLabel: tipoMeta.label,
+        periodoLabel: periodoLabel(periodo.de, periodo.ate),
+        itens: itensComContato,
       })
-      const table = el('div', { class: 'table-wrapper' },
-        el('table', { class: 'data-table' },
-          el('thead', {}, el('tr', {},
-            el('th', {}, 'Data'), el('th', {}, 'Descrição'), el('th', {}, 'Contato'), el('th', { class: 'th-money' }, 'Valor'),
-          )),
-          tbody,
-        )
-      )
-      mount(body,
-        el('p', { class: 'text-muted', style: 'margin-bottom:12px' },
-          `${grupo.qtd} lançamento${grupo.qtd === 1 ? '' : 's'} · Total ${tipoMeta.verbo.toLowerCase()}: ${brl(grupo.valor)}`),
-        table,
-      )
+
+      renderExtratoPreview(body, dados)
+    },
+    footer: (close, footerEl) => {
+      const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
+      fecharBtn.addEventListener('click', close)
+      footerEl.append(fecharBtn, criarBotaoImprimir())
     },
   })
 }
 
-function buildRelatorio({ lancamentos, clientes, fornecedores, periodo, tipo, agrupador, busca }) {
+function buildRelatorio({ lancamentos, clientes, fornecedores, empresa, periodo, tipo, agrupador, busca }) {
   const tipoMeta = TIPO_META[tipo]
   const clientesMap = buildNomeMap(clientes)
   const fornecedoresMap = buildNomeMap(fornecedores)
@@ -162,7 +165,7 @@ function buildRelatorio({ lancamentos, clientes, fornecedores, periodo, tipo, ag
       el('td', { class: 'td-money' }, String(r.qtd)),
       el('td', { class: 'td-money' }, brl(r.valor)),
     )
-    row.addEventListener('click', () => abrirDrillDownModal(r, tipoMeta, clientesMap, fornecedoresMap))
+    row.addEventListener('click', () => abrirDrillDownModal(r, { tipoMeta, agrupador, periodo, empresa, clientesMap, fornecedoresMap }))
     tbody.appendChild(row)
   })
 
