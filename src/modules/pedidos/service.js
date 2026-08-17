@@ -72,10 +72,11 @@ export function produtoLabel(pr) {
 // reconfirmado (a edição reseta o status pra negociando, mas não limpa o que
 // já tinha sido gerado; sem isso, cada reconfirmação criava registros extras).
 //
-// Compra com estoqueAplicado=true ou status "concluído" não nasceu desse
-// fluxo — é uma unidade que já estava em estoque (lançada avulsa em Compras)
-// e só foi vinculada/consumida aqui. Apagar destruiria o registro real da
-// compra; em vez disso desvincula e devolve a unidade pro estoque, pra
+// Compra com estoqueAplicado=true ou status "concluído"/"estoque" não nasceu
+// desse fluxo — é uma unidade que já estava em estoque (lançada avulsa em
+// Compras, ou uma troca que virou estoque quando o pedido foi entregue) e só
+// foi vinculada/consumida aqui. Apagar destruiria o registro real da compra;
+// em vez disso desvincula e devolve a unidade pro estoque, pra
 // reconfirmar/editar/excluir o pedido nunca fazer sumir uma compra de verdade.
 async function limparCompraEVenda(pedidoId, batch) {
   const [comprasSnap, vendasSnap, financeiroSnap] = await Promise.all([
@@ -85,8 +86,8 @@ async function limparCompraEVenda(pedidoId, batch) {
   ])
   comprasSnap.docs.forEach(d => {
     const c = d.data()
-    if (c.estoqueAplicado || c.status === 'concluido') {
-      batch.update(d.ref, { pedidoId: null, cliente: '', status: 'estoque' })
+    if (c.estoqueAplicado || c.status === 'concluido' || c.status === 'estoque') {
+      batch.update(d.ref, { pedidoId: null, cliente: '', clienteId: null, status: 'estoque' })
       if (c.produtoId) batch.update(doc(db, 'produtos', c.produtoId), { estoqueAtual: increment(1) })
     } else {
       batch.delete(d.ref)
