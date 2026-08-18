@@ -67,6 +67,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     })
   let trocaAtiva = normalizarTrocasPedido(pedido || {}).length > 0
   let diffLabel = null // referência pro aviso "falta dividir X" — só existe quando tem 2+ formas
+  let trocas = [] // populado mais abaixo; declarado aqui pra updateDiffLabel poder referenciar mesmo chamado antes
 
   const produtoNomes     = produtosCatalogo.map(p => p.nome)
   const produtoNomesSN   = produtosCatalogo.map(p => p.nome).filter(n => n.trim().toUpperCase().endsWith('S/N'))
@@ -172,6 +173,14 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   }
   function calcTotal() {
     return produtos.reduce((s, p) => s + itemTotal(p), 0)
+  }
+  // Troca abate do total antes de dividir entre as formas de pagamento — o
+  // cliente não paga em dinheiro/cartão a parte coberta pelo aparelho usado.
+  function somaTrocas() {
+    return trocaAtiva ? trocas.reduce((s, t) => s + (parseFloat(t.valorCredito) || 0), 0) : 0
+  }
+  function totalFormas() {
+    return calcTotal() - somaTrocas()
   }
   function updateTotal() {
     const t = calcTotal()
@@ -402,11 +411,11 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   function updateDiffLabel() {
     if (!diffLabel) return
     const somaFormas = formasPagamento.reduce((s, nome) => s + (parseFloat(valoresPorForma[nome]) || 0), 0)
-    const falta = calcTotal() - somaFormas
+    const falta = totalFormas() - somaFormas
     const bateu = Math.abs(falta) < 0.01
     diffLabel.textContent = bateu
-      ? 'Valores batem com o total do pedido.'
-      : `Falta dividir ${brl(falta)} do total (${brl(calcTotal())}).`
+      ? 'Valores batem com o total a pagar.'
+      : `Falta dividir ${brl(falta)} do total a pagar (${brl(totalFormas())}).`
     diffLabel.classList.toggle('field-hint-error', !bateu)
   }
 
@@ -456,7 +465,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   // ── Troca ─────────────────────────────────────────────────────────────────
   // Cliente pode dar mais de um aparelho na troca — lista igual à de produtos,
   // com item repetível e botão de remover (cada troca vira uma Compra própria).
-  let trocas = normalizarTrocasPedido(pedido || {}).map(t => ({
+  trocas = normalizarTrocasPedido(pedido || {}).map(t => ({
     produto:      t.produto || '',
     valorCredito: t.valorCredito !== undefined && t.valorCredito !== '' ? t.valorCredito : '',
     observacoes:  t.observacoes || '',
@@ -480,7 +489,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
       const creditoInp = el('input', { type: 'number', step: '1', min: '0', placeholder: '0' })
       creditoInp.value = t.valorCredito
-      creditoInp.addEventListener('input', () => { trocas[i].valorCredito = creditoInp.value })
+      creditoInp.addEventListener('input', () => { trocas[i].valorCredito = creditoInp.value; updateDiffLabel() })
 
       // Vai junto pra Compra gerada do aparelho da troca — é lá que interessa
       // registrar estado do aparelho, serial, marcas de uso etc.
@@ -492,7 +501,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
       const delBtn = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
       delBtn.addEventListener('click', () => {
         if (trocas.length === 1) return
-        trocas.splice(i, 1); renderTrocas()
+        trocas.splice(i, 1); renderTrocas(); updateDiffLabel()
       })
 
       trocasWrap.appendChild(
@@ -520,6 +529,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
   addTrocaBtn.addEventListener('click', () => {
     trocas.push({ produto: '', valorCredito: '', observacoes: '' })
     renderTrocas()
+    updateDiffLabel()
   })
 
   const trocaSection = el('div', { class: 'troca-section' })
@@ -530,7 +540,7 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
 
   const trocaCheckbox = el('input', { type: 'checkbox', class: 'troca-checkbox' })
   trocaCheckbox.checked = trocaAtiva
-  trocaCheckbox.addEventListener('change', () => { trocaAtiva = trocaCheckbox.checked; renderTrocaSection() })
+  trocaCheckbox.addEventListener('change', () => { trocaAtiva = trocaCheckbox.checked; renderTrocaSection(); updateDiffLabel() })
   const trocaToggleRow = el('label', { class: 'troca-toggle-row' }, trocaCheckbox,
     el('span', {}, '↔ Inclui troca'))
   renderTrocaSection()
@@ -555,18 +565,18 @@ export function renderPedidoForm(container, close, pedido, { clientes, produtosC
     const clienteId = clientesList.find(c => c.name === cliente)?.id || null
     if (!dataInp.value) { toastError('Informe a data.'); return }
 
-    // 1 forma só vale o total inteiro (nada pra dividir); 2+ formas precisam
-    // somar exatamente o total, senão o Confirmar Pagamento não sabe quanto
-    // cobrar em cada uma.
-    const total = calcTotal()
+    // Troca abate do total antes de dividir: 1 forma só vale o que sobra
+    // depois da troca (nada pra dividir); 2+ formas precisam somar exatamente
+    // esse valor, senão o Confirmar Pagamento não sabe quanto cobrar em cada uma.
+    const totalCobrar = totalFormas()
     const formasPagamentoFinal = formasPagamento.map(nome => ({
       nome,
-      valor: formasPagamento.length === 1 ? total : (parseFloat(valoresPorForma[nome]) || 0),
+      valor: formasPagamento.length === 1 ? totalCobrar : (parseFloat(valoresPorForma[nome]) || 0),
     }))
     if (formasPagamentoFinal.length > 1) {
       const soma = formasPagamentoFinal.reduce((s, f) => s + f.valor, 0)
-      if (Math.abs(soma - total) >= 0.01) {
-        toastError(`A soma das formas de pagamento (${brl(soma)}) precisa bater com o total do pedido (${brl(total)}).`)
+      if (Math.abs(soma - totalCobrar) >= 0.01) {
+        toastError(`A soma das formas de pagamento (${brl(soma)}) precisa bater com o total a pagar (${brl(totalCobrar)}).`)
         return
       }
     }
