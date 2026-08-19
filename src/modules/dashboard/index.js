@@ -22,14 +22,34 @@ const MODULE_CARDS = [
   { label: 'Produtos',     sub: 'Catálogo de produtos',    path: '/produtos',      color: '#ec4899', icon: 'produtos'     },
 ]
 
+// A tela de Busca abre com o filtro de Data já preenchido com o dia da
+// oferta mais recente (mostRecentDateValue em busca/list.js) — o badge "1024"
+// de lá é a contagem JÁ com esse filtro aplicado, não o total da coleção.
+// Reproduz a mesma conta aqui pra bater o número certinho.
+function contarOfertasDoUltimoDia(docs) {
+  const dataDe = o => {
+    const q = o.quotedAt
+    if (!q) return null
+    return typeof q.toDate === 'function' ? q.toDate() : new Date(q)
+  }
+  let maisRecente = null
+  docs.forEach(o => {
+    const d = dataDe(o)
+    if (d && (!maisRecente || d > maisRecente)) maisRecente = d
+  })
+  if (!maisRecente) return docs.length
+  const inicioDoDia = new Date(maisRecente.getFullYear(), maisRecente.getMonth(), maisRecente.getDate())
+  return docs.filter(o => { const d = dataDe(o); return d && d >= inicioDoDia }).length
+}
+
 const STAT_CARDS = [
   { label: 'Clientes', collection: 'clientes', color: '#10B981', path: '/clientes', sub: 'registros'  },
   { label: 'Pedidos',  collection: 'pedidos',  color: '#6366f1', path: '/pedidos',  sub: 'este mês'   },
   // ofertas não aceita getCountFromServer (a regra de leitura usa get(), que
   // agregação não suporta) — busca os documentos uma vez só, igual ao número
   // que já aparece no menu Busca, sem manter um listener aberto no Dashboard.
-  { label: 'Busca', color: '#8b5cf6', path: '/busca', sub: 'ofertas dos fornecedores',
-    count: () => getDocs(collection(db, 'ofertas')).then(snap => snap.size) },
+  { label: 'Busca', color: '#8b5cf6', path: '/busca', sub: 'ofertas da última lista',
+    count: () => getDocs(collection(db, 'ofertas')).then(snap => contarOfertasDoUltimoDia(snap.docs.map(d => d.data()))) },
 ]
 
 const ICON_PATHS = {
