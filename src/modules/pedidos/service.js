@@ -397,7 +397,12 @@ async function syncVendasEntrega(pedidoId, statusEntrega) {
   const snap = await getDocs(query(collection(db, 'vendas'), where('pedidoId', '==', pedidoId)))
   if (snap.empty) return
   const batch = writeBatch(db)
-  snap.docs.forEach(d => batch.update(d.ref, { statusEntrega }))
+  // dataEntrega alimenta o lembrete de pós-venda do Dashboard (aparece 3 dias
+  // depois) — só grava no instante em que a entrega de fato acontece aqui.
+  snap.docs.forEach(d => batch.update(d.ref, {
+    statusEntrega,
+    ...(statusEntrega === 'entregue' ? { dataEntrega: serverTimestamp() } : {}),
+  }))
   return batch.commit()
 }
 

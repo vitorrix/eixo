@@ -6,10 +6,11 @@ import { subscribeAniversariantes } from '../clientes/service.js'
 import { subscribeBotStatus } from '../configuracoes/service.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
 import { subscribeTarefas } from '../tarefas/service.js'
+import { subscribeVendasEntregues, marcarPosVendaFeito } from '../vendas/service.js'
 import { buildTarefasWidget } from './tarefasWidget.js'
 import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { isoLocal } from '../../shared/utils/periodo.js'
-import { collection, query, where, getCountFromServer } from 'firebase/firestore'
+import { collection, query, where, getCountFromServer, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 
 const MODULE_CARDS = [
@@ -24,6 +25,11 @@ const MODULE_CARDS = [
 const STAT_CARDS = [
   { label: 'Clientes', collection: 'clientes', color: '#10B981', path: '/clientes', sub: 'registros'  },
   { label: 'Pedidos',  collection: 'pedidos',  color: '#6366f1', path: '/pedidos',  sub: 'este mês'   },
+  // ofertas não aceita getCountFromServer (a regra de leitura usa get(), que
+  // agregação não suporta) — busca os documentos uma vez só, igual ao número
+  // que já aparece no menu Busca, sem manter um listener aberto no Dashboard.
+  { label: 'Busca', color: '#8b5cf6', path: '/busca', sub: 'ofertas dos fornecedores',
+    count: () => getDocs(collection(db, 'ofertas')).then(snap => snap.size) },
 ]
 
 const ICON_PATHS = {
@@ -58,6 +64,7 @@ const RECADO_TIPOS = {
   pagamento:   { color: '#d93025', paths: ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M16 12l-4-4-4 4', 'M12 16V8'] },
   aviso:       { color: '#3b82f6', paths: ['M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 01-3.46 0'] },
   alerta:      { color: '#d93025', paths: ['M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z', 'M12 9v4', 'M12 17h.01'] },
+  posvenda:    { color: '#8b5cf6', paths: ['M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z', 'M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12'] },
 }
 
 function buildRecadoIcon(tipo) {
@@ -192,6 +199,46 @@ function recadosFinanceiro(lancamentos) {
   return recados
 }
 
+function diasDesde(timestamp) {
+  const date = timestamp?.toDate ? timestamp.toDate() : null
+  if (!date) return null
+  return Math.floor((Date.now() - date.getTime()) / 86400000)
+}
+
+function posVendaAction(vendaId) {
+  const btn = el('button', { type: 'button', class: 'mural-item-action mural-item-action-text' }, 'Feito ✓')
+  btn.addEventListener('click', async () => {
+    btn.disabled = true
+    try {
+      await marcarPosVendaFeito(vendaId)
+    } catch (err) {
+      console.error('Erro ao marcar pós-venda como feito:', err)
+      btn.disabled = false
+    }
+  })
+  return btn
+}
+
+// Vendas entregues há 3 dias ou mais que ainda não tiveram o pós-venda
+// marcado como feito — fica no mural até alguém clicar "Feito", não some
+// sozinho. dataEntrega só existe em vendas entregues depois dessa mudança
+// (histórico antigo não retroage, pra não inundar o mural de recados velhos).
+function recadosPosVenda(vendas) {
+  return vendas
+    .filter(v => !v.posVendaFeito && (diasDesde(v.dataEntrega) ?? -1) >= 3)
+    .sort((a, b) => (a.dataEntrega?.toDate?.() ?? 0) - (b.dataEntrega?.toDate?.() ?? 0))
+    .map(v => {
+      const dias = diasDesde(v.dataEntrega)
+      const produto = v.produto || v.itens?.[0]?.produto || ''
+      return {
+        tipo: 'posvenda',
+        titulo: `Pós-venda: ${v.cliente || 'Cliente'}`,
+        detalhe: `Entregue há ${dias} dia${dias === 1 ? '' : 's'}${produto ? ' · ' + produto : ''} — hora de dar um retorno.`,
+        action: posVendaAction(v.id),
+      }
+    })
+}
+
 function buildMural(recados) {
   const body = recados.length
     ? el('div', { class: 'mural-list' }, ...recados.map(muralItem))
@@ -301,6 +348,11 @@ export function render(container) {
     )
     card.addEventListener('click', () => { window.location.hash = s.path })
 
+    if (s.count) {
+      s.count().then(n => { valueEl.textContent = n }).catch(() => { valueEl.textContent = '?' })
+      return card
+    }
+
     const col = collection(db, s.collection)
     const q = s.collection === 'pedidos'
       ? query(col, where('dataContato', '>=', mesStart), where('dataContato', '<=', mesEnd))
@@ -352,13 +404,15 @@ export function render(container) {
     () => mount(chartWrap, buildRevenueChart([]))
   )
 
-  // O Mural junta três fontes assíncronas (financeiro + aniversariantes +
-  // status do bot); cada uma guarda seu estado e redesenha o conjunto quando
-  // muda. Ordem: alerta do bot (operacional, urgente) → pagamentos/recebimentos
-  // (dinheiro, prazo curto) → aniversário (não urgente). Tarefas tem bloco
-  // próprio no Dashboard (tarefasWrap), não entra mais aqui.
+  // O Mural junta quatro fontes assíncronas (financeiro + pós-venda +
+  // aniversariantes + status do bot); cada uma guarda seu estado e redesenha
+  // o conjunto quando muda. Ordem: alerta do bot (operacional, urgente) →
+  // pagamentos/recebimentos (dinheiro, prazo curto) → pós-venda (relacionamento,
+  // sem prazo rígido) → aniversário (não urgente). Tarefas tem bloco próprio
+  // no Dashboard (tarefasWrap), não entra mais aqui.
   let aniversariantes = []
   let botStatus = null
+  let vendasEntregues = []
 
   function renderMural() {
     const recados = []
@@ -366,6 +420,7 @@ export function render(container) {
     if (alertaBot) recados.push(alertaBot)
 
     recados.push(...recadosFinanceiro(lancamentos))
+    recados.push(...recadosPosVenda(vendasEntregues))
 
     aniversariantes.forEach(c => {
       const phone = c.phone || ''
@@ -404,6 +459,11 @@ export function render(container) {
     err => console.error('Erro ao acompanhar tarefas:', err)
   )
 
+  const unsubVendasEntregues = subscribeVendasEntregues(
+    lista => { vendasEntregues = lista; renderMural() },
+    err => console.error('Erro ao acompanhar vendas entregues:', err)
+  )
+
   // O alerta é por tempo decorrido ("sem sinal há 15min"), então precisa ser
   // reavaliado mesmo sem evento novo do Firestore — senão a tela fica dizendo
   // que está tudo bem enquanto o sinal envelhece.
@@ -414,6 +474,7 @@ export function render(container) {
     unsubFinanceiro?.()
     unsubBotStatus?.()
     unsubTarefas?.()
+    unsubVendasEntregues?.()
     clearInterval(revisaoStatus)
   }
 }

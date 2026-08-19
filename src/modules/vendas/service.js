@@ -21,6 +21,7 @@ export async function createVenda(data) {
   const { uid } = getCurrentProfile()
   const batch = writeBatch(db)
   const ref = doc(collection(db, COL))
+  const statusEntrega = data.statusEntrega || 'aguardando'
   batch.set(ref, {
     produtoId:      data.produtoId || null,
     produto:        (data.produto || '').trim(),
@@ -28,7 +29,8 @@ export async function createVenda(data) {
     clienteId:      data.clienteId || null,
     valorVenda:     parseFloat(data.valorVenda) || 0,
     formaPagamento: data.formaPagamento || '',
-    statusEntrega:  data.statusEntrega || 'aguardando',
+    statusEntrega,
+    ...(statusEntrega === 'entregue' ? { dataEntrega: serverTimestamp() } : {}),
     reciboEmitido:  false,
     pedidoId:       null,
     criadoPor:      uid,
@@ -43,7 +45,25 @@ export async function createVenda(data) {
 export async function patchVenda(id, fields) {
   const patch = { ...fields }
   if (patch.valorVenda !== undefined) patch.valorVenda = parseFloat(patch.valorVenda) || 0
+  // Marca o instante da entrega pra alimentar o lembrete de pós-venda no
+  // Dashboard (mostra 3 dias depois) — só quando o status está de fato
+  // virando "entregue" agora, senão reeditar outro campo reiniciaria a contagem.
+  if (patch.statusEntrega === 'entregue') patch.dataEntrega = serverTimestamp()
   return updateDoc(doc(db, COL, id), patch)
+}
+
+// Subconjunto usado pelo lembrete de pós-venda do Dashboard — filtra no
+// servidor pra não abrir um listener sobre a coleção inteira de vendas.
+export function subscribeVendasEntregues(callback, onError) {
+  const q = query(collection(db, COL), where('statusEntrega', '==', 'entregue'))
+  return onSnapshot(q,
+    snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    onError
+  )
+}
+
+export async function marcarPosVendaFeito(id) {
+  return updateDoc(doc(db, COL, id), { posVendaFeito: true, posVendaFeitoEm: serverTimestamp() })
 }
 
 // Desfaz a entrada de estoque se a venda avulsa tinha descontado 1 na criação —

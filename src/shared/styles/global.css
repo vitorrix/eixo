@@ -1009,15 +1009,19 @@ html, body {
   flex-shrink: 0;
   width: 30px;
   height: 30px;
+  border: none;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #e8f9f1;
   color: #10B981;
+  font-family: inherit;
+  cursor: pointer;
   transition: background .15s;
 }
 .mural-item-action:hover { background: #d1f4e3; }
+.mural-item-action:disabled { opacity: .6; cursor: default; }
 
 .mural-item-action-text {
   width: auto;
