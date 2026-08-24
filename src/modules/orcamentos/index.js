@@ -841,7 +841,7 @@ function buildHistorico() {
   let lista = []
   let busca = ''
 
-  const searchInp = el('input', { type: 'text', placeholder: 'Buscar por cliente ou aparelho...' })
+  const searchInp = el('input', { type: 'text', class: 'search-input', placeholder: 'Buscar por cliente ou aparelho...' })
   searchInp.addEventListener('input', () => { busca = searchInp.value.trim().toLowerCase(); renderList() })
 
   const tbody = document.createElement('tbody')
