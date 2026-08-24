@@ -2429,12 +2429,14 @@ html, body {
 .orc-srow:last-child { border-bottom: none; }
 .orc-srow-green { background: rgba(16,185,129,.06); }
 .orc-srow-red   { background: rgba(220,38,38,.04); }
+.orc-srow-troco { background: rgba(245,158,11,.10); }
 .orc-sico { width: 32px; height: 32px; flex-shrink: 0; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
 .orc-sinf { flex: 1; min-width: 0; }
 .orc-slbl { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--color-muted); margin-bottom: 2px; }
 .orc-sval { font-size: 13px; font-weight: 700; color: var(--color-text); line-height: 1.35; white-space: pre-line; }
 .orc-sval.green { color: #16a34a; font-size: 15px; font-weight: 800; }
 .orc-sval.red   { color: #dc2626; }
+.orc-sval.troco { color: #b45309; font-size: 15px; font-weight: 800; }
 
 /* Price block */
 .orc-pblk { background: var(--color-sidebar-bg); border-radius: 12px; padding: 20px 18px 16px; text-align: center; margin-bottom: 10px; color: #fff; position: relative; overflow: hidden; }
@@ -2448,6 +2450,18 @@ html, body {
 .orc-pblk-plbl { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.28); margin-bottom: 5px; min-height: 14px; }
 .orc-pblk-pnum { font-size: 26px; font-weight: 800; letter-spacing: -.5px; min-height: 26px; }
 .orc-pblk-ptot { font-size: 11px; color: rgba(255,255,255,.2); margin-top: 4px; min-height: 14px; }
+
+/* Troco (downgrade): a diferença vai pro cliente, não faz sentido mostrar
+   "à vista no cartão" nem opções de parcelamento de um valor que a loja
+   está devolvendo. */
+.orc-troco-mode .orc-pblk-vista-lbl,
+.orc-troco-mode .orc-pblk-vista-val,
+.orc-troco-mode .orc-pblk-acc2,
+.orc-troco-mode .orc-pblk-plbl,
+.orc-troco-mode .orc-pblk-pnum,
+.orc-troco-mode .orc-pblk-ptot,
+.orc-troco-mode .orc-pillc,
+.orc-troco-mode .orc-tblc { display: none; }
 
 /* Pills */
 .orc-pillc { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 13px; margin-bottom: 10px; }

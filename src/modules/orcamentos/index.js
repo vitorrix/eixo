@@ -289,6 +289,7 @@ function makeSRow(ico, lbl, val, cls) {
   valEl.textContent = val
   if (cls === 'orc-srow-green') valEl.classList.add('green')
   if (cls === 'orc-srow-red') valEl.classList.add('red')
+  if (cls === 'orc-srow-troco') valEl.classList.add('troco')
   return el('div', { class: `orc-srow${cls ? ' ' + cls : ''}` },
     el('div', { class: 'orc-sico' }, ico),
     el('div', { class: 'orc-sinf' }, el('div', { class: 'orc-slbl' }, lbl), valEl),
@@ -324,8 +325,9 @@ function buildResultCol(bigLbl) {
   const pnumEl  = el('div', { class: 'orc-pblk-pnum' })
   const ptotEl  = el('div', { class: 'orc-pblk-ptot' })
 
+  const lblEl = el('div', { class: 'orc-pblk-lbl' }, bigLbl)
   const pblk = el('div', { class: 'orc-pblk' },
-    el('div', { class: 'orc-pblk-lbl' }, bigLbl),
+    lblEl,
     bigEl,
     el('div', { class: 'orc-pblk-acc' }),
     el('div', { class: 'orc-pblk-vista-lbl' }, 'À vista (cartão)'),
@@ -375,7 +377,7 @@ function buildResultCol(bigLbl) {
   const disc = el('div', { class: 'orc-disc' })
   const col  = el('div', { class: 'orc-col-r' }, resultBlock, disc, msgc)
 
-  return { col, summWrap, bigEl, vistaEl, plblEl, pnumEl, ptotEl, pillsWrap, tbody, resultBlock, disc, msgc, msgBody }
+  return { col, summWrap, bigEl, lblEl, vistaEl, plblEl, pnumEl, ptotEl, pillsWrap, tbody, resultBlock, disc, msgc, msgBody }
 }
 
 function updPblk(refs, liq, n, bigVal) {
@@ -513,7 +515,7 @@ function msgParc(items, desc, liq, entrada, rest, cli) {
   return m + `${NL}${L}${NL}_Válido por 24h  ·  Baruk Store_${NL}_barukstore.com.br_`
 }
 
-function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = []) {
+function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], troco = 0) {
   const nome = cli || 'Baruker'
   const NL = '\n', L = '───────────────────'
   let m = `Olá, ${nome}! 😊${NL}${NL}*Orçamento de Troca — Baruk Store*${NL}${L}${NL}${NL}`
@@ -525,6 +527,16 @@ function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = []) {
   }
   for (const it of novos)  m += `📦  Aparelho desejado${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}`
   if (dc > 0) m += `🏷️  Desconto:  *− ${R(dc)}*${NL}`
+
+  // Downgrade: o aparelho do cliente vale mais que o desejado — em vez de
+  // cobrar diferença, é a loja quem devolve. Não faz sentido oferecer
+  // parcelamento de um valor que vai pro cliente, então a mensagem termina aqui.
+  if (troco > 0) {
+    m += `${NL}${L}${NL}${NL}💰  Troco a devolver:  *${R(troco)}*${NL}${NL}`
+    m += `O valor do seu aparelho na troca superou o valor do aparelho escolhido — vamos te devolver essa diferença. 😊${NL}`
+    return m + `${NL}${L}${NL}_Válido por 24h  ·  Baruk Store_${NL}_barukstore.com.br_`
+  }
+
   m += `${NL}${L}${NL}${NL}💳  Diferença a pagar:  *${R(dif)}*${NL}${NL}${L}${NL}${NL}`
   m += `*Formas de pagamento*${NL}${NL}`
   m += `💸  Pix / Dinheiro${NL}     *${R(dif)}*${NL}${NL}`
@@ -672,10 +684,15 @@ function buildTroca(prodData) {
     const av    = calcAv()
     const cli   = cliInp.value.trim()
 
-    const uvLiq = Math.max(0, uvTot - av)
-    const dif   = Math.max(0, nvTot - uvLiq - dc)
-    const rest  = Math.max(0, dif - ent)
-    const base  = rest > 0 ? rest : dif
+    const uvLiq  = Math.max(0, uvTot - av)
+    // Downgrade: cliente troca por algo mais barato — o valor líquido do
+    // aparelho dele supera o desejado (mesmo já descontando o desconto extra).
+    // Nesse caso não sobra diferença a cobrar, sobra troco a devolver.
+    const bruto  = nvTot - dc - uvLiq
+    const dif    = Math.max(0, bruto)
+    const troco  = Math.max(0, -bruto)
+    const rest   = Math.max(0, dif - ent)
+    const base   = rest > 0 ? rest : dif
 
     tNparc = 12
     refs.summWrap.replaceChildren()
@@ -683,26 +700,40 @@ function buildTroca(prodData) {
     if (av > 0) refs.summWrap.appendChild(makeSRow('🔧', 'Avarias (desc. interno)', `− ${R(av)}`, 'orc-srow-red'))
     for (const it of tNovos) refs.summWrap.appendChild(makeSRow('📦', 'Aparelho desejado', `${it.nome} — ${R(it.val)}`))
     if (dc > 0)  refs.summWrap.appendChild(makeSRow('🏷️', 'Desconto extra',        `− ${R(dc)}`,  'orc-srow-red'))
-    refs.summWrap.appendChild(               makeSRow('💸', 'Diferença — Pix / Dinheiro', R(dif),  'orc-srow-green'))
-    if (ent > 0) refs.summWrap.appendChild(makeSRow('💵', 'Entrada',               R(ent),          'orc-srow-green'))
-    if (rest > 0 && ent > 0) refs.summWrap.appendChild(makeSRow('💳', 'Restante no cartão', R(rest)))
-
-    updPblk(refs, base, tNparc, dif)
-
-    let onPill
-    onPill = (n) => {
-      tNparc = n
-      updPblk(refs, base, n, dif)
-      updPills(refs.pillsWrap, base, n, onPill)
-      updTbl(refs.tbody, base, n)
+    if (troco > 0) {
+      refs.summWrap.appendChild(makeSRow('💰', 'Troco a devolver ao cliente', R(troco), 'orc-srow-troco'))
+    } else {
+      refs.summWrap.appendChild(             makeSRow('💸', 'Diferença — Pix / Dinheiro', R(dif),  'orc-srow-green'))
+      if (ent > 0) refs.summWrap.appendChild(makeSRow('💵', 'Entrada',               R(ent),          'orc-srow-green'))
+      if (rest > 0 && ent > 0) refs.summWrap.appendChild(makeSRow('💳', 'Restante no cartão', R(rest)))
     }
-    updPills(refs.pillsWrap, base, tNparc, onPill)
-    updTbl(refs.tbody, base, tNparc)
+
+    refs.resultBlock.classList.toggle('orc-troco-mode', troco > 0)
+    refs.lblEl.textContent = troco > 0 ? 'Troco a Devolver ao Cliente' : 'Diferença a Pagar'
+
+    if (troco > 0) {
+      refs.bigEl.textContent = R(troco)
+      refs.pillsWrap.replaceChildren()
+      refs.tbody.replaceChildren()
+    } else {
+      updPblk(refs, base, tNparc, dif)
+
+      let onPill
+      onPill = (n) => {
+        tNparc = n
+        updPblk(refs, base, n, dif)
+        updPills(refs.pillsWrap, base, n, onPill)
+        updTbl(refs.tbody, base, n)
+      }
+      updPills(refs.pillsWrap, base, tNparc, onPill)
+      updTbl(refs.tbody, base, tNparc)
+    }
+
     const avItems = []
     for (const a of AVARIA_DEFS) {
       if (avState[a.key].checked) avItems.push({ nome: a.label.replace(/^\S+\s+/, ''), val: avState[a.key].val })
     }
-    refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli, avItems)
+    refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli, avItems, troco)
     refs.resultBlock.classList.add('visible')
     refs.disc.classList.add('visible')
     refs.msgc.classList.add('visible')
