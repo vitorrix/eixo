@@ -662,6 +662,8 @@ html, body {
 }
 .badge-pf { background: #dbeafe; color: #1d4ed8; }
 .badge-pj { background: #d1fae5; color: #065f46; }
+.badge-orc-parc  { background: #dbeafe; color: #1d4ed8; }
+.badge-orc-troca { background: #d1fae5; color: #065f46; }
 
 /* ── Empty state ─────────────────────────────── */
 .empty-state {

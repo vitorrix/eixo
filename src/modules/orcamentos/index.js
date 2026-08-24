@@ -2,6 +2,9 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { db } from '../../firebase.js'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
+import { openModal } from '../../shared/components/Modal.js'
+import { toolbarCard, searchWithIcon } from '../../shared/components/ToolbarCard.js'
+import { createOrcamento, subscribeOrcamentos } from './service.js'
 
 function R(v) {
   if (!v || isNaN(v)) return 'R$ 0,00'
@@ -605,6 +608,17 @@ function buildParc(prodData) {
     refs.resultBlock.classList.add('visible')
     refs.disc.classList.add('visible')
     refs.msgc.classList.add('visible')
+
+    // Guarda no histórico pra poder visualizar/copiar de novo depois — a
+    // mensagem fica congelada como foi gerada, não recalculada (preço da
+    // tabela pode mudar, o orçamento já enviado não).
+    createOrcamento({
+      tipo:     'parcelamento',
+      cliente:  cli || 'Baruker',
+      itens:    pItems.filter(i => i.nome).map(i => ({ nome: i.nome, val: i.val })),
+      valor:    liq,
+      mensagem: refs.msgBody.textContent,
+    }).catch(err => console.error('Erro ao salvar histórico do orçamento:', err))
   })
 
   const colL = el('div', { class: 'orc-col-l' },
@@ -737,6 +751,16 @@ function buildTroca(prodData) {
     refs.resultBlock.classList.add('visible')
     refs.disc.classList.add('visible')
     refs.msgc.classList.add('visible')
+
+    createOrcamento({
+      tipo:     'troca',
+      cliente:  cli || 'Baruker',
+      usados:   tUsados.filter(i => i.nome).map(i => ({ nome: i.nome, val: i.val })),
+      novos:    tNovos.filter(i => i.nome).map(i => ({ nome: i.nome, val: i.val })),
+      valor:    troco > 0 ? troco : dif,
+      ehTroco:  troco > 0,
+      mensagem: refs.msgBody.textContent,
+    }).catch(err => console.error('Erro ao salvar histórico do orçamento:', err))
   })
 
   const colL = el('div', { class: 'orc-col-l' },
@@ -773,6 +797,101 @@ function buildTroca(prodData) {
   return { sec, cliInp, getNovos: () => tNovos, syncNovos: (src) => { tNovos.splice(0, tNovos.length, ...src.map(i => ({ ...i }))); renderNovos() } }
 }
 
+// ── Histórico ──────────────────────────────────────────────────────
+function resumoOrcamento(o) {
+  if (o.tipo === 'troca') {
+    const usados = (o.usados || []).map(i => i.nome).filter(Boolean).join(', ') || '—'
+    const novos  = (o.novos  || []).map(i => i.nome).filter(Boolean).join(', ') || '—'
+    return `${usados} → ${novos}`
+  }
+  return (o.itens || []).map(i => i.nome).filter(Boolean).join(', ') || '—'
+}
+
+function dataHoraOrcamento(ts) {
+  const d = ts?.toDate ? ts.toDate() : null
+  if (!d) return '—'
+  return `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+}
+
+// Reaproveita o mesmo visual do cartão "Mensagem pronta" da tela de cálculo,
+// já que é literalmente a mesma mensagem — só congelada de quando foi gerada.
+function abrirHistoricoModal(o) {
+  openModal({
+    title: `${o.tipo === 'troca' ? 'Orçamento de Troca' : 'Orçamento'} — ${o.cliente || 'Baruker'}`,
+    size: 'md',
+    renderBody: (body) => {
+      const msgBody = el('div', { class: 'orc-msgb' })
+      msgBody.textContent = o.mensagem || ''
+      mount(body, el('div', { class: 'orc-msgc visible' },
+        el('div', { class: 'orc-msgh' }, el('span', { class: 'orc-msght' }, '📲 Mensagem enviada')),
+        msgBody,
+      ))
+    },
+    footer: (close, footerEl) => {
+      const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
+      fecharBtn.addEventListener('click', close)
+      const copyBtn = el('button', { type: 'button', class: 'orc-copy-btn' }, 'Copiar')
+      copyBtn.addEventListener('click', () => copyText(o.mensagem || '', copyBtn))
+      footerEl.append(fecharBtn, copyBtn)
+    },
+  })
+}
+
+function buildHistorico() {
+  let lista = []
+  let busca = ''
+
+  const searchInp = el('input', { type: 'text', placeholder: 'Buscar por cliente ou aparelho...' })
+  searchInp.addEventListener('input', () => { busca = searchInp.value.trim().toLowerCase(); renderList() })
+
+  const tbody = document.createElement('tbody')
+  const emptyState = el('div', { class: 'empty-state' }, el('p', {}, 'Nenhum orçamento gerado ainda.'))
+  const tableWrap = el('div', { class: 'table-wrapper' },
+    el('table', { class: 'data-table' },
+      el('thead', {}, el('tr', {},
+        el('th', {}, 'Data'), el('th', {}, 'Cliente'), el('th', {}, 'Tipo'),
+        el('th', {}, 'Aparelhos'), el('th', { class: 'th-money' }, 'Valor'),
+      )),
+      tbody,
+    )
+  )
+
+  function renderList() {
+    tbody.replaceChildren()
+    const filtrada = busca
+      ? lista.filter(o => (o.cliente || '').toLowerCase().includes(busca) || resumoOrcamento(o).toLowerCase().includes(busca))
+      : lista
+    tableWrap.style.display = filtrada.length ? '' : 'none'
+    emptyState.style.display = filtrada.length ? 'none' : ''
+    filtrada.forEach(o => {
+      const resumo = resumoOrcamento(o)
+      const row = el('tr', { class: 'row-clicavel' },
+        el('td', { class: 'td-date' }, dataHoraOrcamento(o.criadoEm)),
+        el('td', {}, o.cliente || '—'),
+        el('td', {}, el('span', { class: `badge ${o.tipo === 'troca' ? 'badge-orc-troca' : 'badge-orc-parc'}` }, o.tipo === 'troca' ? 'Troca' : 'Parcelamento')),
+        el('td', { class: 'td-name', title: resumo }, resumo),
+        el('td', { class: 'td-money' }, `${o.tipo === 'troca' && o.ehTroco ? '↩ ' : ''}${R(o.valor)}`),
+      )
+      row.addEventListener('click', () => abrirHistoricoModal(o))
+      tbody.appendChild(row)
+    })
+  }
+
+  const toolbar = toolbarCard(searchWithIcon(searchInp))
+  const sec = el('div', { class: 'orc-section' }, toolbar, tableWrap, emptyState)
+  renderList() // estado inicial (vazio) antes do primeiro snapshot chegar
+
+  const unsubscribe = subscribeOrcamentos(
+    list => { lista = list; renderList() },
+    err => {
+      console.error('Erro ao carregar histórico de orçamentos:', err)
+      mount(tableWrap, el('p', { class: 'text-muted' }, 'Erro ao carregar histórico.'))
+    }
+  )
+
+  return { sec, unsubscribe }
+}
+
 // ── Main ──────────────────────────────────────────────────────────
 export async function render(container) {
   let prodData = []
@@ -785,28 +904,40 @@ export async function render(container) {
 
   const { sec: parcSec, cliInp: parcCli, getItems: parcGetItems, syncItems: parcSyncItems } = buildParc(prodData)
   const { sec: trocaSec, cliInp: trocaCli, getNovos: trocaGetNovos, syncNovos: trocaSyncNovos } = buildTroca(prodData)
+  const { sec: histSec, unsubscribe: unsubHistorico } = buildHistorico()
 
   const tabParc = el('button', { type: 'button', class: 'config-tab-btn active' }, 'Parcelamento')
   const tabTroc = el('button', { type: 'button', class: 'config-tab-btn' }, 'Troca')
+  const tabHist = el('button', { type: 'button', class: 'config-tab-btn' }, 'Histórico')
+  const allTabs = [[tabParc, parcSec], [tabTroc, trocaSec], [tabHist, histSec]]
+
+  function activate(tab, sec) {
+    for (const [t, s] of allTabs) {
+      t.classList.toggle('active', t === tab)
+      s.classList.toggle('active', s === sec)
+    }
+  }
 
   tabParc.addEventListener('click', () => {
     parcCli.value = trocaCli.value
     parcSyncItems(trocaGetNovos())
-    parcSec.classList.add('active');  trocaSec.classList.remove('active')
-    tabParc.classList.add('active');  tabTroc.classList.remove('active')
+    activate(tabParc, parcSec)
   })
   tabTroc.addEventListener('click', () => {
     trocaCli.value = parcCli.value
     trocaSyncNovos(parcGetItems())
-    trocaSec.classList.add('active'); parcSec.classList.remove('active')
-    tabTroc.classList.add('active');  tabParc.classList.remove('active')
+    activate(tabTroc, trocaSec)
   })
+  tabHist.addEventListener('click', () => activate(tabHist, histSec))
 
   mount(container,
     el('div', { class: 'orc-wrap' },
-      el('div', { class: 'orc-tabs-center' }, el('div', { class: 'config-tab-bar' }, tabParc, tabTroc)),
+      el('div', { class: 'orc-tabs-center' }, el('div', { class: 'config-tab-bar' }, tabParc, tabTroc, tabHist)),
       parcSec,
       trocaSec,
+      histSec,
     )
   )
+
+  return () => { unsubHistorico?.() }
 }

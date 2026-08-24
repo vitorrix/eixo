@@ -104,10 +104,10 @@ service cloud.firestore {
 
     // ── /orcamentos ───────────────────────────────────────────────────────
     match /orcamentos/{id} {
-      allow read:   if hasPermission('orcamento', 'view');
-      allow create: if hasPermission('orcamento', 'create');
-      allow update: if hasPermission('orcamento', 'edit');
-      allow delete: if hasPermission('orcamento', 'delete');
+      allow read:   if hasPermission('orcamentos', 'view');
+      allow create: if hasPermission('orcamentos', 'create');
+      allow update: if hasPermission('orcamentos', 'edit');
+      allow delete: if hasPermission('orcamentos', 'delete');
     }
 
     // ── /relatorios (coleção gerada por aggregações — somente leitura) ────
