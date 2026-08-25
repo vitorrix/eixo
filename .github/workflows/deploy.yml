@@ -51,8 +51,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          # Pages andou lento pra publicar (chegou a passar de "na fila" pra
-          # "publicando" e ainda assim estourou o timeout padrão de 10min) —
-          # dobra o prazo em vez de ficar cancelando no meio do processo.
-          timeout: 1200
+        # Sem "timeout" custom: em 25/08/26 todo deploy com timeout:1200 abortava
+        # em milissegundos ("Timeout reached, aborting!" quase instantâneo, não
+        # os 20min configurados) — suspeita de bug na action com input numérico
+        # custom. O default embutido da action funciona normal.
