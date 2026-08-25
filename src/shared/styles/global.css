@@ -2502,7 +2502,11 @@ html, body {
 .orc-copy-btn:hover { opacity: .82; }
 .orc-wpp-btn { background: #25d366; color: #fff; border: none; border-radius: 7px; padding: 7px 13px; font-size: 12px; font-weight: 700; font-family: var(--font); cursor: pointer; }
 .orc-wpp-btn:hover { opacity: .82; }
+.orc-pdf-btn { background: #3b82f6; color: #fff; border: none; border-radius: 7px; padding: 7px 13px; font-size: 12px; font-weight: 700; font-family: var(--font); cursor: pointer; }
+.orc-pdf-btn:hover { opacity: .82; }
 .orc-msgb { padding: 14px; font-size: 12px; line-height: 1.85; color: var(--color-text); white-space: pre-wrap; font-family: 'Courier New', monospace; }
+.orc-pdf-fields { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--color-border); }
+.orc-pdf-fields .field { flex: 1; min-width: 140px; }
 
 /* Avaria section */
 .orc-avc { background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 14px; margin-bottom: 12px; }

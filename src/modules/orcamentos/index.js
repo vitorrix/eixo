@@ -5,6 +5,12 @@ import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { openModal } from '../../shared/components/Modal.js'
 import { toolbarCard, searchWithIcon } from '../../shared/components/ToolbarCard.js'
 import { createOrcamento, subscribeOrcamentos } from './service.js'
+import { maskCPF, maskCNPJ, fullDate } from '../../shared/utils/formatters.js'
+import { validateCPF, validateCNPJ } from '../../shared/utils/validators.js'
+import { montarEmpresa, criarBotaoImprimir } from '../../shared/components/Recibo.js'
+import { montarDadosOrcamentoPdf, renderOrcamentoPdfPreview } from '../../shared/components/OrcamentoPdf.js'
+import { getEmpresa } from '../configuracoes/service.js'
+import { toastError } from '../../shared/components/Toast.js'
 
 function R(v) {
   if (!v || isNaN(v)) return 'R$ 0,00'
@@ -367,11 +373,14 @@ function buildResultCol(bigLbl) {
   copyBtn.addEventListener('click', () => copyText(msgBody.textContent, copyBtn))
   const wppBtn = el('button', { type: 'button', class: 'orc-wpp-btn' }, '📲 Enviar')
   wppBtn.addEventListener('click', () => window.open(`https://wa.me/?text=${encodeURIComponent(msgBody.textContent)}`, '_blank'))
+  // Só aparece quando o toggle "Documento formal (PDF)" está ligado — quem
+  // controla isso é buildParc/buildTroca, aqui é só o botão.
+  const pdfBtn = el('button', { type: 'button', class: 'orc-pdf-btn', style: 'display:none' }, '📄 Gerar PDF')
 
   const msgc = el('div', { class: 'orc-msgc' },
     el('div', { class: 'orc-msgh' },
       el('span', { class: 'orc-msght' }, '📲 Mensagem pronta'),
-      el('div', { class: 'orc-msga' }, copyBtn, wppBtn),
+      el('div', { class: 'orc-msga' }, copyBtn, wppBtn, pdfBtn),
     ),
     msgBody,
   )
@@ -380,7 +389,57 @@ function buildResultCol(bigLbl) {
   const disc = el('div', { class: 'orc-disc' })
   const col  = el('div', { class: 'orc-col-r' }, resultBlock, disc, msgc)
 
-  return { col, summWrap, bigEl, lblEl, vistaEl, plblEl, pnumEl, ptotEl, pillsWrap, tbody, resultBlock, disc, msgc, msgBody }
+  return { col, summWrap, bigEl, lblEl, vistaEl, plblEl, pnumEl, ptotEl, pillsWrap, tbody, resultBlock, disc, msgc, msgBody, pdfBtn }
+}
+
+// ── Documento formal (PDF) — CPF/CNPJ do cliente ───────────────────
+// Reaproveitado por Parcelamento e Troca: um checkbox que revela o toggle
+// PF/PJ + campo de documento, só usados quando o cliente pediu um PDF formal
+// pra apresentar numa empresa (a Baruk entra sozinha, via getEmpresa()).
+function buildPdfFields() {
+  let tipo = 'pf'
+  let onToggle = null
+
+  const chk = el('input', { type: 'checkbox' })
+  const btnPF = el('button', { type: 'button', class: 'type-btn type-btn-sm active' }, 'Pessoa Física')
+  const btnPJ = el('button', { type: 'button', class: 'type-btn type-btn-sm' }, 'Pessoa Jurídica')
+  const toggle = el('div', { class: 'type-toggle type-toggle-sm' }, btnPF, btnPJ)
+  const docLabel = el('label', {}, 'CPF')
+  const docInp = el('input', { type: 'text', class: 'orc-input', placeholder: '000.000.000-00' })
+
+  function applyMask() { docInp.value = tipo === 'pf' ? maskCPF(docInp.value) : maskCNPJ(docInp.value) }
+  btnPF.addEventListener('click', () => {
+    tipo = 'pf'; btnPF.classList.add('active'); btnPJ.classList.remove('active')
+    docLabel.textContent = 'CPF'; docInp.placeholder = '000.000.000-00'; applyMask()
+  })
+  btnPJ.addEventListener('click', () => {
+    tipo = 'pj'; btnPJ.classList.add('active'); btnPF.classList.remove('active')
+    docLabel.textContent = 'CNPJ'; docInp.placeholder = '00.000.000/0000-00'; applyMask()
+  })
+  docInp.addEventListener('input', applyMask)
+
+  const fieldsWrap = el('div', { class: 'orc-pdf-fields', style: 'display:none' },
+    el('div', { class: 'field' }, el('label', {}, 'Tipo'), toggle),
+    el('div', { class: 'field' }, docLabel, docInp),
+  )
+
+  chk.addEventListener('change', () => {
+    fieldsWrap.style.display = chk.checked ? '' : 'none'
+    if (onToggle) onToggle()
+  })
+
+  const wrap = el('div', {},
+    el('label', { class: 'troca-toggle-row' }, chk, el('span', {}, '📄 Documento formal (PDF)')),
+    fieldsWrap,
+  )
+
+  return {
+    wrap,
+    isChecked: () => chk.checked,
+    getTipo:   () => tipo,
+    getDoc:    () => docInp.value,
+    onChange:  fn => { onToggle = fn },
+  }
 }
 
 function updPblk(refs, liq, n, bigVal) {
@@ -557,9 +616,10 @@ function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], tr
 }
 
 // ── Parcelamento section ──────────────────────────────────────────
-function buildParc(prodData) {
+function buildParc(prodData, empresa) {
   let pItems = [{ nome: '', val: 0 }]
   let pNparc = 12
+  let ultimoCalc = null // snapshot do último "Gerar Orçamento" — o PDF usa ele, não os inputs ao vivo
 
   const cliInp  = el('input', { type: 'text',   class: 'orc-input', placeholder: 'Nome do cliente' })
   const descInp = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
@@ -571,6 +631,46 @@ function buildParc(prodData) {
 
   const addBtn = el('button', { type: 'button', class: 'orc-add-btn' }, '+ Adicionar produto')
   addBtn.addEventListener('click', () => { pItems.push({ nome: '', val: 0 }); renderList() })
+
+  const pdf = buildPdfFields()
+  function atualizarPdfBtn() {
+    refs.pdfBtn.style.display = (pdf.isChecked() && ultimoCalc) ? '' : 'none'
+  }
+  pdf.onChange(atualizarPdfBtn)
+  refs.pdfBtn.addEventListener('click', () => {
+    if (!ultimoCalc) return
+    const tipo = pdf.getTipo()
+    const doc  = pdf.getDoc()
+    const valido = tipo === 'pf' ? validateCPF(doc) : validateCNPJ(doc)
+    if (!valido) { toastError(`${tipo === 'pf' ? 'CPF' : 'CNPJ'} inválido.`); return }
+
+    const dados = montarDadosOrcamentoPdf({
+      empresa: montarEmpresa(empresa),
+      data: fullDate(new Date().toISOString().slice(0, 10)),
+      tipo: 'parcelamento',
+      clienteNome: ultimoCalc.cli || 'Cliente',
+      clienteDocLabel: tipo === 'pf' ? 'CPF' : 'CNPJ',
+      clienteDoc: doc,
+      itens: ultimoCalc.itens,
+      desconto: ultimoCalc.desc,
+      liquido: ultimoCalc.liq,
+      entrada: ultimoCalc.entrada,
+      restante: ultimoCalc.rest,
+      parcelas: pNparc,
+      valorParcela: cobrar(ultimoCalc.base, pNparc) / pNparc,
+      valorTotalParcelado: cobrar(ultimoCalc.base, pNparc),
+    })
+    openModal({
+      title: 'Orçamento em PDF',
+      size: 'lg',
+      renderBody: body => renderOrcamentoPdfPreview(body, dados),
+      footer: (close, footerEl) => {
+        const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
+        fecharBtn.addEventListener('click', close)
+        footerEl.append(fecharBtn, criarBotaoImprimir())
+      },
+    })
+  })
 
   const calcBtn = el('button', { type: 'button', class: 'orc-calc-btn' }, 'Gerar Orçamento →')
   calcBtn.addEventListener('click', () => {
@@ -619,6 +719,12 @@ function buildParc(prodData) {
       valor:    liq,
       mensagem: refs.msgBody.textContent,
     }).catch(err => console.error('Erro ao salvar histórico do orçamento:', err))
+
+    ultimoCalc = {
+      cli, desc, entrada, liq, rest, base,
+      itens: pItems.filter(i => i.nome).map(i => ({ descricao: i.nome, valor: i.val })),
+    }
+    atualizarPdfBtn()
   })
 
   const colL = el('div', { class: 'orc-col-l' },
@@ -633,6 +739,7 @@ function buildParc(prodData) {
         el('div', { class: 'field' }, el('label', {}, '💵 Entrada'), makePfxWrap(entInp)),
         el('div', { class: 'field' }, el('label', {}, '🏷️ Desconto'), makePfxWrap(descInp)),
       ),
+      pdf.wrap,
     ),
     calcBtn,
   )
@@ -642,10 +749,11 @@ function buildParc(prodData) {
 }
 
 // ── Troca section ─────────────────────────────────────────────────
-function buildTroca(prodData) {
+function buildTroca(prodData, empresa) {
   let tUsados = [{ nome: '', val: 0 }]
   let tNovos  = [{ nome: '', val: 0 }]
   let tNparc  = 12
+  let ultimoCalc = null
 
   const avState = Object.fromEntries(AVARIA_DEFS.map(a => [a.key, { checked: false, val: a.def }]))
 
@@ -688,6 +796,49 @@ function buildTroca(prodData) {
 
   const refs = buildResultCol('Diferença a Pagar')
   refs.disc.textContent = 'Orçamento válido por 24h · Sujeito à análise do aparelho usado'
+
+  const pdf = buildPdfFields()
+  function atualizarPdfBtn() {
+    refs.pdfBtn.style.display = (pdf.isChecked() && ultimoCalc) ? '' : 'none'
+  }
+  pdf.onChange(atualizarPdfBtn)
+  refs.pdfBtn.addEventListener('click', () => {
+    if (!ultimoCalc) return
+    const tipo = pdf.getTipo()
+    const doc  = pdf.getDoc()
+    const valido = tipo === 'pf' ? validateCPF(doc) : validateCNPJ(doc)
+    if (!valido) { toastError(`${tipo === 'pf' ? 'CPF' : 'CNPJ'} inválido.`); return }
+
+    const dados = montarDadosOrcamentoPdf({
+      empresa: montarEmpresa(empresa),
+      data: fullDate(new Date().toISOString().slice(0, 10)),
+      tipo: 'troca',
+      clienteNome: ultimoCalc.cli || 'Cliente',
+      clienteDocLabel: tipo === 'pf' ? 'CPF' : 'CNPJ',
+      clienteDoc: doc,
+      usados: ultimoCalc.usados,
+      novos: ultimoCalc.novos,
+      avarias: ultimoCalc.avItems,
+      desconto: ultimoCalc.dc,
+      diferenca: ultimoCalc.dif,
+      troco: ultimoCalc.troco,
+      entrada: ultimoCalc.ent,
+      restante: ultimoCalc.rest,
+      parcelas: tNparc,
+      valorParcela: ultimoCalc.troco > 0 ? 0 : cobrar(ultimoCalc.base, tNparc) / tNparc,
+      valorTotalParcelado: ultimoCalc.troco > 0 ? 0 : cobrar(ultimoCalc.base, tNparc),
+    })
+    openModal({
+      title: 'Orçamento de Troca em PDF',
+      size: 'lg',
+      renderBody: body => renderOrcamentoPdfPreview(body, dados),
+      footer: (close, footerEl) => {
+        const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
+        fecharBtn.addEventListener('click', close)
+        footerEl.append(fecharBtn, criarBotaoImprimir())
+      },
+    })
+  })
 
   const calcBtn = el('button', { type: 'button', class: 'orc-calc-btn' }, 'Gerar Orçamento de Troca →')
   calcBtn.addEventListener('click', () => {
@@ -761,6 +912,14 @@ function buildTroca(prodData) {
       ehTroco:  troco > 0,
       mensagem: refs.msgBody.textContent,
     }).catch(err => console.error('Erro ao salvar histórico do orçamento:', err))
+
+    ultimoCalc = {
+      cli, dc, ent, dif, troco, rest, base,
+      usados: tUsados.filter(i => i.nome).map(i => ({ descricao: i.nome, valor: i.val })),
+      novos:  tNovos.filter(i => i.nome).map(i => ({ descricao: i.nome, valor: i.val })),
+      avItems: avItems.map(a => ({ nome: a.nome, val: a.val })),
+    }
+    atualizarPdfBtn()
   })
 
   const colL = el('div', { class: 'orc-col-l' },
@@ -780,6 +939,7 @@ function buildTroca(prodData) {
         el('div', { class: 'field' }, el('label', {}, '💵 Entrada'), makePfxWrap(entInp)),
         el('div', { class: 'field' }, el('label', {}, '🏷️ Desconto'), makePfxWrap(dcInp)),
       ),
+      pdf.wrap,
     ),
     el('div', { class: 'orc-avc' },
       el('div', { class: 'orc-avlbl' }, '🔧 Análise Interna'),
@@ -902,8 +1062,16 @@ export async function render(container) {
     console.error('Erro ao carregar produtos para orçamento:', e)
   }
 
-  const { sec: parcSec, cliInp: parcCli, getItems: parcGetItems, syncItems: parcSyncItems } = buildParc(prodData)
-  const { sec: trocaSec, cliInp: trocaCli, getNovos: trocaGetNovos, syncNovos: trocaSyncNovos } = buildTroca(prodData)
+  // Dados da Baruk pro cabeçalho do PDF — entra sozinha, não precisa digitar.
+  let empresa = {}
+  try {
+    empresa = await getEmpresa()
+  } catch (e) {
+    console.error('Erro ao carregar dados da empresa para orçamento em PDF:', e)
+  }
+
+  const { sec: parcSec, cliInp: parcCli, getItems: parcGetItems, syncItems: parcSyncItems } = buildParc(prodData, empresa)
+  const { sec: trocaSec, cliInp: trocaCli, getNovos: trocaGetNovos, syncNovos: trocaSyncNovos } = buildTroca(prodData, empresa)
   const { sec: histSec, unsubscribe: unsubHistorico } = buildHistorico()
 
   const tabParc = el('button', { type: 'button', class: 'config-tab-btn active' }, 'Parcelamento')

@@ -1,0 +1,131 @@
+import { el, mount } from '../utils/dom.js'
+import { brl } from '../utils/formatters.js'
+
+// Documento formal de orçamento — alguns clientes pedem em PDF pra apresentar
+// numa empresa (reembolso, aprovação de compra etc.), então precisa do CNPJ/CPF
+// do lado do cliente e um visual sério, diferente da mensagem casual do
+// WhatsApp. Reaproveita o mesmo esqueleto visual do Recibo (masthead da
+// empresa, seções, tabela, rodapé) — dados.empresa já vem pronto de
+// montarEmpresa() (Recibo.js).
+export function montarDadosOrcamentoPdf({
+  empresa, data, tipo, clienteNome, clienteDocLabel, clienteDoc,
+  itens = [], usados = [], novos = [], avarias = [],
+  desconto = 0, liquido = 0, entrada = 0, restante = 0,
+  diferenca = 0, troco = 0, parcelas = 1, valorParcela = 0, valorTotalParcelado = 0,
+}) {
+  return {
+    empresa, data, tipo, clienteNome, clienteDocLabel, clienteDoc,
+    itens, usados, novos, avarias,
+    desconto, liquido, entrada, restante,
+    diferenca, troco, parcelas, valorParcela, valorTotalParcelado,
+  }
+}
+
+function itensTable(itens) {
+  return el('table', { class: 'recibo-table' },
+    el('thead', {}, el('tr', {}, el('th', {}, '#'), el('th', {}, 'Descrição'), el('th', {}, 'Valor'))),
+    el('tbody', {}, ...itens.map((it, i) => el('tr', {},
+      el('td', {}, String(i + 1)), el('td', {}, it.descricao), el('td', {}, brl(it.valor)),
+    ))),
+    el('tfoot', {}, el('tr', {},
+      el('td', { colspan: '2' }, 'Total'),
+      el('td', {}, brl(itens.reduce((s, i) => s + (i.valor || 0), 0))),
+    )),
+  )
+}
+
+// Linhas de parcelamento (cartão) só fazem sentido quando existe algo a
+// cobrar do cliente — numa troca com troco a devolver não há o que parcelar.
+function parcelamentoLinhas(dados) {
+  if (!dados.parcelas || dados.valorTotalParcelado <= 0) return []
+  const linhas = [el('div', { class: 'recibo-line' }, dados.parcelas === 1
+    ? `1x à vista — ${brl(dados.valorTotalParcelado)}`
+    : `${dados.parcelas}x de ${brl(dados.valorParcela)} — total ${brl(dados.valorTotalParcelado)}`)]
+  return linhas
+}
+
+export function renderOrcamentoPdfPreview(container, dados) {
+  const linha = (txt, muted) => el('div', { class: muted ? 'recibo-line recibo-line-muted' : 'recibo-line' }, txt)
+
+  const logoSrc = `${import.meta.env.BASE_URL}logo-baruk.png`
+  const markSrc = `${import.meta.env.BASE_URL}apple-touch-icon.png`
+
+  const masthead = el('div', { class: 'recibo-masthead' },
+    el('div', { class: 'recibo-masthead-brand' },
+      el('img', { src: logoSrc, alt: dados.empresa.fantasia || 'Baruk', class: 'recibo-logo' }),
+      el('div', { class: 'recibo-masthead-info' },
+        ...dados.empresa.enderecoLinhas.map(l => el('div', { class: 'recibo-empresa-linha' }, l)),
+        dados.empresa.tel1 ? el('div', { class: 'recibo-empresa-linha' }, `${dados.empresa.tel1} (whatsapp)`) : null,
+        dados.empresa.cnpj ? el('div', { class: 'recibo-empresa-linha' }, `CNPJ ${dados.empresa.cnpj}`) : null,
+      ),
+    ),
+    el('div', { class: 'recibo-masthead-numero' },
+      el('div', { class: 'recibo-numero-label' }, 'Orçamento'),
+      el('div', { class: 'recibo-numero-valor' }, dados.data),
+    )
+  )
+
+  const dadosCabecalho = el('div', { class: 'recibo-section recibo-grid-2' },
+    el('div', {},
+      el('p', { class: 'recibo-eyebrow' }, 'Para'),
+      linha(dados.clienteNome || '—'),
+      dados.clienteDoc ? linha(`${dados.clienteDocLabel}: ${dados.clienteDoc}`, true) : null,
+    ),
+    el('div', {},
+      el('p', { class: 'recibo-eyebrow' }, 'Detalhes'),
+      linha(`Data: ${dados.data}`),
+      linha('Validade: 24 horas', true),
+    ),
+  )
+
+  const secoes = [dadosCabecalho]
+
+  if (dados.tipo === 'troca') {
+    secoes.push(el('div', { class: 'recibo-section' },
+      el('p', { class: 'recibo-eyebrow' }, 'Aparelho(s) do cliente na troca'),
+      itensTable(dados.usados),
+    ))
+    if (dados.avarias.length) {
+      secoes.push(el('div', { class: 'recibo-obs' },
+        el('p', { class: 'recibo-eyebrow' }, 'Análise técnica'),
+        ...dados.avarias.map(a => linha(`${a.nome}: − ${brl(a.val)}`)),
+      ))
+    }
+    secoes.push(el('div', { class: 'recibo-section' },
+      el('p', { class: 'recibo-eyebrow' }, 'Aparelho(s) desejado(s)'),
+      itensTable(dados.novos),
+    ))
+  } else {
+    secoes.push(el('div', { class: 'recibo-section' },
+      el('p', { class: 'recibo-eyebrow' }, 'Itens'),
+      itensTable(dados.itens),
+    ))
+  }
+
+  const resumoLinhas = []
+  if (dados.desconto > 0) resumoLinhas.push(linha(`Desconto: − ${brl(dados.desconto)}`))
+  if (dados.tipo === 'troca' && dados.troco > 0) {
+    resumoLinhas.push(linha(`Troco a devolver ao cliente: ${brl(dados.troco)}`))
+  } else {
+    const valorFinal = dados.tipo === 'troca' ? dados.diferenca : dados.liquido
+    resumoLinhas.push(linha(`${dados.tipo === 'troca' ? 'Diferença a pagar' : 'Total líquido'}: ${brl(valorFinal)}`))
+    if (dados.entrada > 0) {
+      resumoLinhas.push(linha(`Entrada: ${brl(dados.entrada)}`))
+      resumoLinhas.push(linha(`Restante: ${brl(dados.restante)}`))
+    }
+    resumoLinhas.push(...parcelamentoLinhas(dados))
+  }
+  secoes.push(el('div', { class: 'recibo-section' },
+    el('p', { class: 'recibo-eyebrow' }, 'Resumo financeiro'),
+    ...resumoLinhas,
+  ))
+
+  const footer = el('div', { class: 'recibo-footer' },
+    el('img', { src: markSrc, alt: '', class: 'recibo-footer-mark' }),
+    el('span', {},
+      'Emitido pelo ', el('strong', {}, 'Eixo'), ' — uma plataforma ', el('strong', {}, 'Baruk Technology & Consulting'), '.'
+    ),
+  )
+
+  mount(container, el('div', { class: 'recibo-doc' }, masthead, el('div', { class: 'recibo-body' }, ...secoes), footer))
+}
