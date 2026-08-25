@@ -11,13 +11,13 @@ export function montarDadosOrcamentoPdf({
   empresa, data, tipo, clienteNome, clienteDocLabel, clienteDoc,
   itens = [], usados = [], novos = [], avarias = [],
   desconto = 0, liquido = 0, entrada = 0, restante = 0,
-  diferenca = 0, troco = 0, parcelas = 1, valorParcela = 0, valorTotalParcelado = 0,
+  diferenca = 0, troco = 0, opcoesParcelamento = [],
 }) {
   return {
     empresa, data, tipo, clienteNome, clienteDocLabel, clienteDoc,
     itens, usados, novos, avarias,
     desconto, liquido, entrada, restante,
-    diferenca, troco, parcelas, valorParcela, valorTotalParcelado,
+    diferenca, troco, opcoesParcelamento,
   }
 }
 
@@ -34,14 +34,18 @@ function itensTable(itens) {
   )
 }
 
-// Linhas de parcelamento (cartão) só fazem sentido quando existe algo a
-// cobrar do cliente — numa troca com troco a devolver não há o que parcelar.
-function parcelamentoLinhas(dados) {
-  if (!dados.parcelas || dados.valorTotalParcelado <= 0) return []
-  const linhas = [el('div', { class: 'recibo-line' }, dados.parcelas === 1
-    ? `1x à vista — ${brl(dados.valorTotalParcelado)}`
-    : `${dados.parcelas}x de ${brl(dados.valorParcela)} — total ${brl(dados.valorTotalParcelado)}`)]
-  return linhas
+// Todas as opções de parcelamento (1x-12x) em 2 colunas, em vez de só a
+// selecionada na tela — quem recebe o PDF quer ver o leque todo — e em grid
+// pra não esticar o documento verticalmente. Só faz sentido quando existe
+// algo a cobrar do cliente; numa troca com troco a devolver não há o que
+// parcelar.
+function parcelamentoGrid(opcoes) {
+  if (!opcoes.length) return null
+  return el('div', { class: 'recibo-parc-grid' },
+    ...opcoes.map(o => el('div', { class: 'recibo-parc-cell' }, o.n === 1
+      ? `1x à vista — ${brl(o.valorTotal)}`
+      : `${o.n}x de ${brl(o.valorParcela)} — total ${brl(o.valorTotal)}`)),
+  )
 }
 
 export function renderOrcamentoPdfPreview(container, dados) {
@@ -74,7 +78,7 @@ export function renderOrcamentoPdfPreview(container, dados) {
     el('div', {},
       el('p', { class: 'recibo-eyebrow' }, 'Detalhes'),
       linha(`Data: ${dados.data}`),
-      linha('Validade: 24 horas', true),
+      linha('Validade: 48 horas', true),
     ),
   )
 
@@ -113,12 +117,19 @@ export function renderOrcamentoPdfPreview(container, dados) {
       resumoLinhas.push(linha(`Entrada: ${brl(dados.entrada)}`))
       resumoLinhas.push(linha(`Restante: ${brl(dados.restante)}`))
     }
-    resumoLinhas.push(...parcelamentoLinhas(dados))
   }
   secoes.push(el('div', { class: 'recibo-section' },
     el('p', { class: 'recibo-eyebrow' }, 'Resumo financeiro'),
     ...resumoLinhas,
   ))
+
+  const grid = (dados.troco > 0) ? null : parcelamentoGrid(dados.opcoesParcelamento)
+  if (grid) {
+    secoes.push(el('div', { class: 'recibo-section' },
+      el('p', { class: 'recibo-eyebrow' }, 'Opções de parcelamento (cartão)'),
+      grid,
+    ))
+  }
 
   const footer = el('div', { class: 'recibo-footer' },
     el('img', { src: markSrc, alt: '', class: 'recibo-footer-mark' }),

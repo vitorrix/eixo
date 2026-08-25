@@ -29,6 +29,17 @@ function cobrar(liq, n) {
   return liq / (1 - (t.v + t.p) / 100)
 }
 
+// Leque completo 1x-12x pro PDF (quem recebe quer ver todas as opções, não
+// só a selecionada na tela).
+function todasOpcoesParcelamento(base) {
+  const opcoes = []
+  for (let n = 1; n <= 12; n++) {
+    const valorTotal = cobrar(base, n)
+    opcoes.push({ n, valorTotal, valorParcela: valorTotal / n })
+  }
+  return opcoes
+}
+
 // ── Product data ──────────────────────────────────────────────────
 const NOVOS = [
   { group: 'iPhone 17', items: [
@@ -574,7 +585,7 @@ function msgParc(items, desc, liq, entrada, rest, cli) {
       m += (n === 1 ? `1x  *${R(c)}*  (à vista)` : `${n}x  *${R(p)}*  — total ${R(c)}`) + NL
     }
   }
-  return m + `${NL}${L}${NL}_Válido por 24h  ·  Baruk Store_${NL}_barukstore.com.br_`
+  return m + `${NL}${L}${NL}_Válido por 48h  ·  Baruk Store_${NL}_barukstore.com.br_`
 }
 
 function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], troco = 0) {
@@ -596,7 +607,7 @@ function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], tr
   if (troco > 0) {
     m += `${NL}${L}${NL}${NL}💰  Troco a devolver:  *${R(troco)}*${NL}${NL}`
     m += `O valor do seu aparelho na troca superou o valor do aparelho escolhido — vamos te devolver essa diferença. 😊${NL}`
-    return m + `${NL}${L}${NL}_Válido por 24h  ·  Baruk Store_${NL}_barukstore.com.br_`
+    return m + `${NL}${L}${NL}_Válido por 48h  ·  Baruk Store_${NL}_barukstore.com.br_`
   }
 
   m += `${NL}${L}${NL}${NL}💳  Diferença a pagar:  *${R(dif)}*${NL}${NL}${L}${NL}${NL}`
@@ -612,7 +623,7 @@ function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], tr
     const c = cobrar(base, n), p = c / n
     m += (n === 1 ? `1x  *${R(c)}*  (à vista)` : `${n}x  *${R(p)}*  — total ${R(c)}`) + NL
   }
-  return m + `${NL}${L}${NL}_Válido por 24h  ·  Baruk Store_${NL}_barukstore.com.br_`
+  return m + `${NL}${L}${NL}_Válido por 48h  ·  Baruk Store_${NL}_barukstore.com.br_`
 }
 
 // ── Parcelamento section ──────────────────────────────────────────
@@ -627,7 +638,7 @@ function buildParc(prodData, empresa) {
 
   const { listWrap, totRow, renderList } = makeItemList(pItems, prodData, 'Buscar produto...', 'Total líquido')
   const refs = buildResultCol('Valor Líquido a Receber')
-  refs.disc.textContent = 'Orçamento válido por 24h · Sujeito à disponibilidade de estoque'
+  refs.disc.textContent = 'Orçamento válido por 48h · Sujeito à disponibilidade de estoque'
 
   const addBtn = el('button', { type: 'button', class: 'orc-add-btn' }, '+ Adicionar produto')
   addBtn.addEventListener('click', () => { pItems.push({ nome: '', val: 0 }); renderList() })
@@ -656,9 +667,7 @@ function buildParc(prodData, empresa) {
       liquido: ultimoCalc.liq,
       entrada: ultimoCalc.entrada,
       restante: ultimoCalc.rest,
-      parcelas: pNparc,
-      valorParcela: cobrar(ultimoCalc.base, pNparc) / pNparc,
-      valorTotalParcelado: cobrar(ultimoCalc.base, pNparc),
+      opcoesParcelamento: todasOpcoesParcelamento(ultimoCalc.base),
     })
     openModal({
       title: 'Orçamento em PDF',
@@ -795,7 +804,7 @@ function buildTroca(prodData, empresa) {
   })
 
   const refs = buildResultCol('Diferença a Pagar')
-  refs.disc.textContent = 'Orçamento válido por 24h · Sujeito à análise do aparelho usado'
+  refs.disc.textContent = 'Orçamento válido por 48h · Sujeito à análise do aparelho usado'
 
   const pdf = buildPdfFields()
   function atualizarPdfBtn() {
@@ -824,9 +833,7 @@ function buildTroca(prodData, empresa) {
       troco: ultimoCalc.troco,
       entrada: ultimoCalc.ent,
       restante: ultimoCalc.rest,
-      parcelas: tNparc,
-      valorParcela: ultimoCalc.troco > 0 ? 0 : cobrar(ultimoCalc.base, tNparc) / tNparc,
-      valorTotalParcelado: ultimoCalc.troco > 0 ? 0 : cobrar(ultimoCalc.base, tNparc),
+      opcoesParcelamento: ultimoCalc.troco > 0 ? [] : todasOpcoesParcelamento(ultimoCalc.base),
     })
     openModal({
       title: 'Orçamento de Troca em PDF',

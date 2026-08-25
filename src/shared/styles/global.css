@@ -2906,6 +2906,8 @@ html, body {
 .recibo-grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
 .recibo-line { font-size: 13px; line-height: 1.7; color: #1a1a1a; }
 .recibo-line-muted { color: #6b7280; }
+.recibo-parc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; }
+.recibo-parc-cell { font-size: 12px; line-height: 1.9; color: #1a1a1a; }
 
 .recibo-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .recibo-table th {
@@ -2992,7 +2994,7 @@ html, body {
     width: auto !important;
     max-height: none !important;
   }
-  .modal-header, .no-print { display: none !important; }
+  .modal-header, .modal-footer, .no-print { display: none !important; }
   .recibo-doc { border: none !important; }
   @page { size: A4; margin: 14mm; }
 
