@@ -71,12 +71,10 @@ export const DISCARD_REASON_META = {
 }
 
 export const SOURCE_META = {
-  whatsapp_anuncio: { label: 'Anúncio Instagram → WhatsApp', cls: 'badge-pf', canal: 'whatsapp' },
-  whatsapp_direto:  { label: 'WhatsApp direto',              cls: 'badge-pj', canal: 'whatsapp' },
-  instagram_direto: { label: 'Instagram Direct',              cls: 'badge-pf', canal: 'instagram' },
-  // TODO: fase 2 - captura de instagram_direto ainda não existe do lado do
-  // bot (só WhatsApp por enquanto); o quadro já separa por "canal" pra
-  // quando essa origem começar a chegar de verdade.
+  whatsapp_anuncio:  { label: 'Anúncio Instagram → WhatsApp', cls: 'badge-pf', canal: 'whatsapp' },
+  whatsapp_direto:   { label: 'WhatsApp direto',              cls: 'badge-pj', canal: 'whatsapp' },
+  instagram_anuncio: { label: 'Anúncio → Instagram Direct',   cls: 'badge-pf', canal: 'instagram' },
+  instagram_direto:  { label: 'Instagram Direct',             cls: 'badge-pj', canal: 'instagram' },
 }
 
 // Separa os leads por canal de origem pro quadro (2 quadros iguais — um por

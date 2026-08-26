@@ -62,12 +62,17 @@ export async function descartarLead(id, { discardReason, discardNote }) {
 
 // Acha um cliente já cadastrado com o mesmo telefone (evita duplicar quando o
 // lead já é cliente antigo) — senão cria um cadastro rápido, igual ao já
-// usado em outros pontos do sistema.
+// usado em outros pontos do sistema. Lead do Instagram não tem telefone (só
+// o WhatsApp captura isso) — nesse caso nunca dá pra achar por telefone,
+// sempre cria um cadastro novo.
 export async function converterEmCliente(lead) {
   const telefoneDigits = (lead.phone || '').replace(/\D/g, '')
-  const snap = await getDocs(query(collection(db, 'clientes'), where('phone', '==', telefoneDigits)))
+  const snap = telefoneDigits
+    ? await getDocs(query(collection(db, 'clientes'), where('phone', '==', telefoneDigits)))
+    : { empty: true, docs: [] }
+  const nome = lead.name || lead.phone || 'Lead Instagram'
   const clienteId = snap.empty
-    ? (await createClienteRapido(lead.name || lead.phone, lead.phone)).id
+    ? (await createClienteRapido(nome, lead.phone || '')).id
     : snap.docs[0].id
 
   await updateDoc(doc(db, COL, lead.id), {
