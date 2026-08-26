@@ -1,10 +1,32 @@
-import { el, mount } from '../../shared/utils/dom.js'
+import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia } from './constants.js'
+import { whatsappIcon } from '../../shared/utils/whatsapp.js'
+import { COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead } from './constants.js'
 import { renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta, converterEmCliente } from './service.js'
 import { abrirFollowUpFormModal } from './followUpForm.js'
 import { abrirDescartarModal } from './descartarForm.js'
+
+// Glifo simplificado (câmera + lente + flash), sem o gradiente oficial —
+// só pra diferenciar rápido dos cards de WhatsApp, mesmo estilo de traço
+// dos ícones do menu lateral.
+function instagramIcon() {
+  const svg = svgEl('svg', {
+    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    width: '15', height: '15',
+  })
+  svg.append(
+    svgEl('rect', { x: '2', y: '2', width: '20', height: '20', rx: '5' }),
+    svgEl('circle', { cx: '12', cy: '12', r: '4' }),
+    svgEl('line', { x1: '17.5', y1: '6.5', x2: '17.51', y2: '6.5' }),
+  )
+  return svg
+}
+
+function canalIcon(canal) {
+  return canal === 'instagram' ? instagramIcon() : whatsappIcon()
+}
 
 function toDate(ts) {
   if (!ts) return null
@@ -127,12 +149,13 @@ function leadCard(lead) {
   })
   card.addEventListener('dragend', () => card.classList.remove('lead-card-dragging'))
 
-  const head = el('div', { class: 'lead-card-head' }, nomeEditavelEl(lead))
+  const canalEl = el('span', { class: 'lead-card-canal', title: sourceMeta.label }, canalIcon(canalDoLead(lead)))
+  const head = el('div', { class: 'lead-card-head' }, nomeEditavelEl(lead), canalEl)
 
   const linhas = [head]
 
   if (lead.status === 'novo') {
-    if (lead.adContext) linhas.push(el('span', { class: `badge ${sourceMeta.cls}` }, `via ${sourceMeta.label}`))
+    if (lead.adContext) linhas.push(el('span', { class: `badge ${sourceMeta.cls}` }, lead.adContext))
     linhas.push(el('p', { class: 'lead-card-msg' }, lead.firstMessageText || '—'))
     linhas.push(el('span', { class: 'lead-card-hora' }, relativo(lead.firstMessageAt)))
   } else if (lead.status === 'em_followup') {
@@ -194,8 +217,10 @@ function handleDrop(lead, targetStatus) {
   }
 }
 
-export function renderLeadsBoard(container, leads) {
-  const cols = {}
+// Um quadro completo (5 colunas) pra um subconjunto de leads — reaproveitado
+// duas vezes por renderLeadsBoard, um por canal, já que arrastar só precisa
+// achar o lead dentro do MESMO subconjunto que esse quadro já tem em mãos.
+function buildQuadro(container, leads) {
   const bodies = {}
   const counts = {}
 
@@ -206,7 +231,6 @@ export function renderLeadsBoard(container, leads) {
       el('div', { class: 'lead-col-head' }, el('span', {}, c.titulo), counts[c.status]),
       bodies[c.status],
     )
-    cols[c.status] = colEl
 
     if (c.aceitaDrop) {
       bodies[c.status].addEventListener('dragover', (e) => { e.preventDefault(); colEl.classList.add('lead-col-over') })
@@ -246,4 +270,35 @@ export function renderLeadsBoard(container, leads) {
   refresh()
 
   return { update(newLeads) { leads = newLeads; refresh() } }
+}
+
+function secaoQuadro(titulo, icone) {
+  const body = el('div', {})
+  const secao = el('div', { class: 'lead-board-section' },
+    el('h3', { class: 'lead-board-section-title' }, icone, el('span', {}, titulo)),
+    body,
+  )
+  return { secao, body }
+}
+
+// "2 quadros iguais, um do Instagram e outro do WhatsApp" — mesma estrutura
+// de colunas nos dois, só separa os leads por canal. O quadro do Instagram
+// fica vazio até a fase 2 (bot ainda não captura Instagram Direct).
+export function renderLeadsBoard(container, allLeads) {
+  const wpp = secaoQuadro('WhatsApp', whatsappIcon())
+  const ig  = secaoQuadro('Instagram', instagramIcon())
+
+  mount(container, el('div', { class: 'lead-boards-stack' }, wpp.secao, ig.secao))
+
+  const porCanal = (canal) => allLeads.filter(l => canalDoLead(l) === canal)
+  const ctrlWpp = buildQuadro(wpp.body, porCanal('whatsapp'))
+  const ctrlIg  = buildQuadro(ig.body, porCanal('instagram'))
+
+  return {
+    update(newLeads) {
+      allLeads = newLeads
+      ctrlWpp.update(porCanal('whatsapp'))
+      ctrlIg.update(porCanal('instagram'))
+    },
+  }
 }

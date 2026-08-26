@@ -3151,6 +3151,19 @@ html, body {
 .recibo-footer strong { color: #123c43; }
 
 /* ── Leads ─────────────────────────────────────────────────────────── */
+.lead-boards-stack { display: flex; flex-direction: column; gap: 26px; }
+.lead-board-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin: 0 0 10px;
+}
+.lead-card-canal { flex-shrink: 0; color: var(--color-muted); display: flex; align-items: center; }
 .lead-board {
   display: flex;
   gap: 14px;

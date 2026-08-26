@@ -46,9 +46,18 @@ export const DISCARD_REASON_META = {
 }
 
 export const SOURCE_META = {
-  whatsapp_anuncio: { label: 'Anúncio Instagram', cls: 'badge-pf' },
-  whatsapp_direto:  { label: 'WhatsApp direto',   cls: 'badge-pj' },
-  // TODO: fase 2 - Instagram DM (instagram_direto)
+  whatsapp_anuncio: { label: 'Anúncio Instagram → WhatsApp', cls: 'badge-pf', canal: 'whatsapp' },
+  whatsapp_direto:  { label: 'WhatsApp direto',              cls: 'badge-pj', canal: 'whatsapp' },
+  instagram_direto: { label: 'Instagram Direct',              cls: 'badge-pf', canal: 'instagram' },
+  // TODO: fase 2 - captura de instagram_direto ainda não existe do lado do
+  // bot (só WhatsApp por enquanto); o quadro já separa por "canal" pra
+  // quando essa origem começar a chegar de verdade.
+}
+
+// Separa os leads por canal de origem pro quadro (2 quadros iguais — um por
+// canal — em vez de misturar tudo com só um ícone de diferença).
+export function canalDoLead(lead) {
+  return SOURCE_META[lead.source]?.canal || 'whatsapp'
 }
 
 function hojeISO() {
