@@ -202,7 +202,7 @@ export function renderLeadsBoard(container, leads) {
   const colEls = COLUNAS.map(c => {
     counts[c.status] = el('span', { class: 'lead-col-count' })
     bodies[c.status] = el('div', { class: 'lead-col-body' })
-    const colEl = el('div', { class: 'lead-col' },
+    const colEl = el('div', { class: `lead-col lead-col--${c.status}` },
       el('div', { class: 'lead-col-head' }, el('span', {}, c.titulo), counts[c.status]),
       bodies[c.status],
     )

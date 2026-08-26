@@ -3168,6 +3168,18 @@ html, body {
   flex-direction: column;
   max-height: calc(100vh - 260px);
 }
+/* Mesma paleta das badges de status (STATUS_META em constants.js), só num
+   tom bem mais claro pra dar pra ler o card em cima o dia inteiro. */
+.lead-col--novo         { background: #fef8e7; border-color: #fde68a; }
+.lead-col--em_followup  { background: #eff6ff; border-color: #bfdbfe; }
+.lead-col--sem_resposta { background: #fef2f2; border-color: #fecaca; }
+.lead-col--convertido   { background: #ecfdf5; border-color: #a7f3d0; }
+.lead-col--descartado   { background: #f9fafb; border-color: #e5e7eb; }
+.lead-col--novo         .lead-col-head { border-bottom-color: #fde68a; }
+.lead-col--em_followup  .lead-col-head { border-bottom-color: #bfdbfe; }
+.lead-col--sem_resposta .lead-col-head { border-bottom-color: #fecaca; }
+.lead-col--convertido   .lead-col-head { border-bottom-color: #a7f3d0; }
+.lead-col--descartado   .lead-col-head { border-bottom-color: #e5e7eb; }
 .lead-col-head {
   display: flex;
   align-items: center;
@@ -3197,7 +3209,7 @@ html, body {
   min-height: 60px;
   transition: background .12s;
 }
-.lead-col-over { background: #10b98114; }
+.lead-col.lead-col-over { outline: 2px dashed var(--color-primary); outline-offset: -2px; }
 .lead-col-vertodos { display: block; text-align: center; font-size: 12px; color: var(--color-primary); font-weight: 600; padding: 6px; }
 
 .lead-card {
