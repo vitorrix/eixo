@@ -8,7 +8,7 @@ import { watchRecibosFila } from './src/reciboWatcher.js'
 import { registrarStatus, notificarMac } from './src/botStatus.js'
 import { checkAndSendAniversarios } from './src/aniversario.js'
 import { handleSecretinaMessage, ehUsuarioSecretina } from './src/secretina/handler.js'
-import { capturarLead } from './src/leads.js'
+import { capturarLead, descreverMidia } from './src/leads.js'
 
 // Uma promise rejeitada sem .catch() em qualquer lugar (inclusive dentro do
 // Baileys) derruba o processo inteiro por padrão — já aconteceu 2x num único
@@ -71,6 +71,12 @@ async function handleMessages(sock, messages) {
       || msg.message.extendedTextMessage?.text
       || ''
 
+    // status@broadcast (Status/Stories) e @newsletter não são conversa com
+    // ninguém — não é grupo (não termina em @g.us) mas também não é DM de
+    // uma pessoa. Sem esse filtro, texto de Status de qualquer contato virava
+    // "lead novo" com nome de emoji (jid vira "status" depois do parse).
+    if (jid === 'status@broadcast' || jid.endsWith('@broadcast') || jid.endsWith('@newsletter')) continue
+
     // DM (não é grupo) — duas rotas possíveis: secretina (Vitor/Ana) ou lead
     // (qualquer outro número, tráfego pago ou contato direto). Não filtra a
     // rota do secretina por fromMe: o bot roda como dispositivo vinculado à
@@ -80,14 +86,19 @@ async function handleMessages(sock, messages) {
     // captura de lead É filtrada por fromMe: só interessa a mensagem que
     // veio DO lead, não uma resposta manual mandada pro número dele.
     if (!jid.endsWith('@g.us')) {
-      if (!text) { continue }
       if (ehUsuarioSecretina(jid)) {
-        await handleSecretinaMessage(sock, jid, text)
+        if (text) await handleSecretinaMessage(sock, jid, text)
       } else if (!msg.key.fromMe) {
-        try {
-          await capturarLead(jid, msg, text)
-        } catch (err) {
-          console.error('[leads] Erro ao capturar lead:', err)
+        // Primeiro contato pode não ser texto (foto, áudio, figurinha) — sem
+        // esse fallback o lead nem era criado, mensagem só de mídia nunca
+        // gerava "text".
+        const leadText = text || descreverMidia(msg.message)
+        if (leadText) {
+          try {
+            await capturarLead(jid, msg, leadText)
+          } catch (err) {
+            console.error('[leads] Erro ao capturar lead:', err)
+          }
         }
       }
       continue

@@ -28,6 +28,19 @@ function extrairAdContext(msg) {
   return [ctx.title, ctx.body].filter(Boolean).join(' — ') || null
 }
 
+// Primeiro contato pode não ser texto puro (foto do aparelho, áudio, figurinha)
+// — sem isso, o lead simplesmente não era capturado (texto vazio nunca chega
+// no index.js). Só um resumo legível, não precisa do conteúdo de verdade.
+export function descreverMidia(message) {
+  if (!message) return null
+  if (message.imageMessage) return message.imageMessage.caption ? `[Imagem] ${message.imageMessage.caption}` : '[Imagem sem legenda]'
+  if (message.videoMessage) return message.videoMessage.caption ? `[Vídeo] ${message.videoMessage.caption}` : '[Vídeo sem legenda]'
+  if (message.audioMessage) return message.audioMessage.ptt ? '[Áudio / mensagem de voz]' : '[Áudio]'
+  if (message.stickerMessage) return '[Figurinha]'
+  if (message.documentMessage) return `[Documento] ${message.documentMessage.fileName || 'sem nome'}`
+  return null
+}
+
 // Só grava na primeira mensagem: se o lead já existe, não mexe (evita
 // resetar status/notas/follow-up de um lead que já está sendo trabalhado
 // só porque ele mandou outra mensagem).
