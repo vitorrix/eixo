@@ -6,6 +6,36 @@ export const STATUS_META = {
   convertido:   { label: 'Convertido',    cls: 'badge-recebido' },
 }
 
+// Ordem das colunas do quadro (estilo Notion/Trello) — Novo só recebe lead
+// direto do bot (nunca é destino de um "arrastar pra cá"); Convertido e
+// Descartado são colunas de saída, mostram só os mais recentes (o resto
+// fica no Histórico, que tem filtro de período de verdade).
+export const COLUNAS = [
+  { status: 'novo',         titulo: '🆕 Novo',          aceitaDrop: false },
+  { status: 'em_followup',  titulo: '📞 Em Follow-up',  aceitaDrop: true  },
+  { status: 'sem_resposta', titulo: '🔇 Sem Resposta',  aceitaDrop: true  },
+  { status: 'convertido',   titulo: '✅ Convertido',    aceitaDrop: true, limite: 15 },
+  { status: 'descartado',   titulo: '🗑️ Descartado',    aceitaDrop: true, limite: 15 },
+]
+
+// Telefone do WhatsApp vem cru com DDI ("5511999990000") — tira o "55" e
+// aplica a máscara nacional só pra exibir, nunca pra salvar/comparar.
+export function formatarTelefone(phone) {
+  const digitos = (phone || '').replace(/\D/g, '')
+  const local = digitos.length > 11 && digitos.startsWith('55') ? digitos.slice(2) : digitos
+  if (local.length < 10) return phone || '—'
+  if (local.length <= 2) return local.length ? `(${local}` : ''
+  if (local.length <= 6) return `(${local.slice(0, 2)}) ${local.slice(2)}`
+  if (local.length <= 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`
+  return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`
+}
+
+// Nome de exibição: prioriza o nome dado (do WhatsApp ou renomeado à mão),
+// senão cai pro telefone formatado — nunca mostra o número cru.
+export function nomeExibicao(lead) {
+  return lead.name || formatarTelefone(lead.phone)
+}
+
 export const DISCARD_REASON_META = {
   crianca:            'Criança',
   idoso:               'Idoso',

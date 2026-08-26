@@ -2,7 +2,7 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { toolbarCard, toolbarMeta, searchWithIcon } from '../../shared/components/ToolbarCard.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { presetRange } from '../../shared/utils/periodo.js'
-import { STATUS_META, DISCARD_REASON_META } from './constants.js'
+import { STATUS_META, DISCARD_REASON_META, nomeExibicao } from './constants.js'
 
 function toDate(ts) {
   if (!ts) return null
@@ -98,7 +98,7 @@ export function renderLeadsHistorico(container, leads) {
       const statusMeta = STATUS_META[l.status] || STATUS_META.novo
       return el('tr', {},
         el('td', { class: 'td-date' }, shortDate(l.updatedAt || l.createdAt)),
-        el('td', {}, l.name || l.phone || '—'),
+        el('td', {}, nomeExibicao(l)),
         el('td', {}, el('span', { class: `badge ${statusMeta.cls}` }, statusMeta.label)),
         el('td', {}, l.discardReason ? (DISCARD_REASON_META[l.discardReason] || l.discardReason) : '—'),
         el('td', { class: 'td-name', title: l.discardNote || '' }, l.discardNote || '—'),

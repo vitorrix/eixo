@@ -18,6 +18,12 @@ export function subscribeLeads(callback, onError) {
   }, onError)
 }
 
+// O nome que chega do WhatsApp (pushName) às vezes não vem, ou vem errado —
+// clicar no nome do card no quadro chama isso pra corrigir/completar.
+export async function renomearLead(id, nome) {
+  return updateDoc(doc(db, COL, id), { name: nome.trim() || null, updatedAt: serverTimestamp() })
+}
+
 export async function iniciarFollowUp(id, nextFollowUpAt) {
   return updateDoc(doc(db, COL, id), {
     status: 'em_followup',
