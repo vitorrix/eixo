@@ -3,6 +3,7 @@ import { toolbarCard, toolbarMeta, searchWithIcon } from '../../shared/component
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 import { STATUS_META, DISCARD_REASON_META, nomeExibicao, canalDoLead, canalIcon } from './constants.js'
+import { buildKpisPorCanal } from './kpisPorCanal.js'
 
 function toDate(ts) {
   if (!ts) return null
@@ -45,21 +46,11 @@ export function renderLeadsHistorico(container, leads) {
   const countBadge = el('span', { class: 'count-badge' })
   const toolbar = toolbarCard(picker.el, motivoSel, searchWithIcon(searchInp), toolbarMeta(countBadge))
 
-  // Um painel de números por canal (WhatsApp e Instagram separados) — o
-  // quadro em si mistura os dois nas mesmas colunas, mas pra saber "quanto
-  // veio de cada canal" precisa contar cada um à parte.
-  const kpisWpp = el('div', { class: 'pedidos-stats' })
-  const kpisIg = el('div', { class: 'pedidos-stats' })
-  const painelKpis = el('div', { class: 'lead-kpis-stack' },
-    el('div', {},
-      el('h4', { class: 'lead-board-section-title' }, canalIcon('whatsapp'), el('span', {}, 'WhatsApp')),
-      kpisWpp,
-    ),
-    el('div', {},
-      el('h4', { class: 'lead-board-section-title' }, canalIcon('instagram'), el('span', {}, 'Instagram')),
-      kpisIg,
-    ),
-  )
+  // Painel de números por canal (WhatsApp e Instagram separados) — o quadro
+  // em si mistura os dois nas mesmas colunas, mas pra saber "quanto veio de
+  // cada canal" precisa contar cada um à parte. Mesmo componente do Quadro.
+  const kpisWrap = el('div', {})
+  const kpis = buildKpisPorCanal(kpisWrap, [], { totalLabel: 'Total no período' })
 
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
@@ -71,22 +62,6 @@ export function renderLeadsHistorico(container, leads) {
   )
   const tableWrap = el('div', { class: 'table-wrapper' }, table)
   const emptyState = el('div', { class: 'empty-state' }, el('p', {}, 'Nada encontrado nesse período.') )
-
-  function kpiCard(label, value) {
-    return el('div', { class: 'pedido-stat' },
-      el('div', { class: 'pedido-stat-label' }, label),
-      el('div', { class: 'pedido-stat-value' }, String(value)),
-    )
-  }
-
-  function preencherKpis(wrap, doCanal) {
-    wrap.replaceChildren(
-      kpiCard('Total no período', doCanal.length),
-      kpiCard('Convertidos', doCanal.filter(l => l.status === 'convertido').length),
-      kpiCard('Descartados', doCanal.filter(l => l.status === 'descartado').length),
-      kpiCard('Sem resposta', doCanal.filter(l => l.status === 'sem_resposta').length),
-    )
-  }
 
   function refresh() {
     let filtrados = leads.filter(l => {
@@ -104,8 +79,7 @@ export function renderLeadsHistorico(container, leads) {
 
     countBadge.textContent = `${filtrados.length} lead${filtrados.length === 1 ? '' : 's'}`
 
-    preencherKpis(kpisWpp, filtrados.filter(l => canalDoLead(l) === 'whatsapp'))
-    preencherKpis(kpisIg, filtrados.filter(l => canalDoLead(l) === 'instagram'))
+    kpis.update(filtrados)
 
     tableWrap.style.display = filtrados.length ? '' : 'none'
     emptyState.style.display = filtrados.length ? 'none' : ''
@@ -123,7 +97,7 @@ export function renderLeadsHistorico(container, leads) {
     }))
   }
 
-  mount(container, toolbar, painelKpis, tableWrap, emptyState)
+  mount(container, toolbar, kpisWrap, tableWrap, emptyState)
   refresh()
 
   return { update(newLeads) { leads = newLeads; refresh() } }

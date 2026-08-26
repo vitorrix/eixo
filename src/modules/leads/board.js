@@ -5,6 +5,7 @@ import { COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIc
 import { renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta, converterEmCliente } from './service.js'
 import { abrirFollowUpFormModal } from './followUpForm.js'
 import { abrirDescartarModal } from './descartarForm.js'
+import { buildKpisPorCanal } from './kpisPorCanal.js'
 
 function toDate(ts) {
   if (!ts) return null
@@ -244,8 +245,17 @@ export function renderLeadsBoard(container, leads) {
     })
   }
 
-  mount(container, el('div', { class: 'lead-board' }, ...colEls))
+  const kpisWrap = el('div', {})
+  const kpis = buildKpisPorCanal(kpisWrap, leads)
+
+  mount(container, kpisWrap, el('div', { class: 'lead-board' }, ...colEls))
   refresh()
 
-  return { update(newLeads) { leads = newLeads; refresh() } }
+  return {
+    update(newLeads) {
+      leads = newLeads
+      refresh()
+      kpis.update(leads)
+    },
+  }
 }
