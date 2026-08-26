@@ -13,6 +13,7 @@ const MODULES = [
   { key: 'compras',      label: 'Compras' },
   { key: 'vendas',       label: 'Vendas' },
   { key: 'clientes',     label: 'Clientes' },
+  { key: 'leads',        label: 'Leads' },
   { key: 'fornecedores', label: 'Fornecedores' },
   { key: 'produtos',     label: 'Produtos' },
   { key: 'orcamentos',   label: 'Orçamentos' },

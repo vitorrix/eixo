@@ -7,7 +7,8 @@ import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
 import { watchRecibosFila } from './src/reciboWatcher.js'
 import { registrarStatus, notificarMac } from './src/botStatus.js'
 import { checkAndSendAniversarios } from './src/aniversario.js'
-import { handleSecretinaMessage } from './src/secretina/handler.js'
+import { handleSecretinaMessage, ehUsuarioSecretina } from './src/secretina/handler.js'
+import { capturarLead } from './src/leads.js'
 
 // Uma promise rejeitada sem .catch() em qualquer lugar (inclusive dentro do
 // Baileys) derruba o processo inteiro por padrão — já aconteceu 2x num único
@@ -70,13 +71,25 @@ async function handleMessages(sock, messages) {
       || msg.message.extendedTextMessage?.text
       || ''
 
-    // DM (não é grupo) — rota separada do fluxo de fornecedores, pro secretina.
-    // Não filtra por fromMe: o bot roda como dispositivo vinculado à própria
-    // conta, então mensagens mandadas do celular do dono também chegam como
-    // fromMe:true — quem evita reprocessar as respostas do próprio bot é o
-    // filtro de prefixo dentro de handleSecretinaMessage.
+    // DM (não é grupo) — duas rotas possíveis: secretina (Vitor/Ana) ou lead
+    // (qualquer outro número, tráfego pago ou contato direto). Não filtra a
+    // rota do secretina por fromMe: o bot roda como dispositivo vinculado à
+    // própria conta, então mensagens mandadas do celular do dono também
+    // chegam como fromMe:true — quem evita reprocessar a resposta do próprio
+    // bot é o filtro de prefixo dentro de handleSecretinaMessage. Já a
+    // captura de lead É filtrada por fromMe: só interessa a mensagem que
+    // veio DO lead, não uma resposta manual mandada pro número dele.
     if (!jid.endsWith('@g.us')) {
-      if (text) await handleSecretinaMessage(sock, jid, text)
+      if (!text) { continue }
+      if (ehUsuarioSecretina(jid)) {
+        await handleSecretinaMessage(sock, jid, text)
+      } else if (!msg.key.fromMe) {
+        try {
+          await capturarLead(jid, msg, text)
+        } catch (err) {
+          console.error('[leads] Erro ao capturar lead:', err)
+        }
+      }
       continue
     }
 

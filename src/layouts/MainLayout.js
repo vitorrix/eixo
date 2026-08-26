@@ -11,6 +11,7 @@ const PAGE_LABELS = {
   '/compras':       'Compras',
   '/vendas':        'Vendas',
   '/clientes':      'Clientes',
+  '/leads':         'Leads',
   '/fornecedores':  'Fornecedores',
   '/produtos':      'Produtos',
   '/busca':         'Busca',
@@ -34,6 +35,9 @@ const NAV_ICONS = {
   clientes: [
     'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2',
     'M12 11a4 4 0 100-8 4 4 0 000 8z'
+  ],
+  leads: [
+    'M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z'
   ],
   compras: [
     'M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z',
@@ -94,6 +98,7 @@ const NAV_ITEMS = [
   { path: '/vendas',        label: 'Vendas',         module: 'vendas',        iconKey: 'vendas'        },
   { path: '/busca',         label: 'Busca',          module: 'busca',         iconKey: 'busca' },
   { path: '/clientes',      label: 'Clientes',       module: 'clientes',      iconKey: 'clientes'      },
+  { path: '/leads',         label: 'Leads',          module: 'leads',         iconKey: 'leads'         },
   { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores' },
   { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos' },
   { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios' },
@@ -127,6 +132,13 @@ export function renderLayout(container, profile) {
     item.module === null || isMaster() || can(item.module, 'view')
   )
 
+  // Contador de leads atrasados/vencendo hoje no próprio item do menu — "algo
+  // visível assim que o usuário abre o sistema, sem precisar entrar no
+  // módulo". Busca pontual (não onSnapshot): o layout é remontado em toda
+  // navegação, um listener aqui ficaria aberto pra sempre sem nunca ser
+  // fechado.
+  let leadsBadgeEl = null
+
   const navLinks = visibleItems.map(item => {
     if (item.wip) {
       const link = el('div', { class: 'nav-link nav-link--wip', title: item.label },
@@ -140,9 +152,23 @@ export function renderLayout(container, profile) {
       buildIcon(item.iconKey),
       el('span', { class: 'nav-label' }, item.label)
     )
+    if (item.path === '/leads') {
+      leadsBadgeEl = el('span', { class: 'nav-lead-badge' })
+      leadsBadgeEl.style.display = 'none'
+      link.appendChild(leadsBadgeEl)
+    }
     if (currentPath === item.path) link.classList.add('active')
     return link
   })
+
+  if (leadsBadgeEl) {
+    import('../modules/leads/service.js')
+      .then(({ contarLeadsUrgentes }) => contarLeadsUrgentes())
+      .then(n => {
+        if (n > 0) { leadsBadgeEl.textContent = String(n); leadsBadgeEl.style.display = '' }
+      })
+      .catch(err => console.error('Erro ao contar leads urgentes:', err))
+  }
 
   const logoImg = el('img', {
     src: `${import.meta.env.BASE_URL}logo.png`,

@@ -67,6 +67,15 @@ service cloud.firestore {
       allow delete: if hasPermission('clientes', 'delete');
     }
 
+    // ── /leads (captados pelo bot via WhatsApp — create também pelo Admin SDK,
+    // que ignora as regras) ─────────────────────────────────────────────────
+    match /leads/{id} {
+      allow read:   if hasPermission('leads', 'view');
+      allow create: if hasPermission('leads', 'create');
+      allow update: if hasPermission('leads', 'edit');
+      allow delete: if hasPermission('leads', 'delete');
+    }
+
     // ── /pedidos ──────────────────────────────────────────────────────────
     match /pedidos/{id} {
       allow read:   if hasPermission('pedidos', 'view');

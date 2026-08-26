@@ -8,6 +8,7 @@ const routes = {
   '/compras':  { module: 'compras',  loader: () => import('../modules/compras/index.js')  },
   '/vendas':   { module: 'vendas',   loader: () => import('../modules/vendas/index.js')   },
   '/clientes':     { module: 'clientes',     loader: () => import('../modules/clientes/index.js') },
+  '/leads':        { module: 'leads',        loader: () => import('../modules/leads/index.js') },
   '/fornecedores':  { module: 'fornecedores',  loader: () => import('../modules/fornecedores/index.js') },
   '/produtos':      { module: 'produtos',      loader: () => import('../modules/produtos/index.js') },
   '/busca':         { module: 'busca',         loader: () => import('../modules/busca/index.js') },

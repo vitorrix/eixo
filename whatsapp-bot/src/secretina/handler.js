@@ -41,6 +41,14 @@ function telefoneFromJid(jid) {
   return jid.split('@')[0].split(':')[0]
 }
 
+// Usado pelo index.js pra decidir se uma DM é do secretina (Vitor/Ana
+// perguntando/lançando gasto) ou de outra pessoa — nesse segundo caso vira
+// candidato a lead (ver leads.js). Não muda nada aqui, só expõe a mesma
+// checagem que já existe dentro de handleSecretinaMessage.
+export function ehUsuarioSecretina(jid) {
+  return !!carregarUsuarios()[telefoneFromJid(jid)]
+}
+
 function hojeLocalISO(d = new Date()) {
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
