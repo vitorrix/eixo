@@ -2,7 +2,7 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { toolbarCard, toolbarMeta, searchWithIcon } from '../../shared/components/ToolbarCard.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { presetRange } from '../../shared/utils/periodo.js'
-import { STATUS_META, DISCARD_REASON_META, nomeExibicao } from './constants.js'
+import { STATUS_META, DISCARD_REASON_META, nomeExibicao, canalDoLead, canalIcon } from './constants.js'
 
 function toDate(ts) {
   if (!ts) return null
@@ -45,12 +45,26 @@ export function renderLeadsHistorico(container, leads) {
   const countBadge = el('span', { class: 'count-badge' })
   const toolbar = toolbarCard(picker.el, motivoSel, searchWithIcon(searchInp), toolbarMeta(countBadge))
 
-  const kpisWrap = el('div', { class: 'pedidos-stats' })
+  // Um painel de números por canal (WhatsApp e Instagram separados) — o
+  // quadro em si mistura os dois nas mesmas colunas, mas pra saber "quanto
+  // veio de cada canal" precisa contar cada um à parte.
+  const kpisWpp = el('div', { class: 'pedidos-stats' })
+  const kpisIg = el('div', { class: 'pedidos-stats' })
+  const painelKpis = el('div', { class: 'lead-kpis-stack' },
+    el('div', {},
+      el('h4', { class: 'lead-board-section-title' }, canalIcon('whatsapp'), el('span', {}, 'WhatsApp')),
+      kpisWpp,
+    ),
+    el('div', {},
+      el('h4', { class: 'lead-board-section-title' }, canalIcon('instagram'), el('span', {}, 'Instagram')),
+      kpisIg,
+    ),
+  )
 
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {}, el('tr', {},
-      el('th', {}, 'Data'), el('th', {}, 'Nome/Telefone'), el('th', {}, 'Status'),
+      el('th', {}, 'Data'), el('th', {}, 'Canal'), el('th', {}, 'Nome/Telefone'), el('th', {}, 'Status'),
       el('th', {}, 'Motivo'), el('th', {}, 'Nota'),
     )),
     tbody,
@@ -62,6 +76,15 @@ export function renderLeadsHistorico(container, leads) {
     return el('div', { class: 'pedido-stat' },
       el('div', { class: 'pedido-stat-label' }, label),
       el('div', { class: 'pedido-stat-value' }, String(value)),
+    )
+  }
+
+  function preencherKpis(wrap, doCanal) {
+    wrap.replaceChildren(
+      kpiCard('Total no período', doCanal.length),
+      kpiCard('Convertidos', doCanal.filter(l => l.status === 'convertido').length),
+      kpiCard('Descartados', doCanal.filter(l => l.status === 'descartado').length),
+      kpiCard('Sem resposta', doCanal.filter(l => l.status === 'sem_resposta').length),
     )
   }
 
@@ -81,15 +104,8 @@ export function renderLeadsHistorico(container, leads) {
 
     countBadge.textContent = `${filtrados.length} lead${filtrados.length === 1 ? '' : 's'}`
 
-    const convertidos = filtrados.filter(l => l.status === 'convertido').length
-    const descartados = filtrados.filter(l => l.status === 'descartado').length
-    const semResposta = filtrados.filter(l => l.status === 'sem_resposta').length
-    kpisWrap.replaceChildren(
-      kpiCard('Total no período', filtrados.length),
-      kpiCard('Convertidos', convertidos),
-      kpiCard('Descartados', descartados),
-      kpiCard('Sem resposta', semResposta),
-    )
+    preencherKpis(kpisWpp, filtrados.filter(l => canalDoLead(l) === 'whatsapp'))
+    preencherKpis(kpisIg, filtrados.filter(l => canalDoLead(l) === 'instagram'))
 
     tableWrap.style.display = filtrados.length ? '' : 'none'
     emptyState.style.display = filtrados.length ? 'none' : ''
@@ -98,6 +114,7 @@ export function renderLeadsHistorico(container, leads) {
       const statusMeta = STATUS_META[l.status] || STATUS_META.novo
       return el('tr', {},
         el('td', { class: 'td-date' }, shortDate(l.updatedAt || l.createdAt)),
+        el('td', { class: 'lead-td-canal' }, canalIcon(canalDoLead(l))),
         el('td', {}, nomeExibicao(l)),
         el('td', {}, el('span', { class: `badge ${statusMeta.cls}` }, statusMeta.label)),
         el('td', {}, l.discardReason ? (DISCARD_REASON_META[l.discardReason] || l.discardReason) : '—'),
@@ -106,7 +123,7 @@ export function renderLeadsHistorico(container, leads) {
     }))
   }
 
-  mount(container, toolbar, kpisWrap, tableWrap, emptyState)
+  mount(container, toolbar, painelKpis, tableWrap, emptyState)
   refresh()
 
   return { update(newLeads) { leads = newLeads; refresh() } }

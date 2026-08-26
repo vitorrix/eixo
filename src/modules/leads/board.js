@@ -1,32 +1,10 @@
-import { el, svgEl, mount } from '../../shared/utils/dom.js'
+import { el, mount } from '../../shared/utils/dom.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { whatsappIcon } from '../../shared/utils/whatsapp.js'
-import { COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead } from './constants.js'
+import { COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon } from './constants.js'
 import { renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta, converterEmCliente } from './service.js'
 import { abrirFollowUpFormModal } from './followUpForm.js'
 import { abrirDescartarModal } from './descartarForm.js'
-
-// Glifo simplificado (câmera + lente + flash), sem o gradiente oficial —
-// só pra diferenciar rápido dos cards de WhatsApp, mesmo estilo de traço
-// dos ícones do menu lateral.
-function instagramIcon() {
-  const svg = svgEl('svg', {
-    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-    'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-    width: '15', height: '15',
-  })
-  svg.append(
-    svgEl('rect', { x: '2', y: '2', width: '20', height: '20', rx: '5' }),
-    svgEl('circle', { cx: '12', cy: '12', r: '4' }),
-    svgEl('line', { x1: '17.5', y1: '6.5', x2: '17.51', y2: '6.5' }),
-  )
-  return svg
-}
-
-function canalIcon(canal) {
-  return canal === 'instagram' ? instagramIcon() : whatsappIcon()
-}
 
 function toDate(ts) {
   if (!ts) return null
@@ -217,10 +195,10 @@ function handleDrop(lead, targetStatus) {
   }
 }
 
-// Um quadro completo (5 colunas) pra um subconjunto de leads — reaproveitado
-// duas vezes por renderLeadsBoard, um por canal, já que arrastar só precisa
-// achar o lead dentro do MESMO subconjunto que esse quadro já tem em mãos.
-function buildQuadro(container, leads) {
+// WhatsApp e Instagram misturados nas mesmas colunas — o ícone de canal em
+// cada card (ver leadCard) já resolve a identificação. Os números separados
+// por canal ficam na aba Histórico, não aqui.
+export function renderLeadsBoard(container, leads) {
   const bodies = {}
   const counts = {}
 
@@ -270,35 +248,4 @@ function buildQuadro(container, leads) {
   refresh()
 
   return { update(newLeads) { leads = newLeads; refresh() } }
-}
-
-function secaoQuadro(titulo, icone) {
-  const body = el('div', {})
-  const secao = el('div', { class: 'lead-board-section' },
-    el('h3', { class: 'lead-board-section-title' }, icone, el('span', {}, titulo)),
-    body,
-  )
-  return { secao, body }
-}
-
-// "2 quadros iguais, um do Instagram e outro do WhatsApp" — mesma estrutura
-// de colunas nos dois, só separa os leads por canal. O quadro do Instagram
-// fica vazio até a fase 2 (bot ainda não captura Instagram Direct).
-export function renderLeadsBoard(container, allLeads) {
-  const wpp = secaoQuadro('WhatsApp', whatsappIcon())
-  const ig  = secaoQuadro('Instagram', instagramIcon())
-
-  mount(container, el('div', { class: 'lead-boards-stack' }, wpp.secao, ig.secao))
-
-  const porCanal = (canal) => allLeads.filter(l => canalDoLead(l) === canal)
-  const ctrlWpp = buildQuadro(wpp.body, porCanal('whatsapp'))
-  const ctrlIg  = buildQuadro(ig.body, porCanal('instagram'))
-
-  return {
-    update(newLeads) {
-      allLeads = newLeads
-      ctrlWpp.update(porCanal('whatsapp'))
-      ctrlIg.update(porCanal('instagram'))
-    },
-  }
 }

@@ -1,3 +1,28 @@
+import { svgEl } from '../../shared/utils/dom.js'
+import { whatsappIcon } from '../../shared/utils/whatsapp.js'
+
+// Glifo simplificado do Instagram (câmera + lente + flash), sem o gradiente
+// oficial — só pra diferenciar rápido do WhatsApp, mesmo estilo de traço
+// dos ícones do menu lateral. Usado no card do quadro e nos painéis de
+// número por canal do Histórico.
+export function instagramIcon() {
+  const svg = svgEl('svg', {
+    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    width: '15', height: '15',
+  })
+  svg.append(
+    svgEl('rect', { x: '2', y: '2', width: '20', height: '20', rx: '5' }),
+    svgEl('circle', { cx: '12', cy: '12', r: '4' }),
+    svgEl('line', { x1: '17.5', y1: '6.5', x2: '17.51', y2: '6.5' }),
+  )
+  return svg
+}
+
+export function canalIcon(canal) {
+  return canal === 'instagram' ? instagramIcon() : whatsappIcon()
+}
+
 export const STATUS_META = {
   novo:         { label: 'Novo',          cls: 'badge-pendente' },
   em_followup:  { label: 'Em follow-up',  cls: 'badge-em-andamento' },

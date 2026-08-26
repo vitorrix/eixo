@@ -3151,7 +3151,6 @@ html, body {
 .recibo-footer strong { color: #123c43; }
 
 /* ── Leads ─────────────────────────────────────────────────────────── */
-.lead-boards-stack { display: flex; flex-direction: column; gap: 26px; }
 .lead-board-section-title {
   display: flex;
   align-items: center;
@@ -3164,6 +3163,12 @@ html, body {
   margin: 0 0 10px;
 }
 .lead-card-canal { flex-shrink: 0; color: var(--color-muted); display: flex; align-items: center; }
+.lead-kpis-stack { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px; }
+.lead-td-canal { color: var(--color-muted); }
+.lead-td-canal svg { display: block; }
+@media (max-width: 720px) {
+  .lead-kpis-stack { grid-template-columns: 1fr; }
+}
 .lead-board {
   display: flex;
   gap: 14px;
