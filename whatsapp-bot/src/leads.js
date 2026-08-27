@@ -68,6 +68,18 @@ export async function capturarLead(jid, msg, text) {
     notes: [],
     assignedTo: null,
     clienteId: null,
+    // Chamada perdida (áudio/vídeo) é o sinal de intenção de compra mais
+    // forte que existe — hoje só é marcado à mão pela equipe no quadro
+    // (marcarChamadaPerdida em src/modules/leads/service.js).
+    // TODO: sinalizar quando a fonte de dados incluir chamadas perdidas.
+    // O Baileys emite evento de chamada via sock.ev.on('call', ...) (array
+    // de CallEvent, com status 'offer'/'timeout'/'reject' e isVideo) —
+    // dá pra detectar chamada perdida ouvindo status 'timeout' (ninguém
+    // atendeu) sem vir de nós (!call.fromMe) e chamar marcarChamadaPerdida
+    // direto no Firestore (não passa por capturarLead, que só roda na
+    // primeira mensagem: teria que atualizar um lead já existente também).
+    missedCallAt: null,
+    missedCallTipo: null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   })

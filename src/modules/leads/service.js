@@ -51,6 +51,32 @@ export async function marcarSemResposta(id) {
   return updateDoc(doc(db, COL, id), { status: 'sem_resposta', updatedAt: serverTimestamp() })
 }
 
+// "Não vale a pena registrar em lugar nenhum" (mensagem vazia, teste,
+// engano) — diferente de descartarLead: não pede motivo, não aparece no
+// Histórico nem em coluna nenhuma do quadro. status:'removido' não consta
+// em COLUNAS nem em STATUS_HISTORICO (historico.js), então já some sozinho
+// das duas telas sem precisar de filtro extra. Mantém o doc em vez de
+// apagar de verdade — mesma convenção do resto do Eixo (nunca deleta,
+// só marca fora de uso) — mas nunca aparece pra ninguém de novo.
+export async function removerLead(id) {
+  return updateDoc(doc(db, COL, id), { status: 'removido', updatedAt: serverTimestamp() })
+}
+
+// Sinal de intenção de compra mais forte que existe — hoje só é marcado à
+// mão pela equipe (ver TODOs em whatsapp-bot/src/leads.js e
+// functions/instagramLeads.js pra quando a detecção automática existir).
+export async function marcarChamadaPerdida(id, tipo = null) {
+  return updateDoc(doc(db, COL, id), {
+    missedCallAt: serverTimestamp(),
+    missedCallTipo: tipo,
+    updatedAt: serverTimestamp(),
+  })
+}
+
+export async function desmarcarChamadaPerdida(id) {
+  return updateDoc(doc(db, COL, id), { missedCallAt: null, missedCallTipo: null, updatedAt: serverTimestamp() })
+}
+
 export async function descartarLead(id, { discardReason, discardNote }) {
   return updateDoc(doc(db, COL, id), {
     status: 'descartado',

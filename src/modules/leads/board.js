@@ -1,8 +1,14 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import { COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon } from './constants.js'
-import { renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta, converterEmCliente } from './service.js'
+import {
+  COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon,
+  temChamadaPerdida, textoChamadaPerdida,
+} from './constants.js'
+import {
+  renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta, converterEmCliente,
+  removerLead, marcarChamadaPerdida, desmarcarChamadaPerdida,
+} from './service.js'
 import { abrirFollowUpFormModal } from './followUpForm.js'
 import { abrirDescartarModal } from './descartarForm.js'
 import { buildKpisPorCanal } from './kpisPorCanal.js'
@@ -117,10 +123,60 @@ function botaoNota(lead) {
   return btn
 }
 
+// Descartar via botão pede motivo (openModal); remover é pra lixo mesmo —
+// mensagem vazia, teste, engano — sem passar por triagem nenhuma. Só existe
+// na coluna Novo (é aí que esse tipo de contato aparece antes de qualquer
+// avaliação); o resto do fluxo (Follow-up em diante) já foi triado, não faz
+// sentido "remover sem motivo" depois disso.
+function botaoRemover(lead) {
+  const btn = el('button', { type: 'button', class: 'lead-card-del-btn', title: 'Remover (não registra em lugar nenhum)' }, '🗑️')
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    openConfirm({
+      title: 'Remover lead?',
+      message: `"${nomeExibicao(lead)}" some do quadro e não entra no Histórico — use só pra contato que não vale nem triar (mensagem vazia, teste, engano).`,
+      confirmLabel: 'Remover',
+      danger: true,
+      onConfirm: async () => {
+        try { await removerLead(lead.id) }
+        catch (err) { console.error(err); toastError('Erro ao remover.') }
+      },
+    })
+  })
+  return btn
+}
+
+// Botão liga/desliga — clicar de novo com o selo já ativo desmarca (evita
+// ficar preso num falso positivo). Fica disponível em qualquer status ainda
+// "vivo" (novo/follow-up/sem resposta); depois de convertido ou descartado
+// o lead já foi resolvido, não faz sentido mais sinalizar urgência nele.
+function botaoChamadaPerdida(lead) {
+  const ativo = temChamadaPerdida(lead)
+  const btn = el('button', {
+    type: 'button',
+    class: `lead-card-call-btn${ativo ? ' ativo' : ''}`,
+    title: ativo ? 'Desmarcar chamada perdida' : 'Marcar chamada perdida',
+  }, ativo ? '📞 Marcado' : '📞 Chamada perdida')
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation()
+    btn.disabled = true
+    try {
+      if (ativo) await desmarcarChamadaPerdida(lead.id)
+      else await marcarChamadaPerdida(lead.id)
+    } catch (err) {
+      console.error(err)
+      toastError('Erro ao atualizar.')
+      btn.disabled = false
+    }
+  })
+  return btn
+}
+
 function leadCard(lead) {
   const sourceMeta = SOURCE_META[lead.source] || SOURCE_META.whatsapp_direto
+  const urgente = temChamadaPerdida(lead)
 
-  const card = el('div', { class: 'lead-card', draggable: 'true' })
+  const card = el('div', { class: `lead-card${urgente ? ' lead-card--urgente' : ''}`, draggable: 'true' })
   card.addEventListener('dragstart', (e) => {
     e.dataTransfer.setData('text/plain', lead.id)
     e.dataTransfer.effectAllowed = 'move'
@@ -129,9 +185,13 @@ function leadCard(lead) {
   card.addEventListener('dragend', () => card.classList.remove('lead-card-dragging'))
 
   const canalEl = el('span', { class: 'lead-card-canal', title: sourceMeta.label }, canalIcon(canalDoLead(lead)))
-  const head = el('div', { class: 'lead-card-head' }, nomeEditavelEl(lead), canalEl)
+  const cabecalhoDireita = [canalEl]
+  if (lead.status === 'novo') cabecalhoDireita.push(botaoRemover(lead))
+  const head = el('div', { class: 'lead-card-head' }, nomeEditavelEl(lead), ...cabecalhoDireita)
 
   const linhas = [head]
+
+  if (urgente) linhas.push(el('span', { class: 'lead-card-urgente-badge' }, textoChamadaPerdida(lead)))
 
   if (lead.status === 'novo') {
     if (lead.adContext) linhas.push(el('span', { class: `badge ${sourceMeta.cls}` }, lead.adContext))
@@ -140,11 +200,17 @@ function leadCard(lead) {
   } else if (lead.status === 'em_followup') {
     const { meta, texto } = textoUrgencia(lead.nextFollowUpAt)
     linhas.push(el('span', { class: 'lead-urgencia', style: `color:${meta.cor}` }, `${meta.icone} ${texto}`))
-    linhas.push(el('div', { class: 'lead-card-actions' }, botaoNota(lead)))
   } else {
     linhas.push(el('span', { class: 'lead-card-hora' }, `atualizado ${relativo(lead.updatedAt)}`))
     if (lead.discardReason) linhas.push(el('span', { class: 'lead-card-hora' }, lead.discardReason))
   }
+
+  // Uma linha de ações só, juntando o que existir pro status — evita duas
+  // faixas de botão empilhadas no mesmo card.
+  const acoes = []
+  if (lead.status === 'em_followup') acoes.push(botaoNota(lead))
+  if (['novo', 'em_followup', 'sem_resposta'].includes(lead.status)) acoes.push(botaoChamadaPerdida(lead))
+  if (acoes.length) linhas.push(el('div', { class: 'lead-card-actions' }, ...acoes))
 
   mount(card, ...linhas)
   return card
@@ -226,14 +292,22 @@ export function renderLeadsBoard(container, leads) {
   })
 
   function refresh() {
+    // Chamada perdida passa na frente de tudo na coluna, não importa o
+    // critério normal (mais recente, prazo mais próximo etc.) — é o sinal
+    // de intenção de compra mais forte que existe, não pode ficar escondido
+    // esperando a vez.
+    const prioridade = l => (temChamadaPerdida(l) ? 0 : 1)
+
     COLUNAS.forEach(c => {
       let doStatus = leads.filter(l => l.status === c.status)
-      if (c.status === 'novo') doStatus.sort((a, b) => (toDate(b.firstMessageAt)?.getTime() || 0) - (toDate(a.firstMessageAt)?.getTime() || 0))
+      if (c.status === 'novo') doStatus.sort((a, b) => prioridade(a) - prioridade(b) || (toDate(b.firstMessageAt)?.getTime() || 0) - (toDate(a.firstMessageAt)?.getTime() || 0))
       else if (c.status === 'em_followup') doStatus.sort((a, b) => {
+        const p = prioridade(a) - prioridade(b)
+        if (p) return p
         const da = toDate(a.nextFollowUpAt)?.getTime(); const db_ = toDate(b.nextFollowUpAt)?.getTime()
         if (da == null) return 1; if (db_ == null) return -1; return da - db_
       })
-      else doStatus.sort((a, b) => (toDate(b.updatedAt)?.getTime() || 0) - (toDate(a.updatedAt)?.getTime() || 0))
+      else doStatus.sort((a, b) => prioridade(a) - prioridade(b) || (toDate(b.updatedAt)?.getTime() || 0) - (toDate(a.updatedAt)?.getTime() || 0))
 
       counts[c.status].textContent = String(doStatus.length)
       const limitado = c.limite ? doStatus.slice(0, c.limite) : doStatus

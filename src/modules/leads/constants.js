@@ -83,6 +83,21 @@ export function canalDoLead(lead) {
   return SOURCE_META[lead.source]?.canal || 'whatsapp'
 }
 
+// Ligação/chamada de vídeo perdida é o sinal de intenção de compra mais
+// forte que existe — quem liga quer resposta rápida. Hoje só é marcado à
+// mão (ver marcarChamadaPerdida em service.js); os TODOs em
+// whatsapp-bot/src/leads.js e functions/instagramLeads.js marcam onde
+// entraria a detecção automática quando as fontes passarem a informar isso.
+export function temChamadaPerdida(lead) {
+  return !!lead.missedCallAt
+}
+
+export function textoChamadaPerdida(lead) {
+  if (lead.missedCallTipo === 'video') return '📹 Chamada de vídeo perdida — retornar com prioridade'
+  if (lead.missedCallTipo === 'audio') return '📞 Ligação perdida — retornar com prioridade'
+  return '📞 Chamada perdida — retornar com prioridade'
+}
+
 function hojeISO() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

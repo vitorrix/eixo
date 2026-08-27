@@ -55,23 +55,43 @@ export function extrairEventosMensagem(body) {
   return eventos
 }
 
+// GET /{igsid}?fields=name,username — só funciona no host graph.instagram.com
+// (confirmado testando de verdade; graph.facebook.com dá "Invalid OAuth
+// access token" pra esse tipo de token, gerado pelo fluxo "API do Instagram
+// com login do Instagram", diferente do fluxo antigo via Página do Facebook).
+// Falha aqui não pode derrubar a captura do lead — sem token configurado ou
+// qualquer erro da API, cai pro nome null (front mostra o telefone/—).
+async function buscarNomeInstagram(igsid, accessToken) {
+  if (!accessToken) return null
+  try {
+    const url = `https://graph.instagram.com/v21.0/${igsid}?fields=name,username&access_token=${accessToken}`
+    const res = await fetch(url)
+    if (!res.ok) {
+      console.error('[instagram-webhook] Graph API respondeu', res.status, 'ao buscar nome do lead', igsid)
+      return null
+    }
+    const data = await res.json()
+    return data.name || data.username || null
+  } catch (err) {
+    console.error('[instagram-webhook] erro ao buscar nome do lead:', err)
+    return null
+  }
+}
+
 // Só grava na primeira mensagem — igual ao WhatsApp: se o lead já existe,
 // não mexe, pra não resetar status/notas/follow-up de quem já está em
 // atendimento só porque mandou outra mensagem.
-export async function capturarLeadInstagram(db, { igsid, text, adContext }) {
+export async function capturarLeadInstagram(db, { igsid, text, adContext, accessToken }) {
   const ref = db.collection('leads').doc(`ig_${igsid}`)
   const snap = await ref.get()
   if (snap.exists) return
 
+  const name = await buscarNomeInstagram(igsid, accessToken)
+
   await ref.set({
     phone: null,
     igsid,
-    // TODO: buscar nome de verdade via Graph API
-    // GET /{igsid}?fields=name,username&access_token=... — precisa de um
-    // token de acesso da Página com permissão instagram_manage_messages.
-    // Sem isso, nomeExibicao() no front cai pro telefone formatado, que
-    // pra lead do Instagram é null — mostra "—" até essa busca existir.
-    name: null,
+    name,
     source: adContext ? 'instagram_anuncio' : 'instagram_direto',
     adContext,
     firstMessageText: text,
@@ -83,6 +103,21 @@ export async function capturarLeadInstagram(db, { igsid, text, adContext }) {
     notes: [],
     assignedTo: null,
     clienteId: null,
+    // Chamada de áudio/vídeo perdida é o sinal de intenção de compra mais
+    // forte que existe — hoje só é marcado à mão pela equipe no quadro
+    // (marcarChamadaPerdida em src/modules/leads/service.js). Espelha o
+    // mesmo TODO de whatsapp-bot/src/leads.js.
+    // TODO: sinalizar quando a fonte de dados incluir chamadas perdidas.
+    // A Meta documenta eventos de chamada do Instagram Messaging separados
+    // do evento de mensagem (webhook field diferente de "messages"; ainda
+    // não confirmado com tráfego real) — quando existir, extrairEventosMensagem
+    // precisaria reconhecer esse tipo de evento e, diferente de mensagem de
+    // texto, uma chamada perdida deveria ATUALIZAR um lead já existente
+    // também (não só criar), então não pode usar o mesmo early-return
+    // "if (snap.exists) return" daqui — provavelmente uma função própria,
+    // tipo marcarChamadaPerdidaInstagram(db, igsid, tipo).
+    missedCallAt: null,
+    missedCallTipo: null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   })

@@ -13,12 +13,17 @@ const db = getFirestore()
 // segredo do App da Meta, usado só pra conferir a assinatura de cada POST.
 const VERIFY_TOKEN = defineSecret('INSTAGRAM_VERIFY_TOKEN')
 const APP_SECRET = defineSecret('INSTAGRAM_APP_SECRET')
+// Token da conta barukloja (gerado manualmente no painel da Meta, "Gerar
+// tokens de acesso") — usado só pra buscar o nome/username de quem manda DM,
+// via Graph API. Se vencer/for revogado, a captura do lead continua
+// funcionando normal, só o nome volta a ficar em branco.
+const ACCESS_TOKEN = defineSecret('INSTAGRAM_ACCESS_TOKEN')
 
 // Endpoint único pros dois passos do webhook do Instagram:
 // - GET: handshake de verificação, a Meta chama uma vez ao cadastrar a URL.
 // - POST: evento de mensagem de verdade, chamado toda vez que um lead manda DM.
 export const instagramWebhook = onRequest(
-  { secrets: [VERIFY_TOKEN, APP_SECRET], region: 'southamerica-east1', cors: false },
+  { secrets: [VERIFY_TOKEN, APP_SECRET, ACCESS_TOKEN], region: 'southamerica-east1', cors: false },
   async (req, res) => {
     if (req.method === 'GET') {
       const mode = req.query['hub.mode']
@@ -47,7 +52,7 @@ export const instagramWebhook = onRequest(
       try {
         const eventos = extrairEventosMensagem(req.body)
         for (const evento of eventos) {
-          await capturarLeadInstagram(db, evento)
+          await capturarLeadInstagram(db, { ...evento, accessToken: ACCESS_TOKEN.value() })
         }
       } catch (err) {
         console.error('[instagram-webhook] erro ao processar evento:', err)
