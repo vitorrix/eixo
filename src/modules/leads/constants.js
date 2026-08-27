@@ -98,6 +98,14 @@ export function textoChamadaPerdida(lead) {
   return '📞 Chamada perdida — retornar com prioridade'
 }
 
+// Nº da tentativa de contato atual: entrar em Em Follow-up já é a 1ª
+// tentativa (o "Iniciar" do drag pra essa coluna); cada "Nota" registrada
+// depois (marcarContatado, em notes[]) é uma tentativa a mais. Depois da
+// 3ª sem resposta, a equipe descarta manualmente — não é automático.
+export function contarTentativas(lead) {
+  return (lead.notes?.length || 0) + 1
+}
+
 function hojeISO() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

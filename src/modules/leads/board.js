@@ -3,7 +3,7 @@ import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
   COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon,
-  temChamadaPerdida, textoChamadaPerdida,
+  temChamadaPerdida, textoChamadaPerdida, contarTentativas,
 } from './constants.js'
 import {
   renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta, converterEmCliente,
@@ -12,6 +12,7 @@ import {
 import { abrirFollowUpFormModal } from './followUpForm.js'
 import { abrirDescartarModal } from './descartarForm.js'
 import { buildKpisPorCanal } from './kpisPorCanal.js'
+import { abrirHistoricoLead } from './historicoLeadModal.js'
 
 function toDate(ts) {
   if (!ts) return null
@@ -183,6 +184,9 @@ function leadCard(lead) {
     requestAnimationFrame(() => card.classList.add('lead-card-dragging'))
   })
   card.addEventListener('dragend', () => card.classList.remove('lead-card-dragging'))
+  // Qualquer clique que não seja num botão/campo do card (todos eles já dão
+  // stopPropagation) abre o histórico completo de contatos do lead.
+  card.addEventListener('click', () => abrirHistoricoLead(lead))
 
   const canalEl = el('span', { class: 'lead-card-canal', title: sourceMeta.label }, canalIcon(canalDoLead(lead)))
   const cabecalhoDireita = [canalEl]
@@ -190,6 +194,12 @@ function leadCard(lead) {
   const head = el('div', { class: 'lead-card-head' }, nomeEditavelEl(lead), ...cabecalhoDireita)
 
   const linhas = [head]
+
+  // Nº da tentativa de contato atual, em destaque no canto — só faz sentido
+  // depois que o follow-up começou (ver contarTentativas em constants.js).
+  if (['em_followup', 'sem_resposta'].includes(lead.status)) {
+    linhas.push(el('span', { class: 'lead-card-tentativa-badge', title: 'Tentativa de contato nº' }, String(contarTentativas(lead))))
+  }
 
   if (urgente) linhas.push(el('span', { class: 'lead-card-urgente-badge' }, textoChamadaPerdida(lead)))
 

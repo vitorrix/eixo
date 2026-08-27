@@ -3231,12 +3231,14 @@ html, body {
 .lead-col-vertodos { display: block; text-align: center; font-size: 12px; color: var(--color-primary); font-weight: 600; padding: 6px; }
 
 .lead-card {
+  position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 10px 12px;
-  cursor: grab;
+  cursor: pointer;
 }
+.lead-card:hover { border-color: var(--color-primary); }
 .lead-card-dragging { opacity: .4; }
 .lead-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .lead-card-nome-wrap { flex: 1; min-width: 0; }
@@ -3288,6 +3290,42 @@ html, body {
 .lead-card-call-btn.ativo { background: #d93025; border-color: #d93025; color: #fff; }
 .lead-card-call-btn.ativo:hover { opacity: .85; }
 .lead-card-call-btn:disabled { opacity: .6; cursor: default; }
+
+/* Nº da tentativa de contato — canto superior esquerdo, por cima da borda do
+   card (mesmo padrão de badge de notificação). */
+.lead-card-tentativa-badge {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 20px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 999px;
+  border: 2px solid var(--color-surface);
+  padding: 0 3px;
+}
+
+/* Modal de histórico do lead (abrirHistoricoLead) */
+.lead-hist-origem { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--color-text); margin-bottom: 10px; }
+.lead-hist-dot { color: var(--color-muted); }
+.lead-hist-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-border); }
+.lead-hist-section:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+.lead-hist-section h4 { margin: 0 0 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: var(--color-muted); }
+.lead-hist-msg { font-size: 13px; color: var(--color-text); margin: 0 0 4px; white-space: pre-line; line-height: 1.5; }
+.lead-hist-hora { font-size: 11px; color: var(--color-muted); display: block; }
+.lead-hist-tentativa-count { display: inline-block; background: var(--color-primary); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; margin-bottom: 6px; }
+.lead-hist-vazio { font-size: 13px; color: var(--color-muted); margin: 0; }
+.lead-hist-nota { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.lead-hist-nota:last-child { margin-bottom: 0; }
+.lead-hist-nota-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.lead-hist-nota-autor { font-size: 12px; font-weight: 700; color: var(--color-text); }
+.lead-hist-nota-data { font-size: 11px; color: var(--color-muted); }
+.lead-hist-nota-texto { font-size: 13px; color: var(--color-text); margin: 0; white-space: pre-line; line-height: 1.5; }
 
 .nav-lead-badge {
   margin-left: auto;
