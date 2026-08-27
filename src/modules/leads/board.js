@@ -197,8 +197,15 @@ function leadCard(lead) {
 
   // Nº da tentativa de contato atual, em destaque no canto — só faz sentido
   // depois que o follow-up começou (ver contarTentativas em constants.js).
+  // Verde na 1ª, azul na 2ª, vermelho da 3ª em diante (mesma leitura de
+  // "esquentando" que as cores de urgência já usam no resto do quadro).
   if (['em_followup', 'sem_resposta'].includes(lead.status)) {
-    linhas.push(el('span', { class: 'lead-card-tentativa-badge', title: 'Tentativa de contato nº' }, String(contarTentativas(lead))))
+    const tentativa = contarTentativas(lead)
+    const cor = tentativa >= 3 ? 'vermelho' : tentativa === 2 ? 'azul' : 'verde'
+    linhas.push(el('span', {
+      class: `lead-card-tentativa-badge lead-card-tentativa-badge--${cor}`,
+      title: 'Tentativa de contato nº',
+    }, String(tentativa)))
   }
 
   if (urgente) linhas.push(el('span', { class: 'lead-card-urgente-badge' }, textoChamadaPerdida(lead)))

@@ -3292,23 +3292,28 @@ html, body {
 .lead-card-call-btn:disabled { opacity: .6; cursor: default; }
 
 /* Nº da tentativa de contato — canto superior esquerdo, por cima da borda do
-   card (mesmo padrão de badge de notificação). */
+   card (mesmo padrão de badge de notificação). Flexbox pra centralizar de
+   verdade (line-height com padding assimétrico deixava o número torto). */
 .lead-card-tentativa-badge {
   position: absolute;
   top: -8px;
   left: -8px;
-  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   color: #fff;
   font-size: 11px;
   font-weight: 800;
-  min-width: 20px;
-  height: 20px;
-  line-height: 20px;
-  text-align: center;
-  border-radius: 999px;
+  border-radius: 50%;
   border: 2px solid var(--color-surface);
-  padding: 0 3px;
 }
+/* 1ª tentativa verde, 2ª azul, 3ª em diante vermelho — mesma leitura de
+   "esquentando" que o resto do quadro já usa pra urgência. */
+.lead-card-tentativa-badge--verde    { background: #10b981; }
+.lead-card-tentativa-badge--azul     { background: #2563eb; }
+.lead-card-tentativa-badge--vermelho { background: #d93025; }
 
 /* Modal de histórico do lead (abrirHistoricoLead) */
 .lead-hist-origem { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--color-text); margin-bottom: 10px; }
