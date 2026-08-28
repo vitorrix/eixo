@@ -2,7 +2,7 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { openModal } from '../../shared/components/Modal.js'
 import {
   SOURCE_META, DISCARD_REASON_META, nomeExibicao, canalIcon, canalDoLead,
-  formatDataHora, contarTentativas, formatarTelefone,
+  formatDataHora, contarTentativas, contatoLocalizavel, resumoAnuncio,
 } from './constants.js'
 
 function toDate(ts) {
@@ -28,15 +28,20 @@ export function abrirHistoricoLead(lead) {
     renderBody: (body) => {
       const linhas = []
 
-      const contato = lead.phone ? formatarTelefone(lead.phone) : (lead.name ? '@' + (lead.name.replace(/\s/g, '').toLowerCase()) : 'Instagram Direct')
+      // Telefone/@ em destaque, bem no topo — é o dado que serve de verdade
+      // pra localizar o contato fora do Eixo (WhatsApp ou Instagram).
       linhas.push(el('div', { class: 'lead-hist-origem' },
         canalIcon(canalDoLead(lead)),
         el('span', {}, sourceMeta.label),
         el('span', { class: 'lead-hist-dot' }, '·'),
-        el('span', {}, contato),
+        el('span', { class: 'lead-hist-contato' }, contatoLocalizavel(lead)),
       ))
 
-      if (lead.adContext) linhas.push(el('span', { class: `badge ${sourceMeta.cls}` }, lead.adContext))
+      // Resumo do anúncio, não o texto inteiro — o card do anúncio às vezes
+      // vem com título + corpo completo (uma promoção inteira), e isso vinha
+      // virando um blocão gigante em maiúsculas atropelando a tela. Passa o
+      // mouse pra ver completo.
+      if (lead.adContext) linhas.push(el('span', { class: 'lead-ad-chip', title: lead.adContext }, `📢 ${resumoAnuncio(lead.adContext, 90)}`))
 
       linhas.push(el('div', { class: 'lead-hist-section' },
         el('h4', {}, 'Primeira mensagem'),

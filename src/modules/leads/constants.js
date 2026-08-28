@@ -68,6 +68,28 @@ export function nomeExibicao(lead) {
   return lead.name || formatarTelefone(lead.phone)
 }
 
+// Pra localizar o contato de verdade fora do Eixo — telefone formatado se
+// for WhatsApp; senão uma aproximação de "@" a partir do nome (a Graph API
+// de buscarNomeInstagram às vezes retorna o username em vez do nome de
+// exibição, então nem sempre é o handle real — é só uma pista pra achar no
+// Instagram, não uma garantia). Usado no quadro (card) e no Histórico.
+export function contatoLocalizavel(lead) {
+  if (lead.phone) return formatarTelefone(lead.phone)
+  if (lead.name) return '@' + lead.name.replace(/\s/g, '').toLowerCase()
+  return 'Instagram Direct'
+}
+
+// Card de anúncio (WhatsApp) e referral (Instagram) chegam como texto cru,
+// às vezes bem longo (título + corpo do anúncio inteiro) — sem isso vira um
+// parágrafo gigante que atropela o card/histórico. Corta pra um resumo
+// "assertivo"; o texto completo continua acessível no atributo title
+// (tooltip ao passar o mouse — app é desktop-only, ver CLAUDE.md).
+export function resumoAnuncio(adContext, max = 60) {
+  if (!adContext) return null
+  const limpo = adContext.trim()
+  return limpo.length > max ? `${limpo.slice(0, max).trim()}…` : limpo
+}
+
 export const DISCARD_REASON_META = {
   crianca:            'Criança',
   idoso:               'Idoso',

@@ -4,6 +4,7 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
   COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon,
   temChamadaPerdida, textoChamadaPerdida, contarTentativas, telefoneLocalDigits,
+  contatoLocalizavel, resumoAnuncio,
 } from './constants.js'
 import {
   renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta,
@@ -196,7 +197,9 @@ function leadCard(lead) {
   if (lead.status === 'novo') cabecalhoDireita.push(botaoRemover(lead))
   const head = el('div', { class: 'lead-card-head' }, nomeEditavelEl(lead), ...cabecalhoDireita)
 
-  const linhas = [head]
+  // Telefone (WhatsApp) ou @ aproximado (Instagram) sempre visível — é o que
+  // dá pra usar de verdade pra localizar o contato fora do Eixo.
+  const linhas = [head, el('span', { class: 'lead-card-contato' }, contatoLocalizavel(lead))]
 
   // Nº da tentativa de contato atual, em destaque no canto — só faz sentido
   // depois que o follow-up começou (ver contarTentativas em constants.js).
@@ -214,7 +217,10 @@ function leadCard(lead) {
   if (urgente) linhas.push(el('span', { class: 'lead-card-urgente-badge' }, textoChamadaPerdida(lead)))
 
   if (lead.status === 'novo') {
-    if (lead.adContext) linhas.push(el('span', { class: `badge ${sourceMeta.cls}` }, lead.adContext))
+    // Chip minimalista com resumo do anúncio (não o card inteiro em blocão
+    // maiúsculo) — passa o mouse pra ver o texto completo, dá pra saber de
+    // qual produto/anúncio veio sem atropelar o resto do card.
+    if (lead.adContext) linhas.push(el('span', { class: 'lead-ad-chip', title: lead.adContext }, `📢 ${resumoAnuncio(lead.adContext, 46)}`))
     linhas.push(el('p', { class: 'lead-card-msg' }, lead.firstMessageText || '—'))
     linhas.push(el('span', { class: 'lead-card-hora' }, relativo(lead.firstMessageAt)))
   } else if (lead.status === 'em_followup') {
