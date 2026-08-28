@@ -3,15 +3,18 @@ import { openModal, openConfirm } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
   COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon,
-  temChamadaPerdida, textoChamadaPerdida, contarTentativas,
+  temChamadaPerdida, textoChamadaPerdida, contarTentativas, telefoneLocalDigits,
 } from './constants.js'
 import {
-  renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta, converterEmCliente,
+  renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta,
+  marcarConvertidoSemCliente, vincularClienteConvertido,
   removerLead, marcarChamadaPerdida, desmarcarChamadaPerdida,
 } from './service.js'
 import { abrirFollowUpFormModal } from './followUpForm.js'
 import { abrirDescartarModal } from './descartarForm.js'
 import { buildKpisPorCanal } from './kpisPorCanal.js'
+import { buscarClientePorTelefone } from '../clientes/service.js'
+import { renderClienteForm } from '../clientes/form.js'
 import { abrirHistoricoLead } from './historicoLeadModal.js'
 
 function toDate(ts) {
@@ -233,6 +236,60 @@ function leadCard(lead) {
   return card
 }
 
+// Arrastar pra Convertido = venda concretizada — mas o lead pode já ser
+// cliente cadastrado (não precisa duplicar) ou a loja pode nem querer
+// registrar esse contato como cliente. Pergunta antes de decidir sozinho.
+function perguntarConversaoCliente(lead) {
+  openModal({
+    title: 'Venda concretizada 🎉',
+    size: 'sm',
+    renderBody: (body) => {
+      body.appendChild(el('p', { class: 'confirm-message' },
+        `"${nomeExibicao(lead)}" virou venda. Quer vincular esse contato a um cadastro de cliente?`))
+    },
+    footer: (close, footerEl) => {
+      const naoBtn = el('button', { class: 'btn btn-ghost', type: 'button' }, 'Não, só marcar convertido')
+      const simBtn = el('button', { class: 'btn btn-primary', type: 'button' }, 'Sim, abrir cadastro')
+      naoBtn.addEventListener('click', async () => {
+        naoBtn.disabled = true
+        try { await marcarConvertidoSemCliente(lead.id); toastSuccess('Lead marcado como convertido.') }
+        catch (err) { console.error(err); toastError('Erro ao atualizar.'); naoBtn.disabled = false; return }
+        close()
+      })
+      simBtn.addEventListener('click', () => { close(); abrirCadastroClienteDoLead(lead) })
+      footerEl.append(naoBtn, simBtn)
+    },
+  })
+}
+
+// "Sim" do alerta acima — se o telefone do lead já bate com um cliente
+// cadastrado, abre em EDIÇÃO (não duplica, só reaproveita/atualiza); senão
+// abre em criação já com nome/telefone preenchidos. Só depois que o form
+// salva de verdade (onSaved) o lead vira 'convertido' e fica vinculado —
+// se a equipe cancelar o cadastro, o lead nem muda de coluna.
+async function abrirCadastroClienteDoLead(lead) {
+  let clienteExistente = null
+  if (lead.phone) {
+    try { clienteExistente = await buscarClientePorTelefone(telefoneLocalDigits(lead.phone)) }
+    catch (err) { console.error(err) }
+  }
+
+  openModal({
+    title: clienteExistente ? 'Cliente já cadastrado — revisar' : 'Novo Cliente',
+    size: 'lg',
+    renderBody: (body, close) => {
+      renderClienteForm(body, close, clienteExistente, {
+        prefillName: lead.name,
+        prefillPhone: telefoneLocalDigits(lead.phone),
+        onSaved: async (clienteId) => {
+          try { await vincularClienteConvertido(lead.id, clienteId); toastSuccess('Lead convertido e vinculado ao cliente.') }
+          catch (err) { console.error(err); toastError('Cliente salvo, mas houve erro ao vincular o lead.') }
+        },
+      })
+    },
+  })
+}
+
 function handleDrop(lead, targetStatus) {
   if (lead.status === targetStatus) return
 
@@ -262,15 +319,7 @@ function handleDrop(lead, targetStatus) {
   }
 
   if (targetStatus === 'convertido') {
-    openConfirm({
-      title: 'Converter em cliente?',
-      message: `Cria (ou vincula) o cadastro de "${nomeExibicao(lead)}" em Clientes.`,
-      confirmLabel: 'Converter',
-      onConfirm: async () => {
-        try { await converterEmCliente(lead); toastSuccess('Lead convertido em cliente.') }
-        catch (err) { console.error(err); toastError('Erro ao converter.') }
-      },
-    })
+    perguntarConversaoCliente(lead)
     return
   }
 

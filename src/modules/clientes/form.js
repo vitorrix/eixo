@@ -8,7 +8,11 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 const UFs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
              'PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
 
-export function renderClienteForm(container, close, cliente = null) {
+// prefillName/prefillPhone: só usados na criação (cliente=null) — hoje vêm
+// do módulo Leads ao converter um lead em cliente (ver abrirCadastroCliente
+// em leads/board.js). onSaved(clienteId) roda depois de salvar com sucesso,
+// antes de fechar — é como o chamador (Leads) sabe qual cliente vincular.
+export function renderClienteForm(container, close, cliente = null, { prefillName, prefillPhone, onSaved } = {}) {
   const isEdit = !!cliente
 
   // ── Toggle PF / PJ ───────────────────────────────────────────────────────
@@ -122,6 +126,10 @@ export function renderClienteForm(container, close, cliente = null) {
   // ── Estado inicial ───────────────────────────────────────────────────────
   setType(currentType)
   if (isEdit) prefill(cliente)
+  else if (prefillName || prefillPhone) {
+    nameInput.value  = prefillName || ''
+    phoneInput.value = maskPhone(prefillPhone || '')
+  }
 
   // ── Máscaras ─────────────────────────────────────────────────────────────
   docInput.addEventListener('input', () => {
@@ -227,9 +235,11 @@ export function renderClienteForm(container, close, cliente = null) {
       if (isEdit) {
         await updateCliente(cliente.id, data)
         toastSuccess('Cliente atualizado com sucesso.')
+        await onSaved?.(cliente.id)
       } else {
-        await createCliente(data)
+        const ref = await createCliente(data)
         toastSuccess('Cliente criado com sucesso.')
+        await onSaved?.(ref.id)
       }
       close()
     } catch (err) {

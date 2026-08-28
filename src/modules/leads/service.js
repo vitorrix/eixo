@@ -4,7 +4,6 @@ import {
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
-import { createClienteRapido } from '../clientes/service.js'
 import { urgenciaFollowUp } from './constants.js'
 
 const COL = 'leads'
@@ -86,27 +85,18 @@ export async function descartarLead(id, { discardReason, discardNote }) {
   })
 }
 
-// Acha um cliente já cadastrado com o mesmo telefone (evita duplicar quando o
-// lead já é cliente antigo) — senão cria um cadastro rápido, igual ao já
-// usado em outros pontos do sistema. Lead do Instagram não tem telefone (só
-// o WhatsApp captura isso) — nesse caso nunca dá pra achar por telefone,
-// sempre cria um cadastro novo.
-export async function converterEmCliente(lead) {
-  const telefoneDigits = (lead.phone || '').replace(/\D/g, '')
-  const snap = telefoneDigits
-    ? await getDocs(query(collection(db, 'clientes'), where('phone', '==', telefoneDigits)))
-    : { empty: true, docs: [] }
-  const nome = lead.name || lead.phone || 'Lead Instagram'
-  const clienteId = snap.empty
-    ? (await createClienteRapido(nome, lead.phone || '')).id
-    : snap.docs[0].id
+// Arrastar pra Convertido = venda concretizada, mas nem sempre precisa virar
+// (ou revirar) um cadastro de Cliente — pode ser alguém que já é cliente, ou
+// um contato que a loja não quer registrar. Ver perguntarConversaoCliente em
+// board.js pro fluxo de decisão (Sim abre o cadastro, Não só marca aqui).
+export async function marcarConvertidoSemCliente(id) {
+  return updateDoc(doc(db, COL, id), { status: 'convertido', updatedAt: serverTimestamp() })
+}
 
-  await updateDoc(doc(db, COL, lead.id), {
-    status: 'convertido',
-    clienteId,
-    updatedAt: serverTimestamp(),
-  })
-  return clienteId
+// Chamado depois que o form de Cliente salva com sucesso (novo cadastro ou
+// edição de um já existente) — vincula o lead ao cliente e fecha o ciclo.
+export async function vincularClienteConvertido(id, clienteId) {
+  return updateDoc(doc(db, COL, id), { status: 'convertido', clienteId, updatedAt: serverTimestamp() })
 }
 
 // Usado só pelo badge do menu lateral — busca pontual (não é onSnapshot) pra

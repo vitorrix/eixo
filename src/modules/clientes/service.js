@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc, deleteDoc,
-  doc, onSnapshot, query, orderBy, where,
+  doc, onSnapshot, query, orderBy, where, getDocs,
   serverTimestamp, writeBatch,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
@@ -29,6 +29,17 @@ export function subscribeAniversariantes(callback) {
     (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
     () => callback([])
   )
+}
+
+// Usado ao converter um lead em cliente (módulo Leads) — antes de abrir o
+// cadastro, checa se esse telefone já é cliente pra abrir em edição em vez
+// de duplicar. Telefone salvo aqui é só dígitos nacionais (sem DDI, ver
+// telefoneLocalDigits em leads/constants.js), mesmo formato do campo phone
+// deste cadastro.
+export async function buscarClientePorTelefone(phoneDigits) {
+  if (!phoneDigits) return null
+  const snap = await getDocs(query(collection(db, COL), where('phone', '==', phoneDigits)))
+  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() }
 }
 
 export async function createClienteRapido(name, phone = '', type = 'PF') {

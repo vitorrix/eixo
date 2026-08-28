@@ -43,11 +43,18 @@ export const COLUNAS = [
   { status: 'descartado',   titulo: '🗑️ Descartado',    aceitaDrop: true, limite: 15 },
 ]
 
+// Tira o DDI "55" do telefone cru do WhatsApp ("5511999990000" →
+// "11999990000") — usado tanto pra exibir (formatarTelefone) quanto pra
+// prefill do form de Cliente ao converter um lead (ver board.js).
+export function telefoneLocalDigits(phone) {
+  const digitos = (phone || '').replace(/\D/g, '')
+  return digitos.length > 11 && digitos.startsWith('55') ? digitos.slice(2) : digitos
+}
+
 // Telefone do WhatsApp vem cru com DDI ("5511999990000") — tira o "55" e
 // aplica a máscara nacional só pra exibir, nunca pra salvar/comparar.
 export function formatarTelefone(phone) {
-  const digitos = (phone || '').replace(/\D/g, '')
-  const local = digitos.length > 11 && digitos.startsWith('55') ? digitos.slice(2) : digitos
+  const local = telefoneLocalDigits(phone)
   if (local.length < 10) return phone || '—'
   if (local.length <= 2) return local.length ? `(${local}` : ''
   if (local.length <= 6) return `(${local.slice(0, 2)}) ${local.slice(2)}`
