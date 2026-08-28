@@ -561,7 +561,7 @@ function makeItemList(items, prodData, placeholder, totLabel) {
 }
 
 // ── Message builders ──────────────────────────────────────────────
-function msgParc(items, desc, liq, entrada, rest, cli) {
+function msgParc(items, desc, liq, entrada, rest, cli, frete = 0, seguro = 0) {
   const nome = cli || 'Baruker'
   const NL = '\n', L = '───────────────────'
   let m = `Olá, ${nome}! 😊${NL}${NL}*Orçamento — Baruk Store*${NL}${L}${NL}${NL}`
@@ -571,6 +571,8 @@ function msgParc(items, desc, liq, entrada, rest, cli) {
     for (const it of items) m += `📦  ${it.nome}${NL}     *${R(it.val)}*${NL}`
   }
   if (desc > 0) m += `🏷️  Desconto:  *− ${R(desc)}*${NL}`
+  if (frete > 0) m += `🚚  Frete:  *${R(frete)}*${NL}`
+  if (seguro > 0) m += `🛡️  Seguro:  *${R(seguro)}*${NL}`
   m += `${NL}${L}${NL}${NL}*Formas de pagamento*${NL}${NL}`
   m += `💸  Pix / Dinheiro${NL}     *${R(liq)}*${NL}${NL}`
   if (entrada > 0) {
@@ -588,7 +590,7 @@ function msgParc(items, desc, liq, entrada, rest, cli) {
   return m + `${NL}${L}${NL}_Válido por 48h  ·  Baruk Store_${NL}_barukstore.com.br_`
 }
 
-function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], troco = 0) {
+function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], troco = 0, frete = 0, seguro = 0) {
   const nome = cli || 'Baruker'
   const NL = '\n', L = '───────────────────'
   let m = `Olá, ${nome}! 😊${NL}${NL}*Orçamento de Troca — Baruk Store*${NL}${L}${NL}${NL}`
@@ -600,13 +602,15 @@ function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], tr
   }
   for (const it of novos)  m += `📦  Aparelho desejado${NL}     ${it.nome}${NL}     Valor:  *${R(it.val)}*${NL}`
   if (dc > 0) m += `🏷️  Desconto:  *− ${R(dc)}*${NL}`
+  if (frete > 0) m += `🚚  Frete:  *${R(frete)}*${NL}`
+  if (seguro > 0) m += `🛡️  Seguro:  *${R(seguro)}*${NL}`
 
   // Downgrade: o aparelho do cliente vale mais que o desejado — em vez de
   // cobrar diferença, é a loja quem devolve. Não faz sentido oferecer
   // parcelamento de um valor que vai pro cliente, então a mensagem termina aqui.
   if (troco > 0) {
     m += `${NL}${L}${NL}${NL}💰  Troco a devolver:  *${R(troco)}*${NL}${NL}`
-    m += `O valor do seu aparelho na troca superou o valor do aparelho escolhido — vamos te devolver essa diferença. 😊${NL}`
+    m += `O valor do seu aparelho na troca superou o valor do aparelho escolhido${(frete > 0 || seguro > 0) ? ' (já descontando frete/seguro)' : ''} — vamos te devolver essa diferença. 😊${NL}`
     return m + `${NL}${L}${NL}_Válido por 48h  ·  Baruk Store_${NL}_barukstore.com.br_`
   }
 
@@ -632,9 +636,13 @@ function buildParc(prodData, empresa) {
   let pNparc = 12
   let ultimoCalc = null // snapshot do último "Gerar Orçamento" — o PDF usa ele, não os inputs ao vivo
 
-  const cliInp  = el('input', { type: 'text',   class: 'orc-input', placeholder: 'Nome do cliente' })
-  const descInp = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
-  const entInp  = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
+  const cliInp    = el('input', { type: 'text',   class: 'orc-input', placeholder: 'Nome do cliente' })
+  const descInp   = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
+  const entInp    = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
+  // Opcionais — só quando o cliente pede envio (frete) e/ou seguro da
+  // mercadoria; ficam em 0 e somem da mensagem/PDF se não preenchidos.
+  const freteInp  = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '10' })
+  const seguroInp = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '10' })
 
   const { listWrap, totRow, renderList } = makeItemList(pItems, prodData, 'Buscar produto...', 'Total líquido')
   const refs = buildResultCol('Valor Líquido a Receber')
@@ -667,6 +675,8 @@ function buildParc(prodData, empresa) {
       liquido: ultimoCalc.liq,
       entrada: ultimoCalc.entrada,
       restante: ultimoCalc.rest,
+      frete: ultimoCalc.frete,
+      seguro: ultimoCalc.seguro,
       opcoesParcelamento: todasOpcoesParcelamento(ultimoCalc.base),
     })
     openModal({
@@ -684,9 +694,13 @@ function buildParc(prodData, empresa) {
   const calcBtn = el('button', { type: 'button', class: 'orc-calc-btn' }, 'Gerar Orçamento →')
   calcBtn.addEventListener('click', () => {
     const bruto   = pItems.reduce((s, i) => s + i.val, 0)
-    const desc    = parseFloat(descInp.value) || 0
-    const entrada = parseFloat(entInp.value)  || 0
-    const liq     = Math.max(0, bruto - desc)
+    const desc    = parseFloat(descInp.value)   || 0
+    const entrada = parseFloat(entInp.value)    || 0
+    // Frete e seguro são opcionais — só o cliente que pediu — e somam por
+    // cima do líquido já com desconto (não entram no desconto em si).
+    const frete   = parseFloat(freteInp.value)  || 0
+    const seguro  = parseFloat(seguroInp.value) || 0
+    const liq     = Math.max(0, bruto - desc) + frete + seguro
     const rest    = Math.max(0, liq - entrada)
     const cli     = cliInp.value.trim()
     const base    = rest > 0 ? rest : liq
@@ -698,6 +712,8 @@ function buildParc(prodData, empresa) {
         pItems.length > 1 ? `${it.nome} — ${R(it.val)}` : it.nome))
     }
     if (desc > 0)    refs.summWrap.appendChild(makeSRow('🏷️', 'Desconto',           `− ${R(desc)}`,  'orc-srow-red'))
+    if (frete > 0)   refs.summWrap.appendChild(makeSRow('🚚', 'Frete',              R(frete)))
+    if (seguro > 0)  refs.summWrap.appendChild(makeSRow('🛡️', 'Seguro',             R(seguro)))
     refs.summWrap.appendChild(              makeSRow('💸', 'Pix / Dinheiro',       R(liq),           'orc-srow-green'))
     if (entrada > 0) refs.summWrap.appendChild(makeSRow('💵', 'Entrada',            R(entrada),       'orc-srow-green'))
     if (rest > 0 && entrada > 0) refs.summWrap.appendChild(makeSRow('💳', 'Restante no cartão', R(rest)))
@@ -713,7 +729,7 @@ function buildParc(prodData, empresa) {
     }
     updPills(refs.pillsWrap, base, pNparc, onPill)
     updTbl(refs.tbody, base, pNparc)
-    refs.msgBody.textContent = msgParc(pItems, desc, liq, entrada, rest, cli)
+    refs.msgBody.textContent = msgParc(pItems, desc, liq, entrada, rest, cli, frete, seguro)
     refs.resultBlock.classList.add('visible')
     refs.disc.classList.add('visible')
     refs.msgc.classList.add('visible')
@@ -730,7 +746,7 @@ function buildParc(prodData, empresa) {
     }).catch(err => console.error('Erro ao salvar histórico do orçamento:', err))
 
     ultimoCalc = {
-      cli, desc, entrada, liq, rest, base,
+      cli, desc, entrada, liq, rest, base, frete, seguro,
       itens: pItems.filter(i => i.nome).map(i => ({ descricao: i.nome, valor: i.val })),
     }
     atualizarPdfBtn()
@@ -747,6 +763,10 @@ function buildParc(prodData, empresa) {
       el('div', { class: 'orc-row-2' },
         el('div', { class: 'field' }, el('label', {}, '💵 Entrada'), makePfxWrap(entInp)),
         el('div', { class: 'field' }, el('label', {}, '🏷️ Desconto'), makePfxWrap(descInp)),
+      ),
+      el('div', { class: 'orc-row-2' },
+        el('div', { class: 'field' }, el('label', {}, '🚚 Frete (opcional)'), makePfxWrap(freteInp)),
+        el('div', { class: 'field' }, el('label', {}, '🛡️ Seguro (opcional)'), makePfxWrap(seguroInp)),
       ),
       pdf.wrap,
     ),
@@ -766,9 +786,14 @@ function buildTroca(prodData, empresa) {
 
   const avState = Object.fromEntries(AVARIA_DEFS.map(a => [a.key, { checked: false, val: a.def }]))
 
-  const cliInp = el('input', { type: 'text',   class: 'orc-input', placeholder: 'Nome do cliente' })
-  const dcInp  = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
-  const entInp = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
+  const cliInp    = el('input', { type: 'text',   class: 'orc-input', placeholder: 'Nome do cliente' })
+  const dcInp     = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
+  const entInp    = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '50' })
+  // Opcionais — só quando o cliente pede envio (frete) e/ou seguro da
+  // mercadoria; somam na diferença a pagar (ou abatem o troco a devolver,
+  // se for downgrade — ver cálculo em calcBtn).
+  const freteInp  = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '10' })
+  const seguroInp = el('input', { type: 'number', class: 'orc-input orc-inp-money', placeholder: '0', value: '0', step: '10' })
 
   const { listWrap: usadoList, totRow: usadoTot, renderList: renderUsados } =
     makeItemList(tUsados, prodData, 'Buscar modelo...', 'Total na troca')
@@ -833,6 +858,8 @@ function buildTroca(prodData, empresa) {
       troco: ultimoCalc.troco,
       entrada: ultimoCalc.ent,
       restante: ultimoCalc.rest,
+      frete: ultimoCalc.frete,
+      seguro: ultimoCalc.seguro,
       opcoesParcelamento: ultimoCalc.troco > 0 ? [] : todasOpcoesParcelamento(ultimoCalc.base),
     })
     openModal({
@@ -849,18 +876,23 @@ function buildTroca(prodData, empresa) {
 
   const calcBtn = el('button', { type: 'button', class: 'orc-calc-btn' }, 'Gerar Orçamento de Troca →')
   calcBtn.addEventListener('click', () => {
-    const uvTot = tUsados.reduce((s, i) => s + i.val, 0)
-    const nvTot = tNovos.reduce( (s, i) => s + i.val, 0)
-    const dc    = parseFloat(dcInp.value)  || 0
-    const ent   = parseFloat(entInp.value) || 0
-    const av    = calcAv()
-    const cli   = cliInp.value.trim()
+    const uvTot  = tUsados.reduce((s, i) => s + i.val, 0)
+    const nvTot  = tNovos.reduce( (s, i) => s + i.val, 0)
+    const dc     = parseFloat(dcInp.value)      || 0
+    const ent    = parseFloat(entInp.value)     || 0
+    const frete  = parseFloat(freteInp.value)   || 0
+    const seguro = parseFloat(seguroInp.value)  || 0
+    const av     = calcAv()
+    const cli    = cliInp.value.trim()
 
     const uvLiq  = Math.max(0, uvTot - av)
     // Downgrade: cliente troca por algo mais barato — o valor líquido do
     // aparelho dele supera o desejado (mesmo já descontando o desconto extra).
-    // Nesse caso não sobra diferença a cobrar, sobra troco a devolver.
-    const bruto  = nvTot - dc - uvLiq
+    // Nesse caso não sobra diferença a cobrar, sobra troco a devolver. Frete
+    // e seguro somam em cima do bruto antes desse sinal decidir: se ainda
+    // sobra troco, eles abatem o troco (o cliente "paga" o frete com o
+    // crédito da troca); se vira diferença a pagar, somam nela.
+    const bruto  = nvTot - dc - uvLiq + frete + seguro
     const dif    = Math.max(0, bruto)
     const troco  = Math.max(0, -bruto)
     const rest   = Math.max(0, dif - ent)
@@ -871,6 +903,8 @@ function buildTroca(prodData, empresa) {
     for (const it of tUsados) refs.summWrap.appendChild(makeSRow('🔄', 'Aparelho na troca', `${it.nome} — ${R(it.val)}`))
     if (av > 0) refs.summWrap.appendChild(makeSRow('🔧', 'Avarias (desc. interno)', `− ${R(av)}`, 'orc-srow-red'))
     for (const it of tNovos) refs.summWrap.appendChild(makeSRow('📦', 'Aparelho desejado', `${it.nome} — ${R(it.val)}`))
+    if (frete > 0)  refs.summWrap.appendChild(makeSRow('🚚', 'Frete',  R(frete)))
+    if (seguro > 0) refs.summWrap.appendChild(makeSRow('🛡️', 'Seguro', R(seguro)))
     if (dc > 0)  refs.summWrap.appendChild(makeSRow('🏷️', 'Desconto extra',        `− ${R(dc)}`,  'orc-srow-red'))
     if (troco > 0) {
       refs.summWrap.appendChild(makeSRow('💰', 'Troco a devolver ao cliente', R(troco), 'orc-srow-troco'))
@@ -905,7 +939,7 @@ function buildTroca(prodData, empresa) {
     for (const a of AVARIA_DEFS) {
       if (avState[a.key].checked) avItems.push({ nome: a.label.replace(/^\S+\s+/, ''), val: avState[a.key].val })
     }
-    refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli, avItems, troco)
+    refs.msgBody.textContent = msgTroc(tNovos, tUsados, uvLiq, dc, dif, ent, rest, cli, avItems, troco, frete, seguro)
     refs.resultBlock.classList.add('visible')
     refs.disc.classList.add('visible')
     refs.msgc.classList.add('visible')
@@ -921,7 +955,7 @@ function buildTroca(prodData, empresa) {
     }).catch(err => console.error('Erro ao salvar histórico do orçamento:', err))
 
     ultimoCalc = {
-      cli, dc, ent, dif, troco, rest, base,
+      cli, dc, ent, dif, troco, rest, base, frete, seguro,
       usados: tUsados.filter(i => i.nome).map(i => ({ descricao: i.nome, valor: i.val })),
       novos:  tNovos.filter(i => i.nome).map(i => ({ descricao: i.nome, valor: i.val })),
       avItems: avItems.map(a => ({ nome: a.nome, val: a.val })),
@@ -945,6 +979,10 @@ function buildTroca(prodData, empresa) {
       el('div', { class: 'orc-row-2' },
         el('div', { class: 'field' }, el('label', {}, '💵 Entrada'), makePfxWrap(entInp)),
         el('div', { class: 'field' }, el('label', {}, '🏷️ Desconto'), makePfxWrap(dcInp)),
+      ),
+      el('div', { class: 'orc-row-2' },
+        el('div', { class: 'field' }, el('label', {}, '🚚 Frete (opcional)'), makePfxWrap(freteInp)),
+        el('div', { class: 'field' }, el('label', {}, '🛡️ Seguro (opcional)'), makePfxWrap(seguroInp)),
       ),
       pdf.wrap,
     ),

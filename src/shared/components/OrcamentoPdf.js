@@ -12,12 +12,14 @@ export function montarDadosOrcamentoPdf({
   itens = [], usados = [], novos = [], avarias = [],
   desconto = 0, liquido = 0, entrada = 0, restante = 0,
   diferenca = 0, troco = 0, opcoesParcelamento = [],
+  frete = 0, seguro = 0,
 }) {
   return {
     empresa, data, tipo, clienteNome, clienteDocLabel, clienteDoc,
     itens, usados, novos, avarias,
     desconto, liquido, entrada, restante,
     diferenca, troco, opcoesParcelamento,
+    frete, seguro,
   }
 }
 
@@ -108,6 +110,8 @@ export function renderOrcamentoPdfPreview(container, dados) {
 
   const resumoLinhas = []
   if (dados.desconto > 0) resumoLinhas.push(linha(`Desconto: − ${brl(dados.desconto)}`))
+  if (dados.frete > 0)  resumoLinhas.push(linha(`Frete: ${brl(dados.frete)}`))
+  if (dados.seguro > 0) resumoLinhas.push(linha(`Seguro: ${brl(dados.seguro)}`))
   if (dados.tipo === 'troca' && dados.troco > 0) {
     resumoLinhas.push(linha(`Troco a devolver ao cliente: ${brl(dados.troco)}`))
   } else {
