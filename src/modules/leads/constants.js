@@ -1,4 +1,4 @@
-import { svgEl } from '../../shared/utils/dom.js'
+import { el, svgEl } from '../../shared/utils/dom.js'
 import { whatsappIcon } from '../../shared/utils/whatsapp.js'
 
 // Glifo simplificado do Instagram (câmera + lente + flash), sem o gradiente
@@ -128,11 +128,45 @@ export function textoChamadaPerdida(lead) {
 }
 
 // Nº da tentativa de contato atual: entrar em Em Follow-up já é a 1ª
-// tentativa (o "Iniciar" do drag pra essa coluna); cada "Nota" registrada
-// depois (marcarContatado, em notes[]) é uma tentativa a mais. Depois da
-// 3ª sem resposta, a equipe descarta manualmente — não é automático.
+// tentativa — o "Iniciar" do drag pra essa coluna agora exige descrever o
+// que foi tratado (ver followUpForm.js), então já grava a 1ª nota junto.
+// Cada "Nota" registrada depois (marcarContatado, em notes[]) é uma
+// tentativa a mais. Depois da 3ª sem resposta, a equipe descarta
+// manualmente — não é automático. Math.max(1, ...) preserva o card em leads
+// que já estavam em follow-up antes dessa mudança (0 notas = mostrava "1").
 export function contarTentativas(lead) {
-  return (lead.notes?.length || 0) + 1
+  return Math.max(1, lead.notes?.length || 0)
+}
+
+// Nível de interesse do lead — marcado à mão pela equipe ao iniciar/reagendar
+// o follow-up ou ao registrar uma nova nota (mantém selecionado o valor
+// anterior, com opção de trocar). 1 estrela = pouco, 3 = alto interesse.
+export const INTERESSE_META = {
+  1: { estrelas: '⭐', label: 'Pouco interesse' },
+  2: { estrelas: '⭐⭐', label: 'Médio interesse' },
+  3: { estrelas: '⭐⭐⭐', label: 'Alto interesse' },
+}
+
+// Seletor de estrelas reutilizável (form de Iniciar/Reagendar Follow-up e
+// modal de Nota) — clicar numa estrela marca até ali; clicar de novo na
+// última estrela já marcada limpa a seleção (não é obrigatório opinar).
+export function criarSeletorInteresse(valorInicial = null) {
+  let valor = valorInicial || null
+  const btns = [1, 2, 3].map(n => {
+    const btn = el('button', { type: 'button', class: 'lead-interesse-star', title: INTERESSE_META[n].label }, '⭐')
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      valor = valor === n ? null : n
+      render()
+    })
+    return btn
+  })
+  function render() {
+    btns.forEach((b, i) => b.classList.toggle('ativa', valor != null && i < valor))
+  }
+  render()
+  const wrap = el('div', { class: 'lead-interesse-seletor' }, ...btns)
+  return { el: wrap, getValue: () => valor }
 }
 
 function hojeISO() {

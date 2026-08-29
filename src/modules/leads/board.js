@@ -4,7 +4,7 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import {
   COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon,
   temChamadaPerdida, textoChamadaPerdida, contarTentativas, telefoneLocalDigits,
-  contatoLocalizavel, resumoAnuncio,
+  contatoLocalizavel, resumoAnuncio, INTERESSE_META, criarSeletorInteresse,
 } from './constants.js'
 import {
   renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta,
@@ -85,12 +85,16 @@ function botaoNota(lead) {
       size: 'sm',
       renderBody: (body) => {
         const notaInp = el('textarea', { rows: '3', class: 'field-textarea', placeholder: 'O que foi conversado...' })
+        // Mantém o nível de interesse já marcado (se tiver) — a equipe só
+        // troca se o interesse do cliente mudou desde o último contato.
+        const seletor = criarSeletorInteresse(lead.interesse || null)
         const reagendarChk = el('input', { type: 'checkbox' })
         reagendarChk.checked = true
         const dtInp = el('input', { type: 'datetime-local', class: 'field-input' })
 
         mount(body,
           el('div', { class: 'field' }, el('label', {}, 'Nota'), notaInp),
+          el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'Nível de interesse'), seletor.el),
           el('div', { class: 'field', style: 'margin-top:14px' },
             el('label', { class: 'perm-label' }, reagendarChk, 'Reagendar novo retorno'),
             dtInp,
@@ -99,6 +103,7 @@ function botaoNota(lead) {
         body._getPayload = () => ({
           nota: notaInp.value,
           proximoRetorno: reagendarChk.checked && dtInp.value ? new Date(dtInp.value) : null,
+          interesse: seletor.getValue(),
         })
         notaInp.focus()
       },
@@ -214,6 +219,12 @@ function leadCard(lead) {
     }, String(tentativa)))
   }
 
+  // Nível de interesse — mesma visibilidade do nº de tentativa, pra
+  // identificar rápido no quadro quem está mais quente.
+  if (['em_followup', 'sem_resposta'].includes(lead.status) && lead.interesse) {
+    linhas.push(el('span', { class: 'lead-card-interesse', title: INTERESSE_META[lead.interesse].label }, INTERESSE_META[lead.interesse].estrelas))
+  }
+
   if (urgente) linhas.push(el('span', { class: 'lead-card-urgente-badge' }, textoChamadaPerdida(lead)))
 
   if (lead.status === 'novo') {
@@ -303,6 +314,7 @@ function handleDrop(lead, targetStatus) {
     abrirFollowUpFormModal({
       titulo: `Follow-up — ${nomeExibicao(lead)}`,
       confirmLabel: lead.status === 'novo' ? 'Iniciar' : 'Reagendar',
+      interesseInicial: lead.interesse || null,
       onConfirm: async (data) => {
         await iniciarFollowUp(lead.id, data)
         toastSuccess('Follow-up definido.')

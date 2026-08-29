@@ -2,7 +2,7 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { openModal } from '../../shared/components/Modal.js'
 import {
   SOURCE_META, DISCARD_REASON_META, nomeExibicao, canalIcon, canalDoLead,
-  formatDataHora, contarTentativas, contatoLocalizavel, resumoAnuncio,
+  formatDataHora, contarTentativas, contatoLocalizavel, resumoAnuncio, INTERESSE_META,
 } from './constants.js'
 
 function toDate(ts) {
@@ -53,6 +53,7 @@ export function abrirHistoricoLead(lead) {
         linhas.push(el('div', { class: 'lead-hist-section' },
           el('h4', {}, 'Tentativas de contato'),
           el('span', { class: 'lead-hist-tentativa-count' }, `Tentativa ${contarTentativas(lead)}`),
+          lead.interesse ? el('span', { class: 'lead-hist-hora' }, `Interesse: ${INTERESSE_META[lead.interesse].estrelas} ${INTERESSE_META[lead.interesse].label}`) : null,
           lead.nextFollowUpAt ? el('span', { class: 'lead-hist-hora' }, `Próximo retorno: ${formatDataHora(lead.nextFollowUpAt)}`) : null,
         ))
       }

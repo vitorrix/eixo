@@ -3315,6 +3315,26 @@ html, body {
 .lead-card-tentativa-badge--azul     { background: #2563eb; }
 .lead-card-tentativa-badge--vermelho { background: #d93025; }
 
+/* Nível de interesse no card — estrelas visíveis pra identificar rápido
+   quem está mais quente sem precisar abrir o histórico. */
+.lead-card-interesse { display: block; font-size: 12px; letter-spacing: 1px; margin: 2px 0 4px; }
+
+/* Seletor de estrelas (Iniciar/Reagendar Follow-up e modal de Nota) —
+   clicável, cinza quando não marcada, colorida quando ativa. */
+.lead-interesse-seletor { display: flex; gap: 4px; }
+.lead-interesse-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  padding: 2px;
+  filter: grayscale(1) opacity(.4);
+  transition: filter .1s;
+}
+.lead-interesse-star:hover { filter: grayscale(.5) opacity(.7); }
+.lead-interesse-star.ativa { filter: none; opacity: 1; }
+
 /* Chip de anúncio (WhatsApp externalAdReply / Instagram referral) — resumo
    curto, não o texto inteiro (que pode ser o anúncio completo, com título +
    corpo). Passa o mouse pra ver tudo (title). Usado no card do quadro e no

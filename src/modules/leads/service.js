@@ -23,12 +23,19 @@ export async function renomearLead(id, nome) {
   return updateDoc(doc(db, COL, id), { name: nome.trim() || null, updatedAt: serverTimestamp() })
 }
 
-export async function iniciarFollowUp(id, nextFollowUpAt) {
-  return updateDoc(doc(db, COL, id), {
+// "Iniciar" (de Novo) ou "Reagendar" (de Sem Resposta) — os dois passam por
+// abrirFollowUpFormModal (followUpForm.js) e representam um contato de
+// verdade acontecendo agora, por isso já gravam a nota e o nível de
+// interesse junto (contarTentativas em constants.js conta com isso).
+export async function iniciarFollowUp(id, { nextFollowUpAt, nota, interesse }) {
+  const patch = {
     status: 'em_followup',
     nextFollowUpAt,
     updatedAt: serverTimestamp(),
-  })
+  }
+  if (nota) patch.notes = arrayUnion(notaAtual(nota))
+  if (interesse !== undefined) patch.interesse = interesse
+  return updateDoc(doc(db, COL, id), patch)
 }
 
 // Firestore não aceita serverTimestamp() dentro de um elemento de arrayUnion
@@ -39,10 +46,11 @@ function notaAtual(texto) {
   return { text: texto.trim(), author: name || email || '—', at: new Date() }
 }
 
-export async function marcarContatado(id, { nota, proximoRetorno }) {
+export async function marcarContatado(id, { nota, proximoRetorno, interesse }) {
   const patch = { updatedAt: serverTimestamp() }
   if (nota) patch.notes = arrayUnion(notaAtual(nota))
   if (proximoRetorno) { patch.status = 'em_followup'; patch.nextFollowUpAt = proximoRetorno }
+  if (interesse !== undefined) patch.interesse = interesse
   return updateDoc(doc(db, COL, id), patch)
 }
 
