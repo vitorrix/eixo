@@ -81,16 +81,18 @@ export function contatoLocalizavel(lead) {
 
 // Link pra abrir a conversa direto — clicado no ícone do canal no card do
 // quadro e no Histórico. WhatsApp usa o telefone cru (com DDI, formato que
-// wa.me espera). Instagram não tem endpoint de deep-link por igsid pra quem
-// não é o dono da conta — ig.me/m/<usuário> é a melhor aproximação usando o
-// mesmo "@" de contatoLocalizavel (nem sempre é o username exato: a Graph
-// API às vezes devolve o nome de exibição em vez do username de verdade).
+// wa.me espera). Instagram: ig.me/m/<usuário> foi testado e não funciona
+// ("Esta página não está disponível" — o "@" é só uma aproximação, nem
+// sempre bate com o username real). O link certo é a própria thread do
+// Direct web — pra conversa 1:1, o id da thread é o mesmo igsid que a gente
+// já grava no lead (functions/instagramLeads.js), então não precisa
+// adivinhar usuário nenhum.
 export function linkContatoDireto(lead) {
   if (canalDoLead(lead) === 'whatsapp') {
     const digits = (lead.phone || '').replace(/\D/g, '')
     return digits ? `https://wa.me/${digits}` : null
   }
-  if (lead.name) return `https://ig.me/m/${lead.name.replace(/\s/g, '').toLowerCase()}`
+  if (lead.igsid) return `https://www.instagram.com/direct/t/${lead.igsid}/`
   return null
 }
 
