@@ -12,9 +12,19 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { db } from './firestoreWriter.js'
 
 // Mesmo parsing usado no secretina (secretina/handler.js) — jid de DM vem
-// como "5511995844837@s.whatsapp.net" (às vezes "...@lid" nesta conta, um
-// identificador opaco do WhatsApp que não é o número de telefone de verdade;
-// limitação conhecida, não resolvida aqui nem no secretina).
+// como "5511995844837@s.whatsapp.net" — ou, nesta conta, às vezes como
+// "...@lid" (identificador opaco de dispositivo do WhatsApp; extrair dígitos
+// dele gera um "telefone" grande e sem sentido, não o número de verdade).
+// Baileys 6.7+ expõe o número real nesse caso em msg.key.senderPn ("sender
+// phone number") — parte do rollout de LID do próprio WhatsApp. Preferir
+// sempre que disponível; leads antigos capturados com o @lid cru (antes
+// dessa correção) ficam órfãos com o "telefone" errado — não há como migrar
+// esse doc de volta, mas contatos novos já entram certos.
+function jidTelefonico(jid, msg) {
+  if (jid.endsWith('@lid') && msg.key?.senderPn) return msg.key.senderPn
+  return jid
+}
+
 function telefoneFromJid(jid) {
   return jid.split('@')[0].split(':')[0]
 }
@@ -45,7 +55,7 @@ export function descreverMidia(message) {
 // resetar status/notas/follow-up de um lead que já está sendo trabalhado
 // só porque ele mandou outra mensagem).
 export async function capturarLead(jid, msg, text) {
-  const phone = telefoneFromJid(jid)
+  const phone = telefoneFromJid(jidTelefonico(jid, msg))
   if (!phone) return
 
   const ref = db.collection('leads').doc(phone)

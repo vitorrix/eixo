@@ -79,6 +79,21 @@ export function contatoLocalizavel(lead) {
   return 'Instagram Direct'
 }
 
+// Link pra abrir a conversa direto — clicado no ícone do canal no card do
+// quadro e no Histórico. WhatsApp usa o telefone cru (com DDI, formato que
+// wa.me espera). Instagram não tem endpoint de deep-link por igsid pra quem
+// não é o dono da conta — ig.me/m/<usuário> é a melhor aproximação usando o
+// mesmo "@" de contatoLocalizavel (nem sempre é o username exato: a Graph
+// API às vezes devolve o nome de exibição em vez do username de verdade).
+export function linkContatoDireto(lead) {
+  if (canalDoLead(lead) === 'whatsapp') {
+    const digits = (lead.phone || '').replace(/\D/g, '')
+    return digits ? `https://wa.me/${digits}` : null
+  }
+  if (lead.name) return `https://ig.me/m/${lead.name.replace(/\s/g, '').toLowerCase()}`
+  return null
+}
+
 // Card de anúncio (WhatsApp) e referral (Instagram) chegam como texto cru,
 // às vezes bem longo (título + corpo do anúncio inteiro) — sem isso vira um
 // parágrafo gigante que atropela o card/histórico. Corta pra um resumo

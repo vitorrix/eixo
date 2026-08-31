@@ -5,6 +5,7 @@ import {
   COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon,
   temChamadaPerdida, textoChamadaPerdida, contarTentativas, telefoneLocalDigits,
   contatoLocalizavel, resumoAnuncio, INTERESSE_META, criarSeletorInteresse,
+  linkContatoDireto,
 } from './constants.js'
 import {
   renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta,
@@ -197,7 +198,17 @@ function leadCard(lead) {
   // stopPropagation) abre o histórico completo de contatos do lead.
   card.addEventListener('click', () => abrirHistoricoLead(lead))
 
-  const canalEl = el('span', { class: 'lead-card-canal', title: sourceMeta.label }, canalIcon(canalDoLead(lead)))
+  // Ícone do canal vira link direto pra conversa quando dá — clicar já abre
+  // o WhatsApp/Instagram nessa pessoa, sem precisar copiar telefone/@.
+  const linkDireto = linkContatoDireto(lead)
+  const canalEl = linkDireto
+    ? el('a', {
+        class: 'lead-card-canal lead-card-canal--link',
+        title: `Abrir conversa — ${sourceMeta.label}`,
+        href: linkDireto, target: '_blank', rel: 'noopener',
+      }, canalIcon(canalDoLead(lead)))
+    : el('span', { class: 'lead-card-canal', title: sourceMeta.label }, canalIcon(canalDoLead(lead)))
+  if (linkDireto) canalEl.addEventListener('click', e => e.stopPropagation())
   const cabecalhoDireita = [canalEl]
   if (lead.status === 'novo') cabecalhoDireita.push(botaoRemover(lead))
   const head = el('div', { class: 'lead-card-head' }, nomeEditavelEl(lead), ...cabecalhoDireita)

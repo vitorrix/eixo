@@ -3,6 +3,7 @@ import { openModal } from '../../shared/components/Modal.js'
 import {
   SOURCE_META, DISCARD_REASON_META, nomeExibicao, canalIcon, canalDoLead,
   formatDataHora, contarTentativas, contatoLocalizavel, resumoAnuncio, INTERESSE_META,
+  linkContatoDireto,
 } from './constants.js'
 
 function toDate(ts) {
@@ -29,9 +30,14 @@ export function abrirHistoricoLead(lead) {
       const linhas = []
 
       // Telefone/@ em destaque, bem no topo — é o dado que serve de verdade
-      // pra localizar o contato fora do Eixo (WhatsApp ou Instagram).
+      // pra localizar o contato fora do Eixo (WhatsApp ou Instagram). Ícone
+      // do canal também abre a conversa direto, quando dá.
+      const linkDireto = linkContatoDireto(lead)
+      const iconeCanal = linkDireto
+        ? el('a', { class: 'lead-hist-canal-link', href: linkDireto, target: '_blank', rel: 'noopener', title: `Abrir conversa — ${sourceMeta.label}` }, canalIcon(canalDoLead(lead)))
+        : canalIcon(canalDoLead(lead))
       linhas.push(el('div', { class: 'lead-hist-origem' },
-        canalIcon(canalDoLead(lead)),
+        iconeCanal,
         el('span', {}, sourceMeta.label),
         el('span', { class: 'lead-hist-dot' }, '·'),
         el('span', { class: 'lead-hist-contato' }, contatoLocalizavel(lead)),
