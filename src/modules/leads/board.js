@@ -242,13 +242,18 @@ function leadCard(lead) {
   // stopPropagation) abre o histórico completo de contatos do lead.
   card.addEventListener('click', () => abrirHistoricoLead(lead))
 
-  // Ícone do canal vira link direto pra conversa quando dá — clicar já abre
-  // o WhatsApp/Instagram nessa pessoa, sem precisar copiar telefone/@.
+  // Ícone do canal vira link quando dá. WhatsApp abre a conversa certa
+  // direto (telefone real). Instagram ainda não tem como confirmar o id
+  // da thread certa (ver linkContatoDireto) — leva só pro Direct geral,
+  // por isso o texto avisa que não é direto na conversa.
   const linkDireto = linkContatoDireto(lead)
+  const tituloLink = canalDoLead(lead) === 'whatsapp'
+    ? `Abrir conversa — ${sourceMeta.label}`
+    : `Abrir Direct (geral) — procure "${nomeExibicao(lead)}"`
   const canalEl = linkDireto
     ? el('a', {
         class: 'lead-card-canal lead-card-canal--link',
-        title: `Abrir conversa — ${sourceMeta.label}`,
+        title: tituloLink,
         href: linkDireto, target: '_blank', rel: 'noopener',
       }, canalIcon(canalDoLead(lead)))
     : el('span', { class: 'lead-card-canal', title: sourceMeta.label }, canalIcon(canalDoLead(lead)))

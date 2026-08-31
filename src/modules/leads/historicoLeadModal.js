@@ -31,10 +31,15 @@ export function abrirHistoricoLead(lead) {
 
       // Telefone/@ em destaque, bem no topo — é o dado que serve de verdade
       // pra localizar o contato fora do Eixo (WhatsApp ou Instagram). Ícone
-      // do canal também abre a conversa direto, quando dá.
+      // do canal também vira link, quando dá — Instagram só leva pro Direct
+      // geral (ver linkContatoDireto em constants.js), não tem como
+      // confirmar o id da thread certa ainda.
       const linkDireto = linkContatoDireto(lead)
+      const tituloLink = canalDoLead(lead) === 'whatsapp'
+        ? `Abrir conversa — ${sourceMeta.label}`
+        : `Abrir Direct (geral) — procure "${nomeExibicao(lead)}"`
       const iconeCanal = linkDireto
-        ? el('a', { class: 'lead-hist-canal-link', href: linkDireto, target: '_blank', rel: 'noopener', title: `Abrir conversa — ${sourceMeta.label}` }, canalIcon(canalDoLead(lead)))
+        ? el('a', { class: 'lead-hist-canal-link', href: linkDireto, target: '_blank', rel: 'noopener', title: tituloLink }, canalIcon(canalDoLead(lead)))
         : canalIcon(canalDoLead(lead))
       linhas.push(el('div', { class: 'lead-hist-origem' },
         iconeCanal,

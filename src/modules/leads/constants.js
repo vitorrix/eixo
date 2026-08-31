@@ -81,19 +81,27 @@ export function contatoLocalizavel(lead) {
 
 // Link pra abrir a conversa direto — clicado no ícone do canal no card do
 // quadro e no Histórico. WhatsApp usa o telefone cru (com DDI, formato que
-// wa.me espera). Instagram: ig.me/m/<usuário> foi testado e não funciona
-// ("Esta página não está disponível" — o "@" é só uma aproximação, nem
-// sempre bate com o username real). O link certo é a própria thread do
-// Direct web — pra conversa 1:1, o id da thread é o mesmo igsid que a gente
-// já grava no lead (functions/instagramLeads.js), então não precisa
-// adivinhar usuário nenhum.
+// wa.me espera).
+//
+// Instagram: já tentamos ig.me/m/<usuário> (deu "página não disponível" —
+// o "@" é só uma aproximação, nem sempre bate com o username real) e
+// instagram.com/direct/t/<igsid> (parecia certo — a thread abria — mas
+// confirmado com um lead real que abre a conversa ERRADA: o igsid do
+// webhook não é o id da thread do Direct web, são números diferentes).
+// Abrir a thread errada é pior que não abrir nada — dá pra mandar
+// mensagem pra pessoa trocada sem perceber. Até ter uma forma confirmada
+// de resolver o id certo da thread (ex: Graph API /conversations, que
+// precisaria de uma Cloud Function porque usa o access token — não dá pra
+// chamar do front), o ícone do Instagram leva só pro Direct geral; a
+// equipe localiza a conversa pelo nome que já aparece no card.
+// TODO: resolver o id real da thread via Graph API /conversations e cachear
+// no lead (ex: lead.igThreadId), testando com tráfego real antes de confiar.
 export function linkContatoDireto(lead) {
   if (canalDoLead(lead) === 'whatsapp') {
     const digits = (lead.phone || '').replace(/\D/g, '')
     return digits ? `https://wa.me/${digits}` : null
   }
-  if (lead.igsid) return `https://www.instagram.com/direct/t/${lead.igsid}/`
-  return null
+  return 'https://www.instagram.com/direct/inbox/'
 }
 
 // Card de anúncio (WhatsApp) e referral (Instagram) chegam como texto cru,
