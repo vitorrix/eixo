@@ -23,6 +23,14 @@ export async function renomearLead(id, nome) {
   return updateDoc(doc(db, COL, id), { name: nome.trim() || null, updatedAt: serverTimestamp() })
 }
 
+// Corrige na mão o telefone de um lead do WhatsApp — cobre o caso de captura
+// via "@lid" (identificador opaco do WhatsApp, não o número de verdade; ver
+// jidTelefonico em whatsapp-bot/src/leads.js) que já tinha sido salva antes
+// da correção existir: esses docs não se autocorrigem sozinhos.
+export async function atualizarTelefoneLead(id, phone) {
+  return updateDoc(doc(db, COL, id), { phone: (phone || '').replace(/\D/g, '') || null, updatedAt: serverTimestamp() })
+}
+
 // "Iniciar" (de Novo) ou "Reagendar" (de Sem Resposta) — os dois passam por
 // abrirFollowUpFormModal (followUpForm.js) e representam um contato de
 // verdade acontecendo agora, por isso já gravam a nota e o nível de

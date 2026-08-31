@@ -5,12 +5,12 @@ import {
   COLUNAS, SOURCE_META, nomeExibicao, textoUrgencia, canalDoLead, canalIcon,
   temChamadaPerdida, textoChamadaPerdida, contarTentativas, telefoneLocalDigits,
   contatoLocalizavel, resumoAnuncio, INTERESSE_META, criarSeletorInteresse,
-  linkContatoDireto,
+  linkContatoDireto, formatarTelefone,
 } from './constants.js'
 import {
   renomearLead, iniciarFollowUp, marcarContatado, marcarSemResposta,
   marcarConvertidoSemCliente, vincularClienteConvertido,
-  removerLead, marcarChamadaPerdida, desmarcarChamadaPerdida,
+  removerLead, marcarChamadaPerdida, desmarcarChamadaPerdida, atualizarTelefoneLead,
 } from './service.js'
 import { abrirFollowUpFormModal } from './followUpForm.js'
 import { abrirDescartarModal } from './descartarForm.js'
@@ -62,6 +62,50 @@ function nomeEditavelEl(lead) {
     inp.addEventListener('keydown', e => {
       if (e.key === 'Enter') inp.blur()
       if (e.key === 'Escape') { inp.value = lead.name || ''; inp.blur() }
+    })
+    inp.addEventListener('blur', salvar, { once: true })
+    inp.addEventListener('click', e => e.stopPropagation())
+    wrap.appendChild(inp)
+    inp.focus()
+    inp.select()
+  }
+
+  mostrar()
+  return wrap
+}
+
+// Telefone clicável — só pra lead do WhatsApp (Instagram não tem telefone,
+// usa igsid). Corrige na mão quando a captura vem torta: mensagens que
+// chegam endereçadas por "@lid" (identificador opaco do WhatsApp, não o
+// número de verdade) geravam um "telefone" sem sentido antes da correção em
+// whatsapp-bot/src/leads.js — leads já capturados assim não se autocorrigem
+// sozinhos, só editando aqui.
+function contatoEditavelEl(lead) {
+  const editavel = canalDoLead(lead) === 'whatsapp'
+  const wrap = el('span', { class: 'lead-card-contato' })
+
+  function mostrar() {
+    wrap.replaceChildren()
+    const txt = el('span', editavel ? { class: 'lead-card-contato-txt', title: 'Clique pra corrigir o telefone' } : {}, contatoLocalizavel(lead))
+    if (editavel) txt.addEventListener('click', (e) => { e.stopPropagation(); editar() })
+    wrap.appendChild(txt)
+  }
+
+  function editar() {
+    wrap.replaceChildren()
+    const inp = el('input', { type: 'tel', class: 'lead-card-contato-inp', value: lead.phone || '', placeholder: 'Ex: 5511999998888' })
+    const salvar = async () => {
+      const digits = inp.value.replace(/\D/g, '')
+      wrap.replaceChildren()
+      wrap.appendChild(el('span', { class: 'lead-card-contato-txt' }, digits ? formatarTelefone(digits) : contatoLocalizavel(lead)))
+      if (digits !== (lead.phone || '')) {
+        try { await atualizarTelefoneLead(lead.id, digits) }
+        catch (err) { console.error(err); toastError('Erro ao salvar telefone.') }
+      }
+    }
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') inp.blur()
+      if (e.key === 'Escape') { inp.value = lead.phone || ''; inp.blur() }
     })
     inp.addEventListener('blur', salvar, { once: true })
     inp.addEventListener('click', e => e.stopPropagation())
@@ -213,9 +257,10 @@ function leadCard(lead) {
   if (lead.status === 'novo') cabecalhoDireita.push(botaoRemover(lead))
   const head = el('div', { class: 'lead-card-head' }, nomeEditavelEl(lead), ...cabecalhoDireita)
 
-  // Telefone (WhatsApp) ou @ aproximado (Instagram) sempre visível — é o que
-  // dá pra usar de verdade pra localizar o contato fora do Eixo.
-  const linhas = [head, el('span', { class: 'lead-card-contato' }, contatoLocalizavel(lead))]
+  // Telefone (WhatsApp, editável) ou @ aproximado (Instagram) sempre
+  // visível — é o que dá pra usar de verdade pra localizar o contato fora
+  // do Eixo.
+  const linhas = [head, contatoEditavelEl(lead)]
 
   // Nº da tentativa de contato atual, em destaque no canto — só faz sentido
   // depois que o follow-up começou (ver contarTentativas em constants.js).
