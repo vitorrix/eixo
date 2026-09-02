@@ -205,7 +205,14 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
     tableWrap.classList.remove('hidden'); emptyState.classList.add('hidden')
 
     for (const l of list) {
-      const dateStr = l.dataLiquidacao || l.dataVencimento ? shortDate(l.dataLiquidacao || l.dataVencimento) : '—'
+      // Pendente mostra o vencimento (é o que importa pra quem tá de olho na
+      // fila); só liquidado mostra a data em que o dinheiro de fato
+      // entrou/saiu. Antes priorizava dataLiquidacao sempre — se esse campo
+      // tivesse qualquer valor perdido (ver fix em updateLancamento,
+      // financeiro/service.js), a tela ficava presa nele e não refletia uma
+      // edição no vencimento.
+      const dataParaExibir = l.liquidado ? (l.dataLiquidacao || l.dataVencimento) : (l.dataVencimento || l.dataLiquidacao)
+      const dateStr = dataParaExibir ? shortDate(dataParaExibir) : '—'
       const descricao = l.parcela?.total > 1 ? `${l.descricao} (${l.parcela.numero}/${l.parcela.total})` : l.descricao
 
       const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({

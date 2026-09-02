@@ -93,6 +93,14 @@ export async function createLancamento(data) {
 export async function updateLancamento(id, fields) {
   const patch = { ...fields }
   if (patch.valor !== undefined) patch.valor = parseFloat(patch.valor) || 0
+  // Mesma regra do createLancamento: sem isso, o campo "Data de recebimento/
+  // pagamento" do form (que sempre vem preenchido, mesmo escondido quando o
+  // lançamento tá Pendente — ver financeiro/list.js) gravava uma
+  // dataLiquidacao "fantasma" mesmo em lançamento não liquidado. Isso fazia
+  // a lista principal mostrar essa data em vez do vencimento recém-editado
+  // (a tela de detalhe lia o campo certo, então só o lançamento aberto
+  // mostrava a edição — o sintoma reportado).
+  if (patch.liquidado === false) patch.dataLiquidacao = null
   return updateDoc(doc(db, COL, id), patch)
 }
 
