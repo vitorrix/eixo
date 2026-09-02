@@ -26,22 +26,61 @@ const PAGE_W    = 595.28 // A4 em pt
 const MARGIN    = 40
 const CONTENT_W = PAGE_W - MARGIN * 2
 
+const MAX_TENTATIVAS = 5
+const SWEEP_INTERVAL_MS = 2 * 60 * 1000 // 2min
+
+// Evita mandar o mesmo recibo 2x se o listener em tempo real e a varredura
+// periódica pegarem o mesmo doc quase ao mesmo tempo.
+const emProcessamento = new Set()
+
+function processarSeNaoEstiver(sock, doc) {
+  if (emProcessamento.has(doc.id)) return
+  emProcessamento.add(doc.id)
+  processarRecibo(sock, doc)
+    .catch(err => console.error('[recibo] erro inesperado ao processar:', err))
+    .finally(() => emProcessamento.delete(doc.id))
+}
+
+// Varredura periódica: cobre o recibo que ficou "pendente" porque a conexão
+// com o WhatsApp caiu bem no instante em que ele entrou na fila (o listener
+// abaixo só reage UMA VEZ por doc — se não tinha socket ativo naquela hora,
+// ninguém tentava de novo) e reprocessa "erro" com poucas tentativas ainda
+// (falha de conexão quase sempre é transitória, não do número/destinatário).
+// Antes dessa varredura só um restart do processo (que recria o listener do
+// zero) reprocessava a fila parada — por isso o recibo às vezes só saía
+// horas ou um dia depois, e às vezes nunca (se caiu em "erro").
+async function sweepFila(getSock, db) {
+  const sock = getSock()
+  if (!sock) return
+  try {
+    const snap = await db.collection(COL).where('status', 'in', ['pendente', 'erro']).get()
+    for (const doc of snap.docs) {
+      const data = doc.data()
+      if (data.status === 'erro' && (data.tentativas || 0) >= MAX_TENTATIVAS) continue
+      processarSeNaoEstiver(sock, doc)
+    }
+  } catch (err) {
+    console.error('[recibo] erro na varredura periódica da fila:', err)
+  }
+}
+
 export function watchRecibosFila(getSock, db) {
   db.collection(COL).where('status', '==', 'pendente').onSnapshot(snap => {
     snap.docChanges().forEach(change => {
       if (change.type !== 'added') return
       const sock = getSock()
       if (!sock) {
-        console.error(`[recibo] fila ${change.doc.id} chegou sem conexão ativa com o WhatsApp — será reprocessada na próxima mudança.`)
+        console.error(`[recibo] fila ${change.doc.id} chegou sem conexão ativa com o WhatsApp — a varredura periódica reprocessa quando a conexão voltar.`)
         return
       }
-      processarRecibo(sock, change.doc).catch(err => {
-        console.error('[recibo] erro inesperado ao processar:', err)
-      })
+      processarSeNaoEstiver(sock, change.doc)
     })
   }, err => {
     console.error('[recibo] erro no listener da fila:', err)
   })
+
+  setInterval(() => sweepFila(getSock, db), SWEEP_INTERVAL_MS)
+  sweepFila(getSock, db)
 }
 
 const primeiroNome = nomeCompleto => (nomeCompleto || '').trim().split(/\s+/)[0] || 'Olá'
@@ -59,7 +98,8 @@ Se precisar de qualquer coisa, estamos sempre aqui para ajudar.
 
 async function processarRecibo(sock, doc) {
   const data = doc.data()
-  console.log(`[recibo] enviando recibo ${data.numero} para ${data.telefone}...`)
+  const tentativas = (data.tentativas || 0) + 1
+  console.log(`[recibo] enviando recibo ${data.numero} para ${data.telefone}... (tentativa ${tentativas})`)
   try {
     const pdfBuffer = await gerarPdf(data.dados)
     const jid = `${data.telefone}@s.whatsapp.net`
@@ -73,14 +113,20 @@ async function processarRecibo(sock, doc) {
       caption: `${nome1}, segue seu recibo.`,
     })
     await sock.sendMessage(jid, { text: mensagemAvaliacao(nome1) })
-    await doc.ref.update({ status: 'enviado', enviadoEm: FieldValue.serverTimestamp() })
+    await doc.ref.update({ status: 'enviado', enviadoEm: FieldValue.serverTimestamp(), tentativas })
     console.log(`[recibo] ${data.numero} enviado com sucesso.`)
   } catch (err) {
-    console.error(`[recibo] falha ao enviar ${data.numero}:`, err)
+    console.error(`[recibo] falha ao enviar ${data.numero} (tentativa ${tentativas}):`, err)
+    // Falha de conexão é quase sempre transitória — volta pra "pendente" e a
+    // varredura periódica tenta de novo, em vez de desistir na primeira.
+    // Só vira "erro" (parado de vez, precisa olhar na mão) depois de
+    // MAX_TENTATIVAS seguidas — geralmente sinal de algo real (número
+    // inválido, bloqueio etc.), não intermitência de rede.
     await doc.ref.update({
-      status:  'erro',
+      status:  tentativas >= MAX_TENTATIVAS ? 'erro' : 'pendente',
       erro:    String(err?.message || err),
       erroEm:  FieldValue.serverTimestamp(),
+      tentativas,
     })
   }
 }
