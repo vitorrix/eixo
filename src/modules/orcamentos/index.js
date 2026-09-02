@@ -22,18 +22,21 @@ const TX = [null,
   {v:2.75,p:3.40}, {v:2.75,p:4.25}, {v:2.75,p:5.10},
   {v:2.59,p:5.95}, {v:2.59,p:6.80}, {v:2.59,p:7.65},
   {v:2.59,p:8.50}, {v:2.59,p:9.35}, {v:2.59,p:10.20},
+  {v:2.89,p:11.05}, {v:2.89,p:11.90}, {v:2.89,p:12.75},
+  {v:2.89,p:13.60}, {v:2.89,p:14.45}, {v:2.89,p:15.30},
 ]
+const MAX_PARCELAS = TX.length - 1 // 18x — confirmado com a taxa real da adquirente (13x-18x sobem pra 2,89% "na hora")
 
 function cobrar(liq, n) {
   const t = TX[n]
   return liq / (1 - (t.v + t.p) / 100)
 }
 
-// Leque completo 1x-12x pro PDF (quem recebe quer ver todas as opções, não
+// Leque completo 1x-18x pro PDF (quem recebe quer ver todas as opções, não
 // só a selecionada na tela).
 function todasOpcoesParcelamento(base) {
   const opcoes = []
-  for (let n = 1; n <= 12; n++) {
+  for (let n = 1; n <= MAX_PARCELAS; n++) {
     const valorTotal = cobrar(base, n)
     opcoes.push({ n, valorTotal, valorParcela: valorTotal / n })
   }
@@ -472,7 +475,7 @@ function updPblk(refs, liq, n, bigVal) {
 
 function updPills(pillsWrap, liq, selN, onSelect) {
   pillsWrap.replaceChildren()
-  for (let n = 1; n <= 12; n++) {
+  for (let n = 1; n <= MAX_PARCELAS; n++) {
     const c   = cobrar(liq, n)
     const par = c / n
     const sub = el('span', { class: 'orc-pill-sub' }, n === 1 ? '1x à vista' : `${n}x`)
@@ -486,7 +489,7 @@ function updPills(pillsWrap, liq, selN, onSelect) {
 
 function updTbl(tbody, liq, selN) {
   tbody.replaceChildren()
-  for (let n = 1; n <= 12; n++) {
+  for (let n = 1; n <= MAX_PARCELAS; n++) {
     const c   = cobrar(liq, n)
     const t   = TX[n]
     const tax = (t.v + t.p).toFixed(2).replace('.', ',')
@@ -582,7 +585,7 @@ function msgParc(items, desc, liq, entrada, rest, cli, frete = 0, seguro = 0) {
   const base = rest > 0 ? rest : liq
   if (base > 0) {
     m += (entrada > 0 ? '*Parcelamento:*' : '*Cartão de crédito:*') + `${NL}${NL}`
-    for (let n = 1; n <= 12; n++) {
+    for (let n = 1; n <= MAX_PARCELAS; n++) {
       const c = cobrar(base, n), p = c / n
       m += (n === 1 ? `1x  *${R(c)}*  (à vista)` : `${n}x  *${R(p)}*  — total ${R(c)}`) + NL
     }
@@ -623,7 +626,7 @@ function msgTroc(novos, usados, uvLiq, dc, dif, ent, rest, cli, avItems = [], tr
   }
   const base = rest > 0 ? rest : dif
   m += (ent > 0 ? '*Parcelamento:*' : '*Cartão de crédito:*') + `${NL}${NL}`
-  for (let n = 1; n <= 12; n++) {
+  for (let n = 1; n <= MAX_PARCELAS; n++) {
     const c = cobrar(base, n), p = c / n
     m += (n === 1 ? `1x  *${R(c)}*  (à vista)` : `${n}x  *${R(p)}*  — total ${R(c)}`) + NL
   }
