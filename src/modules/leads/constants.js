@@ -116,12 +116,17 @@ export function resumoAnuncio(adContext, max = 60) {
 }
 
 export const DISCARD_REASON_META = {
-  crianca:            'Criança',
-  idoso:               'Idoso',
-  cobrador_fornecedor: 'Cobrador/fornecedor',
-  sem_interesse:       'Sem interesse',
-  duplicado:           'Duplicado',
-  outro:               'Outro',
+  crianca:                 'Criança',
+  idoso:                    'Idoso',
+  cobrador_fornecedor:      'Cobrador/fornecedor',
+  sem_interesse:            'Sem interesse',
+  duplicado:                'Duplicado',
+  // Lead nunca teve intenção real — só usa o chat como qualquer outro da
+  // caixa de entrada dele (encaminha vídeo de futebol, religião, política,
+  // corrente etc.), diferente de "sem_interesse" (que pressupõe que a
+  // pessoa ao menos considerou o produto).
+  conteudo_nao_relacionado: 'Conteúdo não relacionado (encaminhamento)',
+  outro:                    'Outro',
 }
 
 export const SOURCE_META = {
