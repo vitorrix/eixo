@@ -58,6 +58,31 @@ export function getFaturaKey(dataStr, fechamento) {
   return `${y}-${String(m).padStart(2, '0')}`
 }
 
+// Gasto do mês numa combinação grupo+item, mesma lógica de lancMesFatura
+// (secretina-dashboard.html): cartão conta pela fatura (getFaturaKey),
+// débito/pix/dinheiro contam pela data da compra direto.
+export async function getGastoCategoria(uid, grupo, item, mesKey, cartoes) {
+  const snap = await db.collection('users').doc(uid).collection('lancamentos')
+    .where('tipo', '==', 'saida')
+    .where('grupo', '==', grupo)
+    .where('item', '==', item)
+    .get()
+
+  return snap.docs.reduce((total, doc) => {
+    const l = doc.data()
+    if (!l.data) return total
+    let pertenceAoMes
+    if (l.forma === 'cartao' && l.cartao_nome) {
+      const c = cartoes.find(x => x.nome === l.cartao_nome)
+      const fechamento = c ? (c.fechamento || 1) : 1
+      pertenceAoMes = getFaturaKey(l.data, fechamento) === mesKey
+    } else {
+      pertenceAoMes = l.data.startsWith(mesKey)
+    }
+    return pertenceAoMes ? total + (parseFloat(l.valor) || 0) : total
+  }, 0)
+}
+
 // Replica _saveLancamento (secretina-dashboard.html) — mesmo formato de
 // campos e mesma lógica de parcelamento (uma parcela = um doc, data avançando
 // mês a mês sem vazar pro mês seguinte em dias > 28).

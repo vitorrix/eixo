@@ -14,6 +14,7 @@ import { responderPergunta } from './perguntas.js'
 import {
   getGruposEItens, getCartoes, salvarLancamento,
   getLancamentosDoMes, getSaldoInicial, getOrcamento,
+  getGastoCategoria, getFaturaKey,
 } from './firestoreWriter.js'
 
 const USUARIOS_PATH = new URL('../../config/secretinaUsuarios.json', import.meta.url)
@@ -103,7 +104,20 @@ function textoPerguntaCartao(cartoes) {
   return 'Qual cartão?\n' + cartoes.map((c, i) => `${i + 1}) ${c.nome}`).join('\n') + '\nResponde com o número ou escreve.'
 }
 
-async function finalizarLancamento(sock, jid, telefone, uid, dados) {
+// Linha extra na confirmação mostrando quanto do orçamento daquele
+// grupo/item já foi usado esse mês (incluindo o lançamento que acabou de
+// entrar). Vazio se a pessoa não tem orçamento definido pra essa combinação
+// — não faz sentido mostrar "R$X de R$0,00".
+function linhaOrcamento(orcado, gasto) {
+  if (orcado <= 0) return ''
+  const pct = Math.round((gasto / orcado) * 100)
+  if (gasto > orcado) {
+    return `\n⚠️ Estourou o orçamento: ${fmtR(gasto)} de ${fmtR(orcado)} (${pct}%)`
+  }
+  return `\n📊 ${fmtR(gasto)} de ${fmtR(orcado)} usado esse mês (${pct}%)`
+}
+
+async function finalizarLancamento(sock, jid, telefone, uid, dados, grupos, cartoes) {
   await salvarLancamento(uid, dados)
 
   if (dados.tipo === 'entrada') {
@@ -114,26 +128,46 @@ async function finalizarLancamento(sock, jid, telefone, uid, dados) {
 
   const parcelasTxt = dados.parcelas > 1 ? ` em ${dados.parcelas}x` : ''
   const formaTxt = dados.forma === 'cartao' ? `${dados.cartao_nome}${parcelasTxt}` : FORMA_LABEL[dados.forma] || dados.forma
-  await enviar(sock, jid, `✅ Lançado: ${dados.desc} — ${fmtR(dados.valor)} (${formaTxt})`)
+  let msg = `✅ Lançado: ${dados.desc} — ${fmtR(dados.valor)} (${formaTxt})`
+
+  if (dados.grupo && dados.item && grupos && cartoes) {
+    try {
+      const g = grupos.find(x => x.nome === dados.grupo)
+      const chave = g ? `${g.id}|||${dados.item}` : null
+      const orcamento = chave ? await getOrcamento(uid) : null
+      const orcado = orcamento ? parseFloat(orcamento[chave]) || 0 : 0
+      if (orcado > 0) {
+        const mesKey = dados.forma === 'cartao' && dados.cartao_nome
+          ? getFaturaKey(dados.data, (cartoes.find(c => c.nome === dados.cartao_nome)?.fechamento) || 1)
+          : dados.data.slice(0, 7)
+        const gasto = await getGastoCategoria(uid, dados.grupo, dados.item, mesKey, cartoes)
+        msg += linhaOrcamento(orcado, gasto)
+      }
+    } catch (err) {
+      console.error('[secretina] Erro ao calcular orçamento (segue sem essa linha):', err)
+    }
+  }
+
+  await enviar(sock, jid, msg)
   console.log(`[secretina] ${telefone}: ${dados.desc} — ${fmtR(dados.valor)} (${formaTxt})`)
 }
 
 // Depois de resolver a forma (seja de uma mensagem nova ou de uma resposta a
 // pergunta pendente), decide se falta perguntar o cartão ou se já dá pra
 // gravar.
-async function prosseguirComForma(sock, jid, telefone, uid, dados, cartoes) {
+async function prosseguirComForma(sock, jid, telefone, uid, dados, cartoes, grupos) {
   if (dados.forma === 'cartao' && !cartoes.find(c => c.nome === dados.cartao_nome)) {
     if (cartoes.length === 0) {
       await enviar(sock, jid, 'Não tem cartão cadastrado no app — lança lá primeiro ou escolhe outra forma de pagamento.')
       pendentes.delete(jid)
       return
     }
-    pendentes.set(jid, { uid, telefone, dados, cartoes, campo: 'cartao_nome', tentativas: 0, criadoEm: Date.now() })
+    pendentes.set(jid, { uid, telefone, dados, cartoes, grupos, campo: 'cartao_nome', tentativas: 0, criadoEm: Date.now() })
     await enviar(sock, jid, textoPerguntaCartao(cartoes))
     return
   }
   pendentes.delete(jid)
-  await finalizarLancamento(sock, jid, telefone, uid, dados)
+  await finalizarLancamento(sock, jid, telefone, uid, dados, grupos, cartoes)
 }
 
 async function handlePendente(sock, jid, texto, pendente) {
@@ -155,7 +189,7 @@ async function handlePendente(sock, jid, texto, pendente) {
       return true
     }
     pendente.dados.forma = forma
-    await prosseguirComForma(sock, jid, pendente.telefone, pendente.uid, pendente.dados, pendente.cartoes)
+    await prosseguirComForma(sock, jid, pendente.telefone, pendente.uid, pendente.dados, pendente.cartoes, pendente.grupos)
     return true
   }
 
@@ -173,7 +207,7 @@ async function handlePendente(sock, jid, texto, pendente) {
     }
     pendente.dados.cartao_nome = cartaoNome
     pendentes.delete(jid)
-    await finalizarLancamento(sock, jid, pendente.telefone, pendente.uid, pendente.dados)
+    await finalizarLancamento(sock, jid, pendente.telefone, pendente.uid, pendente.dados, pendente.grupos, pendente.cartoes)
     return true
   }
 
@@ -231,17 +265,17 @@ export async function handleSecretinaMessage(sock, jid, texto) {
     }
 
     if (resultado.tipo === 'entrada') {
-      await finalizarLancamento(sock, jid, telefone, uid, resultado)
+      await finalizarLancamento(sock, jid, telefone, uid, resultado, grupos, cartoes)
       return
     }
 
     if (!resultado.forma) {
-      pendentes.set(jid, { uid, telefone, dados: resultado, cartoes, campo: 'forma', tentativas: 0, criadoEm: Date.now() })
+      pendentes.set(jid, { uid, telefone, dados: resultado, cartoes, grupos, campo: 'forma', tentativas: 0, criadoEm: Date.now() })
       await enviar(sock, jid, textoPerguntaForma())
       return
     }
 
-    await prosseguirComForma(sock, jid, telefone, uid, resultado, cartoes)
+    await prosseguirComForma(sock, jid, telefone, uid, resultado, cartoes, grupos)
   } catch (err) {
     console.error('[secretina] Erro ao processar mensagem:', err)
     pendentes.delete(jid)
