@@ -89,7 +89,18 @@ export async function connect(onMessages, onOpen, onClose) {
   })
 
   if (onMessages) {
-    sock.ev.on('messages.upsert', ({ messages }) => onMessages(sock, messages))
+    // type:'notify' é mensagem nova de verdade. Qualquer outro tipo ('append',
+    // 'replace' etc.) é replay de histórico/sincronização — acontece a cada
+    // reconexão e, principalmente, depois de um re-pareamento (401 seguido de
+    // QR novo), que dispara um backfill de mensagens recentes. Sem esse
+    // filtro, cada reconexão fazia o bot reprocessar mensagens antigas como
+    // se fossem novas — causou lançamentos e lembretes duplicados em rajada
+    // (uma sessão instável com milhares de reconexões numa única madrugada
+    // virou dezenas de duplicatas reais no Firestore).
+    sock.ev.on('messages.upsert', ({ messages, type }) => {
+      if (type !== 'notify') return
+      onMessages(sock, messages)
+    })
   }
 
   return sock

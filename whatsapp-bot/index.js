@@ -57,8 +57,26 @@ async function syncAndReload(sock) {
   }
 }
 
+// Segunda trava contra reprocessar a mesma mensagem — a primeira é o filtro
+// de type:'notify' em connection.js, mas depois de uma sessão instável (401
+// + re-pareamento chegou a acontecer, com 6 mil reconexões numa madrugada)
+// preferimos não confiar só nisso. Cache limitado por tamanho (não por TTL:
+// não importa há quanto tempo, só não pode crescer sem limite).
+const MAX_IDS_VISTOS = 2000
+const idsVistos = new Set()
+function jaProcessado(id) {
+  if (!id) return false
+  if (idsVistos.has(id)) return true
+  idsVistos.add(id)
+  if (idsVistos.size > MAX_IDS_VISTOS) {
+    idsVistos.delete(idsVistos.values().next().value)
+  }
+  return false
+}
+
 async function handleMessages(sock, messages) {
   for (const msg of messages) {
+    if (jaProcessado(msg.key.id)) continue
     const jid = msg.key.remoteJid
     const groupMeta = groups[jid]
 
