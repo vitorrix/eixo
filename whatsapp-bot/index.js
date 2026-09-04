@@ -7,6 +7,7 @@ import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
 import { watchRecibosFila } from './src/reciboWatcher.js'
 import { registrarStatus, notificarMac } from './src/botStatus.js'
 import { checkAndSendAniversarios } from './src/aniversario.js'
+import { checkAndSendLembretes } from './src/secretina/lembretes.js'
 import { handleSecretinaMessage, ehUsuarioSecretina } from './src/secretina/handler.js'
 import { capturarLead, descreverMidia } from './src/leads.js'
 
@@ -30,6 +31,9 @@ const HEARTBEAT_MS = 5 * 60 * 1000 // 5min
 // depois das 10h — pega no próximo tick em vez de esperar o dia seguinte.
 const ANIVERSARIO_CHECK_MS = 10 * 60 * 1000 // 10min
 const ANIVERSARIO_HORA = 10
+// Mais curto que o de aniversário: aqui o horário exato importa ("perto da
+// hora" do compromisso), não só o dia.
+const LEMBRETE_CHECK_MS = 5 * 60 * 1000 // 5min
 
 let groups = JSON.parse(readFileSync(GROUPS_PATH))
 function reloadGroups() {
@@ -134,6 +138,7 @@ let heartbeatStarted = false
 let syncedOnce = false
 let aniversarioCheckStarted = false
 let ultimoDiaAniversario = ''
+let lembreteCheckStarted = false
 
 // Estado real da conexão. O heartbeat antigo gravava `conectado: true` fixo, sem
 // nunca olhar o socket: na madrugada de 21/07/26 o bot flapou a noite toda e o
@@ -215,6 +220,11 @@ async function onOpen(sock) {
     setInterval(checarAniversarios, ANIVERSARIO_CHECK_MS)
     checarAniversarios() // cobre o boot já acontecendo depois das 10h
   }
+  if (!lembreteCheckStarted) {
+    lembreteCheckStarted = true
+    setInterval(checarLembretes, LEMBRETE_CHECK_MS)
+    checarLembretes()
+  }
 }
 
 function hojeLocalISO(d = new Date()) {
@@ -240,6 +250,14 @@ function checarAniversarios() {
     .catch(err => {
       console.error('[aniversario] erro ao checar/enviar — tenta de novo no próximo ciclo:', err)
     })
+}
+
+// Dedup é por documento (avisado_whatsapp), não por dia — pode rodar a cada
+// tick sem guarda de "já rodou hoje" como o de aniversário.
+function checarLembretes() {
+  checkAndSendLembretes(() => currentSock).catch(err => {
+    console.error('[lembretes] erro ao checar/enviar — tenta de novo no próximo ciclo:', err)
+  })
 }
 
 // Toda queda conta pra janela de instabilidade. O logout (401) é o único caso

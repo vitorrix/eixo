@@ -151,6 +151,28 @@ export async function salvarLancamento(uid, dados) {
 // alerta_data/alerta_hora ficam vazios: o alerta local (push) é agendado pelo
 // próprio dashboard no navegador (setTimeout), não faz sentido preenchê-los
 // a partir daqui.
+function localISO(d) {
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+// Compromissos de hoje em diante ainda não avisados no WhatsApp
+// (avisado_whatsapp ausente/false). Traz `ref` junto pra quem chamar poder
+// marcar como avisado depois de mandar a mensagem. Sem limite superior de
+// data: o filtro por horário-gatilho exato é feito por quem chama
+// (lembretes.js) — aqui só evita puxar compromissos já passados.
+export async function getLembretesPendentesAviso(uid) {
+  const snap = await db.collection('users').doc(uid).collection('agenda')
+    .where('data', '>=', localISO(new Date()))
+    .get()
+
+  return snap.docs
+    .map(d => ({ id: d.id, ref: d.ref, ...d.data() }))
+    .filter(a => !a.avisado_whatsapp)
+}
+
 export async function salvarLembrete(uid, dados) {
   const ref = await db.collection('users').doc(uid).collection('agenda').add({
     titulo: dados.titulo,
