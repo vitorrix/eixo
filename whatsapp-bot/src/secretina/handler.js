@@ -9,10 +9,11 @@
 // sobreviver a um restart do bot, e evita gravar lançamento incompleto.
 import { readFileSync } from 'fs'
 import { parseLancamentoWithAI } from './aiParser.js'
+import { parseLembreteWithAI } from './lembreteParser.js'
 import { classificarIntencao } from './intentClassifier.js'
 import { responderPergunta } from './perguntas.js'
 import {
-  getGruposEItens, getCartoes, salvarLancamento,
+  getGruposEItens, getCartoes, salvarLancamento, salvarLembrete,
   getLancamentosDoMes, getSaldoInicial, getOrcamento,
   getGastoCategoria, getFaturaKey,
 } from './firestoreWriter.js'
@@ -21,6 +22,9 @@ const USUARIOS_PATH = new URL('../../config/secretinaUsuarios.json', import.meta
 const FORMAS = ['pix', 'debito', 'dinheiro', 'cartao', 'ticket']
 const FORMA_LABEL = { pix: 'Pix / Transferência', debito: 'Débito', dinheiro: 'Dinheiro', cartao: 'Cartão de crédito', ticket: 'Ticket / Vale' }
 const FORMA_ICONE = { pix: '🔁', debito: '🏧', dinheiro: '💵', cartao: '💳', ticket: '🎫' }
+const PRIOR_ICONE = { alta: '🔴', media: '🟡', baixa: '🟢' }
+const PRIOR_LABEL = { alta: 'alta', media: 'média', baixa: 'baixa' }
+const TIPO_ICONE = { Compromisso: '🗓️', Saude: '🏥', Pagamento: '💰' }
 const PENDENTE_TTL_MS = 10 * 60 * 1000
 const TENTATIVAS_MAX = 3
 
@@ -64,6 +68,11 @@ function mesKeyDe(d = new Date()) {
 
 function fmtR(v) {
   return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function fmtDataBR(iso) {
+  const [, m, d] = iso.split('-')
+  return `${d}/${m}`
 }
 
 function normalizar(s) {
@@ -167,6 +176,19 @@ async function finalizarLancamento(sock, jid, telefone, uid, dados, grupos, cart
   console.log(`[secretina] ${telefone}: ${dados.desc} — ${fmtR(dados.valor)} (${formaTxt})`)
 }
 
+async function finalizarLembrete(sock, jid, telefone, uid, dados) {
+  await salvarLembrete(uid, dados)
+
+  const icone = TIPO_ICONE[dados.tipo] || '🗓️'
+  const prior = PRIOR_ICONE[dados.prioridade] || '🟡'
+  const dataTxt = fmtDataBR(dados.data) + (dados.hora ? ` às ${dados.hora}` : '')
+  let msg = `${icone} *Lembrete criado:* ${dados.titulo}\n📅 ${dataTxt} · ${prior} prioridade ${PRIOR_LABEL[dados.prioridade] || dados.prioridade}`
+  if (dados.obs) msg += `\n📝 ${dados.obs}`
+
+  await enviar(sock, jid, msg)
+  console.log(`[secretina] ${telefone}: lembrete "${dados.titulo}" em ${dados.data}${dados.hora ? ' ' + dados.hora : ''}`)
+}
+
 // Depois de resolver a forma (seja de uma mensagem nova ou de uma resposta a
 // pergunta pendente), decide se falta perguntar o cartão ou se já dá pra
 // gravar.
@@ -266,8 +288,18 @@ export async function handleSecretinaMessage(sock, jid, texto) {
       return
     }
 
+    if (intencao === 'lembrete') {
+      const resultado = await parseLembreteWithAI(texto, { hoje: hojeLocalISO() })
+      if (!resultado.valido) {
+        await enviar(sock, jid, `Não consegui entender como um lembrete. ${resultado.motivo || 'Tenta reformular?'}`)
+        return
+      }
+      await finalizarLembrete(sock, jid, telefone, uid, resultado)
+      return
+    }
+
     if (intencao === 'outro') {
-      await enviar(sock, jid, 'Não consegui entender como um gasto ou uma pergunta. Tenta reformular?')
+      await enviar(sock, jid, 'Não consegui entender como um gasto, uma pergunta ou um lembrete. Tenta reformular?')
       return
     }
 

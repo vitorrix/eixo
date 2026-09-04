@@ -144,3 +144,25 @@ export async function salvarLancamento(uid, dados) {
   })
   return [ref.id]
 }
+
+// Mesma coleção que a tela Agenda do dashboard usa (users/{uid}/agenda) e o
+// mesmo formato de campos que window._saveCompromisso grava — um lembrete
+// criado pelo WhatsApp aparece lá como qualquer outro compromisso. Os campos
+// alerta_data/alerta_hora ficam vazios: o alerta local (push) é agendado pelo
+// próprio dashboard no navegador (setTimeout), não faz sentido preenchê-los
+// a partir daqui.
+export async function salvarLembrete(uid, dados) {
+  const ref = await db.collection('users').doc(uid).collection('agenda').add({
+    titulo: dados.titulo,
+    data: dados.data,
+    hora: dados.hora || '',
+    prioridade: dados.prioridade || 'media',
+    tipo: dados.tipo || 'Compromisso',
+    obs: dados.obs || '',
+    alerta_data: '',
+    alerta_hora: '',
+    uid,
+    criado_em: FieldValue.serverTimestamp(),
+  })
+  return ref.id
+}

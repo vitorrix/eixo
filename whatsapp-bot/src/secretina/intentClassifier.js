@@ -6,7 +6,7 @@ const client = new Anthropic()
 
 const SCHEMA = {
   type: 'object',
-  properties: { tipo: { type: 'string', enum: ['lancamento', 'pergunta', 'outro'] } },
+  properties: { tipo: { type: 'string', enum: ['lancamento', 'pergunta', 'lembrete', 'outro'] } },
   required: ['tipo'],
   additionalProperties: false,
 }
@@ -14,6 +14,7 @@ const SCHEMA = {
 const SYSTEM_PROMPT = `Classifique a mensagem de WhatsApp de um app de finanças pessoais (SECRE·TINA) em uma categoria:
 - "lancamento": a pessoa está relatando um gasto ou entrada que aconteceu (ex.: "gastei 50 no mercado", "paguei a conta de luz", "recebi o salário")
 - "pergunta": a pessoa está perguntando sobre a própria situação financeira (ex.: "quanto gastei esse mês?", "qual meu saldo?", "quanto falta no orçamento?", "quanto tá a fatura do cartão?", "quais foram meus últimos gastos?")
+- "lembrete": a pessoa quer criar um lembrete/compromisso futuro na agenda — NÃO é algo que já aconteceu (ex.: "me lembra de pagar o IPVA dia 10", "tenho consulta médica sexta às 15h", "compromisso amanhã com o contador", "não deixa eu esquecer de renovar o seguro")
 - "outro": qualquer outra coisa (saudação, mensagem incompreensível, assunto não financeiro)`
 
 export async function classificarIntencao(texto) {
