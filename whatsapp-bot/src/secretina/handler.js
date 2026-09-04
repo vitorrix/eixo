@@ -20,6 +20,7 @@ import {
 const USUARIOS_PATH = new URL('../../config/secretinaUsuarios.json', import.meta.url)
 const FORMAS = ['pix', 'debito', 'dinheiro', 'cartao', 'ticket']
 const FORMA_LABEL = { pix: 'Pix / Transferência', debito: 'Débito', dinheiro: 'Dinheiro', cartao: 'Cartão de crédito', ticket: 'Ticket / Vale' }
+const FORMA_ICONE = { pix: '🔁', debito: '🏧', dinheiro: '💵', cartao: '💳', ticket: '🎫' }
 const PENDENTE_TTL_MS = 10 * 60 * 1000
 const TENTATIVAS_MAX = 3
 
@@ -104,31 +105,45 @@ function textoPerguntaCartao(cartoes) {
   return 'Qual cartão?\n' + cartoes.map((c, i) => `${i + 1}) ${c.nome}`).join('\n') + '\nResponde com o número ou escreve.'
 }
 
-// Linha extra na confirmação mostrando quanto do orçamento daquele
-// grupo/item já foi usado esse mês (incluindo o lançamento que acabou de
-// entrar). Vazio se a pessoa não tem orçamento definido pra essa combinação
-// — não faz sentido mostrar "R$X de R$0,00".
-function linhaOrcamento(orcado, gasto) {
+// Barrinha de progresso de 10 blocos coloridos — dá pra "ver" o quanto falta
+// numa olhada só, sem precisar fazer conta de cabeça lendo dois valores.
+function barraProgresso(pct, cor) {
+  const blocos = 10
+  const cheios = Math.max(0, Math.min(blocos, Math.round((pct / 100) * blocos)))
+  return cor.repeat(cheios) + '⬜'.repeat(blocos - cheios)
+}
+
+// Bloco extra na confirmação mostrando quanto do orçamento daquele grupo/item
+// já foi usado esse mês (incluindo o lançamento que acabou de entrar). Vazio
+// se a pessoa não tem orçamento definido pra essa combinação — não faz
+// sentido mostrar barra de "R$X de R$0,00". Três tons: verde (tranquilo),
+// amarelo (>=80%, é bom já saber) e vermelho (estourou).
+function linhaOrcamento(item, orcado, gasto) {
   if (orcado <= 0) return ''
   const pct = Math.round((gasto / orcado) * 100)
+  const restante = orcado - gasto
+
   if (gasto > orcado) {
-    return `\n⚠️ Estourou o orçamento: ${fmtR(gasto)} de ${fmtR(orcado)} (${pct}%)`
+    return `\n\n${barraProgresso(100, '🟥')}\n🔴 *${item}* estourou o orçamento\n${fmtR(gasto)} usados de ${fmtR(orcado)} · excedeu em ${fmtR(gasto - orcado)}`
   }
-  return `\n📊 ${fmtR(gasto)} de ${fmtR(orcado)} usado esse mês (${pct}%)`
+  const cor = pct >= 80 ? '🟨' : '🟩'
+  const aviso = pct >= 80 ? '🟡' : '📊'
+  return `\n\n${barraProgresso(pct, cor)}\n${aviso} *${item}*: ${pct}% do orçamento usado\nRestam ${fmtR(restante)} de ${fmtR(orcado)}`
 }
 
 async function finalizarLancamento(sock, jid, telefone, uid, dados, grupos, cartoes) {
   await salvarLancamento(uid, dados)
 
   if (dados.tipo === 'entrada') {
-    await enviar(sock, jid, `✅ Lançado: ${dados.desc} — ${fmtR(dados.valor)} (entrada · ${dados.categoria})`)
+    await enviar(sock, jid, `✅ *Lançado:* ${dados.desc} — *${fmtR(dados.valor)}*\n💰 Entrada · ${dados.categoria}`)
     console.log(`[secretina] ${telefone}: entrada ${dados.desc} — ${fmtR(dados.valor)} (${dados.categoria})`)
     return
   }
 
   const parcelasTxt = dados.parcelas > 1 ? ` em ${dados.parcelas}x` : ''
   const formaTxt = dados.forma === 'cartao' ? `${dados.cartao_nome}${parcelasTxt}` : FORMA_LABEL[dados.forma] || dados.forma
-  let msg = `✅ Lançado: ${dados.desc} — ${fmtR(dados.valor)} (${formaTxt})`
+  const icone = FORMA_ICONE[dados.forma] || '💳'
+  let msg = `✅ *Lançado:* ${dados.desc} — *${fmtR(dados.valor)}*\n${icone} ${formaTxt}`
 
   if (dados.grupo && dados.item && grupos && cartoes) {
     try {
@@ -141,7 +156,7 @@ async function finalizarLancamento(sock, jid, telefone, uid, dados, grupos, cart
           ? getFaturaKey(dados.data, (cartoes.find(c => c.nome === dados.cartao_nome)?.fechamento) || 1)
           : dados.data.slice(0, 7)
         const gasto = await getGastoCategoria(uid, dados.grupo, dados.item, mesKey, cartoes)
-        msg += linhaOrcamento(orcado, gasto)
+        msg += linhaOrcamento(dados.item, orcado, gasto)
       }
     } catch (err) {
       console.error('[secretina] Erro ao calcular orçamento (segue sem essa linha):', err)
