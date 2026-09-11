@@ -1,9 +1,10 @@
 import { el, mount } from '../../shared/utils/dom.js'
-import { getEmpresa, getOperacoes } from './service.js'
+import { getEmpresa, getOperacoes, getTabelaTroca } from './service.js'
 import { renderTabEmpresa } from './tabEmpresa.js'
 import { renderTabFormasPagamento } from './tabFormasPagamento.js'
 import { renderTabContas } from './tabContas.js'
 import { renderTabCategorias } from './tabCategorias.js'
+import { renderTabTabelaTroca } from './tabTabelaTroca.js'
 import { toastError } from '../../shared/components/Toast.js'
 
 const TABS = [
@@ -11,6 +12,7 @@ const TABS = [
   { key: 'formas',      label: 'Formas de Pagamento' },
   { key: 'contas',      label: 'Contas' },
   { key: 'categorias',  label: 'Categorias' },
+  { key: 'tabelaTroca', label: 'Tabela de Troca' },
 ]
 
 export function render(container) {
@@ -19,9 +21,9 @@ export function render(container) {
 }
 
 async function _load(container) {
-  let empresa, operacoes
+  let empresa, operacoes, tabelaTroca
   try {
-    ;[empresa, operacoes] = await Promise.all([getEmpresa(), getOperacoes()])
+    ;[empresa, operacoes, tabelaTroca] = await Promise.all([getEmpresa(), getOperacoes(), getTabelaTroca()])
   } catch (err) {
     console.error(err)
     mount(container, el('p', { class: 'text-muted' }, 'Erro ao carregar configurações.'))
@@ -29,7 +31,7 @@ async function _load(container) {
     return
   }
 
-  const state = { empresa, operacoes }
+  const state = { empresa, operacoes, tabelaTroca }
   let activeKey = 'empresa'
 
   const tabBtns = TABS.map(t => {
@@ -55,6 +57,8 @@ async function _load(container) {
       renderTabContas(tabContent, state.operacoes, saved => { state.operacoes = saved })
     } else if (key === 'categorias') {
       renderTabCategorias(tabContent, state.operacoes, saved => { state.operacoes = saved })
+    } else if (key === 'tabelaTroca') {
+      renderTabTabelaTroca(tabContent, state.tabelaTroca, saved => { state.tabelaTroca = saved })
     }
   }
 

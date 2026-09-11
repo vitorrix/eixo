@@ -43,6 +43,18 @@ export async function saveOperacoes(data) {
   await setDoc(doc(db, 'configuracoes', 'operacoes'), data)
 }
 
+// Tabela de valores-base pra avaliação de aparelho usado (aba Upgrade dos
+// Orçamentos) — separada de `operacoes` porque cresce bastante (uma linha
+// por modelo/capacidade) e não tem nada a ver com formas de pagamento/contas.
+export async function getTabelaTroca() {
+  const snap = await getDoc(doc(db, 'configuracoes', 'tabelaTroca'))
+  return snap.exists() ? (snap.data().itens || []) : []
+}
+
+export async function saveTabelaTroca(itens) {
+  await setDoc(doc(db, 'configuracoes', 'tabelaTroca'), { itens })
+}
+
 // Numeração sequencial dos lançamentos financeiros — mesmo padrão do contador
 // de recibo, contador atômico próprio pra não misturar as duas sequências.
 export async function proximoNumeroFinanceiro() {

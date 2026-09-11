@@ -9,7 +9,7 @@ import { maskCPF, maskCNPJ, fullDate } from '../../shared/utils/formatters.js'
 import { validateCPF, validateCNPJ } from '../../shared/utils/validators.js'
 import { montarEmpresa, criarBotaoImprimir } from '../../shared/components/Recibo.js'
 import { montarDadosOrcamentoPdf, renderOrcamentoPdfPreview } from '../../shared/components/OrcamentoPdf.js'
-import { getEmpresa } from '../configuracoes/service.js'
+import { getEmpresa, getTabelaTroca } from '../configuracoes/service.js'
 import { toastError } from '../../shared/components/Toast.js'
 
 function R(v) {
@@ -1014,23 +1014,31 @@ function buildTroca(prodData, empresa) {
 // Avalia o aparelho usado isoladamente (mesma lógica de avarias da Troca),
 // sem ainda saber qual será o aparelho novo. O resultado final é levado
 // automaticamente pro "Aparelho do Cliente" quando a aba Troca é aberta.
-function buildUpgrade(prodData) {
+function buildUpgrade(tabelaTroca) {
   let selNome = ''
   let selVal  = 0
   let ultimoResultado = null
 
   const avState = Object.fromEntries(AVARIA_DEFS.map(a => [a.key, { checked: false, val: a.def }]))
 
+  // Rótulo de busca: "iPhone 15 Pro 256GB" ou, sem capacidade, só "Apple
+  // Watch Series 8" — vem da Tabela de Troca (Configurações), não do
+  // catálogo geral de produtos (que é dos aparelhos novos à venda).
+  const tabelaPorLabel = new Map(tabelaTroca.map(i => {
+    const label = i.capacidade ? `${i.modelo} ${i.capacidade}` : i.modelo
+    return [label, i]
+  }))
+
   const cliInp = el('input', { type: 'text', class: 'orc-input', placeholder: 'Nome do cliente' })
   const valInp = el('input', { type: 'number', class: 'orc-input', placeholder: '0,00', step: '50' })
 
   const ac = createAutocomplete({
     placeholder: 'Buscar modelo do aparelho...',
-    items: prodData.map(p => p.nome),
+    items: [...tabelaPorLabel.keys()],
     onSelect: v => {
-      const match = prodData.find(p => p.nome === v)
+      const match = tabelaPorLabel.get(v)
       selNome = v
-      if (match?.precoVenda > 0) { selVal = match.precoVenda; valInp.value = match.precoVenda }
+      if (match?.valor > 0) { selVal = match.valor; valInp.value = match.valor }
     },
   })
   ac.el.classList.add('orc-input')
@@ -1256,9 +1264,17 @@ export async function render(container) {
     console.error('Erro ao carregar dados da empresa para orçamento em PDF:', e)
   }
 
+  // Valores-base de avaliação — cadastrados em Configurações > Tabela de Troca.
+  let tabelaTroca = []
+  try {
+    tabelaTroca = await getTabelaTroca()
+  } catch (e) {
+    console.error('Erro ao carregar tabela de troca para o Upgrade:', e)
+  }
+
   const { sec: parcSec, cliInp: parcCli, getItems: parcGetItems, syncItems: parcSyncItems } = buildParc(prodData, empresa)
   const { sec: trocaSec, cliInp: trocaCli, getNovos: trocaGetNovos, syncNovos: trocaSyncNovos, syncUsados: trocaSyncUsados } = buildTroca(prodData, empresa)
-  const { sec: upgSec, cliInp: upgCli, getResultado: upgGetResultado } = buildUpgrade(prodData)
+  const { sec: upgSec, cliInp: upgCli, getResultado: upgGetResultado } = buildUpgrade(tabelaTroca)
   const { sec: histSec, unsubscribe: unsubHistorico } = buildHistorico()
 
   // Nome do cliente acompanha a navegação entre as 4 abas — pega o primeiro
