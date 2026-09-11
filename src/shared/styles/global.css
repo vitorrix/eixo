@@ -662,8 +662,9 @@ html, body {
 }
 .badge-pf { background: #dbeafe; color: #1d4ed8; }
 .badge-pj { background: #d1fae5; color: #065f46; }
-.badge-orc-parc  { background: #dbeafe; color: #1d4ed8; }
-.badge-orc-troca { background: #d1fae5; color: #065f46; }
+.badge-orc-parc    { background: #dbeafe; color: #1d4ed8; }
+.badge-orc-troca   { background: #d1fae5; color: #065f46; }
+.badge-orc-upgrade { background: #ede9fe; color: #5b21b6; }
 
 /* ── Empty state ─────────────────────────────── */
 .empty-state {
@@ -2368,6 +2369,15 @@ html, body {
    left-aligned por padrão — aqui centralizado porque o conteúdo abaixo
    (.orc-cols) também é centralizado, então os dois ficam alinhados. */
 .orc-tabs-center { display: flex; justify-content: center; margin-bottom: 20px; }
+
+/* Barra de abas em pílula — mais chamativa que o .config-tab-bar genérico
+   (Financeiro/Configurações), com espaço pra um ícone por aba. */
+.orc-tab-bar { display: inline-flex; gap: 4px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 999px; padding: 5px; }
+.orc-tab-btn { display: flex; align-items: center; gap: 7px; padding: 9px 18px; border: none; border-radius: 999px; background: transparent; font-family: var(--font); font-size: 13.5px; font-weight: 600; color: var(--color-muted); cursor: pointer; transition: background .15s, color .15s, box-shadow .15s; white-space: nowrap; }
+.orc-tab-btn:hover:not(.active) { color: var(--color-text); background: rgba(0,0,0,.05); }
+.orc-tab-btn.active { background: var(--color-primary); color: #fff; box-shadow: 0 3px 8px rgba(16,185,129,.35); }
+.orc-tab-ico { font-size: 15px; line-height: 1; }
+
 .orc-section { display: none; }
 .orc-section.active { display: block; }
 .orc-cols { display: flex; flex-direction: column; max-width: 680px; margin: 0 auto; gap: 0; }
@@ -2463,7 +2473,17 @@ html, body {
 .orc-troco-mode .orc-pblk-pnum,
 .orc-troco-mode .orc-pblk-ptot,
 .orc-troco-mode .orc-pillc,
-.orc-troco-mode .orc-tblc { display: none; }
+.orc-troco-mode .orc-tblc,
+/* Upgrade é uma avaliação, não uma cobrança — mesmo motivo do troco acima:
+   não faz sentido mostrar "à vista"/parcelamento de um valor que não é cobrança. */
+.orc-upgrade-mode .orc-pblk-vista-lbl,
+.orc-upgrade-mode .orc-pblk-vista-val,
+.orc-upgrade-mode .orc-pblk-acc2,
+.orc-upgrade-mode .orc-pblk-plbl,
+.orc-upgrade-mode .orc-pblk-pnum,
+.orc-upgrade-mode .orc-pblk-ptot,
+.orc-upgrade-mode .orc-pillc,
+.orc-upgrade-mode .orc-tblc { display: none; }
 
 /* Pills */
 .orc-pillc { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 13px; margin-bottom: 10px; }

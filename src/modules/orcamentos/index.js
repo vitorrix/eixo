@@ -1002,7 +1002,133 @@ function buildTroca(prodData, empresa) {
   )
 
   const sec = el('div', { class: 'orc-section' }, el('div', { class: 'orc-cols' }, colL, refs.col))
-  return { sec, cliInp, getNovos: () => tNovos, syncNovos: (src) => { tNovos.splice(0, tNovos.length, ...src.map(i => ({ ...i }))); renderNovos() } }
+  return {
+    sec, cliInp,
+    getNovos:   () => tNovos,
+    syncNovos:  (src) => { tNovos.splice(0, tNovos.length, ...src.map(i => ({ ...i }))); renderNovos() },
+    syncUsados: (src) => { tUsados.splice(0, tUsados.length, ...src.map(i => ({ ...i }))); renderUsados() },
+  }
+}
+
+// ── Upgrade section ────────────────────────────────────────────────
+// Avalia o aparelho usado isoladamente (mesma lógica de avarias da Troca),
+// sem ainda saber qual será o aparelho novo. O resultado final é levado
+// automaticamente pro "Aparelho do Cliente" quando a aba Troca é aberta.
+function buildUpgrade(prodData) {
+  let selNome = ''
+  let selVal  = 0
+  let ultimoResultado = null
+
+  const avState = Object.fromEntries(AVARIA_DEFS.map(a => [a.key, { checked: false, val: a.def }]))
+
+  const cliInp = el('input', { type: 'text', class: 'orc-input', placeholder: 'Nome do cliente' })
+  const valInp = el('input', { type: 'number', class: 'orc-input', placeholder: '0,00', step: '50' })
+
+  const ac = createAutocomplete({
+    placeholder: 'Buscar modelo do aparelho...',
+    items: prodData.map(p => p.nome),
+    onSelect: v => {
+      const match = prodData.find(p => p.nome === v)
+      selNome = v
+      if (match?.precoVenda > 0) { selVal = match.precoVenda; valInp.value = match.precoVenda }
+    },
+  })
+  ac.el.classList.add('orc-input')
+  ac.el.style.width = '100%'
+  ac.el.addEventListener('input', () => { selNome = ac.getValue() })
+  valInp.addEventListener('input', () => { selVal = parseFloat(valInp.value) || 0 })
+
+  const avTotEl = el('span', { class: 'orc-avtotv' }, 'R$ 0,00')
+  function calcAv() {
+    let tot = 0
+    for (const a of AVARIA_DEFS) { if (avState[a.key].checked) tot += avState[a.key].val }
+    avTotEl.textContent = R(tot)
+    return tot
+  }
+  const avRows = AVARIA_DEFS.map(a => {
+    const chk     = el('input', { type: 'checkbox', class: 'orc-avchk' })
+    const avValInp = el('input', { type: 'number', value: String(a.def), step: '10', class: 'orc-avval-inp' })
+    chk.addEventListener('change', () => { avState[a.key].checked = chk.checked; calcAv() })
+    avValInp.addEventListener('input', () => { avState[a.key].val = parseFloat(avValInp.value) || 0; calcAv() })
+    const lbl = el('label', { class: 'orc-avnm' }, a.label)
+    lbl.addEventListener('click', () => { chk.checked = !chk.checked; avState[a.key].checked = chk.checked; calcAv() })
+    return el('div', { class: 'orc-avrow' },
+      chk, lbl,
+      el('div', { class: 'orc-avvw' }, el('span', { class: 'orc-avvw-pfx' }, 'R$'), avValInp),
+    )
+  })
+
+  const refs = buildResultCol('Valor Final do Aparelho')
+  refs.resultBlock.classList.add('orc-upgrade-mode')
+  refs.disc.textContent = 'Esse valor é levado automaticamente pra aba Troca, em "Aparelho do Cliente".'
+
+  const calcBtn = el('button', { type: 'button', class: 'orc-calc-btn' }, 'Avaliar Aparelho →')
+  calcBtn.addEventListener('click', () => {
+    if (!selNome) { toastError('Selecione o aparelho do cliente.'); return }
+    const av    = calcAv()
+    const final = Math.max(0, selVal - av)
+    const cli   = cliInp.value.trim()
+
+    refs.summWrap.replaceChildren()
+    refs.summWrap.appendChild(makeSRow('📱', 'Aparelho', selNome))
+    refs.summWrap.appendChild(makeSRow('💰', 'Valor base', R(selVal)))
+    const avItems = []
+    for (const a of AVARIA_DEFS) {
+      if (avState[a.key].checked) {
+        const nome = a.label.replace(/^\S+\s+/, '')
+        avItems.push({ nome, val: avState[a.key].val })
+        refs.summWrap.appendChild(makeSRow('🔧', nome, `− ${R(avState[a.key].val)}`, 'orc-srow-red'))
+      }
+    }
+    refs.summWrap.appendChild(makeSRow('💵', 'Valor final', R(final), 'orc-srow-green'))
+    refs.bigEl.textContent = R(final)
+    refs.resultBlock.classList.add('visible')
+    refs.disc.classList.add('visible')
+
+    const NL = '\n', L = '───────────────────'
+    let msg = `Avaliação de Aparelho — Upgrade${NL}${L}${NL}${NL}📱  ${selNome}${NL}💰  Valor base:  ${R(selVal)}${NL}`
+    if (avItems.length) {
+      msg += `${NL}🔧  Avarias identificadas:${NL}`
+      for (const it of avItems) msg += `     • ${it.nome}  − ${R(it.val)}${NL}`
+    }
+    msg += `${NL}💵  Valor final do aparelho:  *${R(final)}*${NL}${L}`
+    refs.msgBody.textContent = msg
+    refs.msgc.classList.add('visible')
+
+    createOrcamento({
+      tipo:     'upgrade',
+      cliente:  cli || 'Baruker',
+      aparelho: { nome: selNome, val: selVal },
+      avarias:  avItems,
+      valor:    final,
+      mensagem: msg,
+    }).catch(err => console.error('Erro ao salvar histórico de upgrade:', err))
+
+    ultimoResultado = { nome: selNome, val: final }
+  })
+
+  const colL = el('div', { class: 'orc-col-l' },
+    el('div', { class: 'orc-card' },
+      el('div', { class: 'field' }, el('label', {}, 'Cliente'), cliInp),
+      el('div', { class: 'orc-sep' }),
+      el('div', { class: 'orc-card-label' }, '📱 Aparelho do Cliente'),
+      el('div', { class: 'field' }, ac.el),
+      el('div', { class: 'field', style: 'margin-top:8px' }, el('label', {}, 'Valor base (prévia)'), makePfxWrap(valInp)),
+    ),
+    el('div', { class: 'orc-avc' },
+      el('div', { class: 'orc-avlbl' }, '🔧 Condição do Aparelho'),
+      el('div', { class: 'orc-avnota' }, '⚠️ Marque os problemas encontrados — o valor é abatido do valor base.'),
+      ...avRows,
+      el('div', { class: 'orc-avtot' },
+        el('span', { class: 'orc-avtotl' }, 'Total de descontos'),
+        avTotEl,
+      ),
+    ),
+    calcBtn,
+  )
+
+  const sec = el('div', { class: 'orc-section' }, el('div', { class: 'orc-cols' }, colL, refs.col))
+  return { sec, cliInp, getResultado: () => ultimoResultado }
 }
 
 // ── Histórico ──────────────────────────────────────────────────────
@@ -1012,7 +1138,19 @@ function resumoOrcamento(o) {
     const novos  = (o.novos  || []).map(i => i.nome).filter(Boolean).join(', ') || '—'
     return `${usados} → ${novos}`
   }
+  if (o.tipo === 'upgrade') return o.aparelho?.nome || '—'
   return (o.itens || []).map(i => i.nome).filter(Boolean).join(', ') || '—'
+}
+
+function tipoOrcamentoLabel(tipo) {
+  if (tipo === 'troca')   return 'Troca'
+  if (tipo === 'upgrade') return 'Upgrade'
+  return 'Parcelamento'
+}
+function tipoOrcamentoBadgeClass(tipo) {
+  if (tipo === 'troca')   return 'badge-orc-troca'
+  if (tipo === 'upgrade') return 'badge-orc-upgrade'
+  return 'badge-orc-parc'
 }
 
 function dataHoraOrcamento(ts) {
@@ -1025,7 +1163,7 @@ function dataHoraOrcamento(ts) {
 // já que é literalmente a mesma mensagem — só congelada de quando foi gerada.
 function abrirHistoricoModal(o) {
   openModal({
-    title: `${o.tipo === 'troca' ? 'Orçamento de Troca' : 'Orçamento'} — ${o.cliente || 'Baruker'}`,
+    title: `${o.tipo === 'troca' ? 'Orçamento de Troca' : o.tipo === 'upgrade' ? 'Avaliação de Upgrade' : 'Orçamento'} — ${o.cliente || 'Baruker'}`,
     size: 'md',
     renderBody: (body) => {
       const msgBody = el('div', { class: 'orc-msgb' })
@@ -1076,7 +1214,7 @@ function buildHistorico() {
       const row = el('tr', { class: 'row-clicavel' },
         el('td', { class: 'td-date' }, dataHoraOrcamento(o.criadoEm)),
         el('td', {}, o.cliente || '—'),
-        el('td', {}, el('span', { class: `badge ${o.tipo === 'troca' ? 'badge-orc-troca' : 'badge-orc-parc'}` }, o.tipo === 'troca' ? 'Troca' : 'Parcelamento')),
+        el('td', {}, el('span', { class: `badge ${tipoOrcamentoBadgeClass(o.tipo)}` }, tipoOrcamentoLabel(o.tipo))),
         el('td', { class: 'td-name', title: resumo }, resumo),
         el('td', { class: 'td-money' }, `${o.tipo === 'troca' && o.ehTroco ? '↩ ' : ''}${R(o.valor)}`),
       )
@@ -1119,13 +1257,22 @@ export async function render(container) {
   }
 
   const { sec: parcSec, cliInp: parcCli, getItems: parcGetItems, syncItems: parcSyncItems } = buildParc(prodData, empresa)
-  const { sec: trocaSec, cliInp: trocaCli, getNovos: trocaGetNovos, syncNovos: trocaSyncNovos } = buildTroca(prodData, empresa)
+  const { sec: trocaSec, cliInp: trocaCli, getNovos: trocaGetNovos, syncNovos: trocaSyncNovos, syncUsados: trocaSyncUsados } = buildTroca(prodData, empresa)
+  const { sec: upgSec, cliInp: upgCli, getResultado: upgGetResultado } = buildUpgrade(prodData)
   const { sec: histSec, unsubscribe: unsubHistorico } = buildHistorico()
 
-  const tabParc = el('button', { type: 'button', class: 'config-tab-btn active' }, 'Parcelamento')
-  const tabTroc = el('button', { type: 'button', class: 'config-tab-btn' }, 'Troca')
-  const tabHist = el('button', { type: 'button', class: 'config-tab-btn' }, 'Histórico')
-  const allTabs = [[tabParc, parcSec], [tabTroc, trocaSec], [tabHist, histSec]]
+  // Nome do cliente acompanha a navegação entre as 4 abas — pega o primeiro
+  // valor não-vazio disponível nas outras, na ordem abaixo.
+  function syncCliente(destino) {
+    const fonte = [trocaCli, upgCli, parcCli].find(i => i !== destino && i.value.trim())
+    if (fonte) destino.value = fonte.value
+  }
+
+  const tabParc = el('button', { type: 'button', class: 'orc-tab-btn active' }, el('span', { class: 'orc-tab-ico' }, '💳'), 'Parcelamento')
+  const tabTroc = el('button', { type: 'button', class: 'orc-tab-btn' }, el('span', { class: 'orc-tab-ico' }, '🔄'), 'Troca')
+  const tabUpg  = el('button', { type: 'button', class: 'orc-tab-btn' }, el('span', { class: 'orc-tab-ico' }, '⬆️'), 'Upgrade')
+  const tabHist = el('button', { type: 'button', class: 'orc-tab-btn' }, el('span', { class: 'orc-tab-ico' }, '🕓'), 'Histórico')
+  const allTabs = [[tabParc, parcSec], [tabTroc, trocaSec], [tabUpg, upgSec], [tabHist, histSec]]
 
   function activate(tab, sec) {
     for (const [t, s] of allTabs) {
@@ -1135,22 +1282,31 @@ export async function render(container) {
   }
 
   tabParc.addEventListener('click', () => {
-    parcCli.value = trocaCli.value
+    syncCliente(parcCli)
     parcSyncItems(trocaGetNovos())
     activate(tabParc, parcSec)
   })
   tabTroc.addEventListener('click', () => {
-    trocaCli.value = parcCli.value
+    syncCliente(trocaCli)
     trocaSyncNovos(parcGetItems())
+    // Aparelho avaliado no Upgrade vira automaticamente o "Aparelho do
+    // Cliente" na Troca — só se já existir uma avaliação gerada.
+    const resultado = upgGetResultado()
+    if (resultado) trocaSyncUsados([{ nome: resultado.nome, val: resultado.val }])
     activate(tabTroc, trocaSec)
+  })
+  tabUpg.addEventListener('click', () => {
+    syncCliente(upgCli)
+    activate(tabUpg, upgSec)
   })
   tabHist.addEventListener('click', () => activate(tabHist, histSec))
 
   mount(container,
     el('div', { class: 'orc-wrap' },
-      el('div', { class: 'orc-tabs-center' }, el('div', { class: 'config-tab-bar' }, tabParc, tabTroc, tabHist)),
+      el('div', { class: 'orc-tabs-center' }, el('div', { class: 'orc-tab-bar' }, tabParc, tabTroc, tabUpg, tabHist)),
       parcSec,
       trocaSec,
+      upgSec,
       histSec,
     )
   )
