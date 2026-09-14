@@ -2,98 +2,65 @@ import { el, mount } from '../../shared/utils/dom.js'
 import { saveTabelaTroca } from './service.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 
-// Lista-base da "TABELA BARUK — Troca / Seminovos" — cadastrada uma vez com
-// valor 0 (a preencher aqui mesmo); linhas novas (ex: iPhone 18 usado, no
-// futuro) entram pelo botão "+ Adicionar modelo" dentro do grupo certo.
+// Lista-base da "TABELA BARUK — Troca / Seminovos" — 1 valor por aparelho,
+// sem quebrar por capacidade (o Vitor só precisa do modelo: "iPhone 17 Pro
+// Max", não "256GB"/"512GB"/... separado). Cadastrada uma vez com valor 0
+// (a preencher aqui mesmo); linhas novas entram pelo botão "+ Adicionar
+// modelo" dentro do grupo certo.
 export const TABELA_TROCA_PADRAO = [
-  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro Max', capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro Max', capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro Max', capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro Max', capacidade: '2TB',   valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro',     capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro',     capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro',     capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone Air',        capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone Air',        capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone Air',        capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17',         capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17',         capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17e',        capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 17', modelo: 'iPhone 17e',        capacidade: '512GB', valor: 0 },
+  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro Max', valor: 0 },
+  { linha: 'iPhone 17', modelo: 'iPhone 17 Pro',     valor: 0 },
+  { linha: 'iPhone 17', modelo: 'iPhone Air',        valor: 0 },
+  { linha: 'iPhone 17', modelo: 'iPhone 17',         valor: 0 },
+  { linha: 'iPhone 17', modelo: 'iPhone 17e',        valor: 0 },
 
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro Max', capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro Max', capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro Max', capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro',     capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro',     capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro',     capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro',     capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Plus',    capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Plus',    capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16 Plus',    capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16',         capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16',         capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16',         capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16e',        capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16e',        capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 16', modelo: 'iPhone 16e',        capacidade: '512GB', valor: 0 },
+  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro Max', valor: 0 },
+  { linha: 'iPhone 16', modelo: 'iPhone 16 Pro',     valor: 0 },
+  { linha: 'iPhone 16', modelo: 'iPhone 16 Plus',    valor: 0 },
+  { linha: 'iPhone 16', modelo: 'iPhone 16',         valor: 0 },
+  { linha: 'iPhone 16', modelo: 'iPhone 16e',        valor: 0 },
 
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro Max', capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro Max', capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro Max', capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro',     capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro',     capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro',     capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro',     capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Plus',    capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Plus',    capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15 Plus',    capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15',         capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15',         capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 15', modelo: 'iPhone 15',         capacidade: '512GB', valor: 0 },
+  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro Max', valor: 0 },
+  { linha: 'iPhone 15', modelo: 'iPhone 15 Pro',     valor: 0 },
+  { linha: 'iPhone 15', modelo: 'iPhone 15 Plus',    valor: 0 },
+  { linha: 'iPhone 15', modelo: 'iPhone 15',         valor: 0 },
 
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro Max', capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro Max', capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro Max', capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro Max', capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro',     capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro',     capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro',     capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro',     capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Plus',    capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Plus',    capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14 Plus',    capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14',         capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14',         capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 14', modelo: 'iPhone 14',         capacidade: '512GB', valor: 0 },
+  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro Max', valor: 0 },
+  { linha: 'iPhone 14', modelo: 'iPhone 14 Pro',     valor: 0 },
+  { linha: 'iPhone 14', modelo: 'iPhone 14 Plus',    valor: 0 },
+  { linha: 'iPhone 14', modelo: 'iPhone 14',         valor: 0 },
 
-  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro Max', capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro Max', capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro Max', capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro Max', capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro',     capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro',     capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro',     capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro',     capacidade: '1TB',   valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13',         capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13',         capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13',         capacidade: '512GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 mini',    capacidade: '128GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 mini',    capacidade: '256GB', valor: 0 },
-  { linha: 'iPhone 13', modelo: 'iPhone 13 mini',    capacidade: '512GB', valor: 0 },
+  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro Max', valor: 0 },
+  { linha: 'iPhone 13', modelo: 'iPhone 13 Pro',     valor: 0 },
+  { linha: 'iPhone 13', modelo: 'iPhone 13',         valor: 0 },
+  { linha: 'iPhone 13', modelo: 'iPhone 13 mini',    valor: 0 },
 
-  { linha: 'Apple Watch', modelo: 'Apple Watch Series 4', capacidade: null, valor: 0 },
-  { linha: 'Apple Watch', modelo: 'Apple Watch Series 5', capacidade: null, valor: 0 },
-  { linha: 'Apple Watch', modelo: 'Apple Watch Series 6', capacidade: null, valor: 0 },
-  { linha: 'Apple Watch', modelo: 'Apple Watch Series 7', capacidade: null, valor: 0 },
-  { linha: 'Apple Watch', modelo: 'Apple Watch Series 8', capacidade: null, valor: 0 },
-  { linha: 'Apple Watch', modelo: 'Apple Watch Series 9', capacidade: null, valor: 0 },
-  { linha: 'Apple Watch', modelo: 'Apple Watch Ultra 1',  capacidade: null, valor: 0 },
-  { linha: 'Apple Watch', modelo: 'Apple Watch Ultra 2',  capacidade: null, valor: 0 },
+  { linha: 'Apple Watch', modelo: 'Apple Watch Series 4', valor: 0 },
+  { linha: 'Apple Watch', modelo: 'Apple Watch Series 5', valor: 0 },
+  { linha: 'Apple Watch', modelo: 'Apple Watch Series 6', valor: 0 },
+  { linha: 'Apple Watch', modelo: 'Apple Watch Series 7', valor: 0 },
+  { linha: 'Apple Watch', modelo: 'Apple Watch Series 8', valor: 0 },
+  { linha: 'Apple Watch', modelo: 'Apple Watch Series 9', valor: 0 },
+  { linha: 'Apple Watch', modelo: 'Apple Watch Ultra 1',  valor: 0 },
+  { linha: 'Apple Watch', modelo: 'Apple Watch Ultra 2',  valor: 0 },
 ]
 
+// Colapsa registros antigos (de quando a tabela ainda tinha 1 linha por
+// capacidade) em 1 só por modelo — mantém o maior valor já preenchido entre
+// as capacidades duplicadas, pra não perder o que já tinha sido salvo.
+function colapsarPorModelo(lista) {
+  const porModelo = new Map()
+  lista.forEach(it => {
+    const chave = `${it.linha}|${it.modelo}`
+    const atual = porModelo.get(chave)
+    const valor = Number(it.valor) || 0
+    if (!atual || valor > atual.valor) porModelo.set(chave, { linha: it.linha, modelo: it.modelo, valor })
+  })
+  return [...porModelo.values()]
+}
+
 export function renderTabTabelaTroca(container, itensSalvos, onSaved) {
-  let itens = (itensSalvos?.length ? itensSalvos : TABELA_TROCA_PADRAO).map(i => ({ ...i }))
+  let itens = colapsarPorModelo(itensSalvos?.length ? itensSalvos : TABELA_TROCA_PADRAO)
   let busca = ''
 
   const searchInp = el('input', { type: 'text', class: 'search-input', placeholder: 'Buscar modelo...' })
@@ -102,7 +69,7 @@ export function renderTabTabelaTroca(container, itensSalvos, onSaved) {
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
     el('thead', {}, el('tr', {},
-      el('th', {}, 'Modelo'), el('th', {}, 'Capacidade'), el('th', { class: 'th-money' }, 'Valor de Troca'),
+      el('th', {}, 'Modelo'), el('th', { class: 'th-money' }, 'Valor de Troca'),
     )),
     tbody,
   )
@@ -114,13 +81,17 @@ export function renderTabTabelaTroca(container, itensSalvos, onSaved) {
       const linhas = itens
         .map((it, idx) => ({ it, idx }))
         .filter(({ it }) => it.linha === grupo)
-        .filter(({ it }) => !busca || it.modelo.toLowerCase().includes(busca) || (it.capacidade || '').toLowerCase().includes(busca))
+        .filter(({ it }) => !busca || it.modelo.toLowerCase().includes(busca))
       if (!linhas.length) return
 
-      tbody.appendChild(el('tr', { class: 'dre-row-bloco' }, el('td', { colspan: '3' }, grupo)))
+      tbody.appendChild(el('tr', { class: 'dre-row-bloco' }, el('td', { colspan: '2' }, grupo)))
 
       linhas.forEach(({ it, idx }) => {
-        const valInp = el('input', { type: 'number', class: 'orc-avval-inp', step: '10', style: 'width:110px' })
+        // orc-input + orc-inp-money: mesmo padrão dos campos de dinheiro do
+        // Orçamento — antes usava orc-avval-inp (feito pra avaria, vermelho
+        // e com padding pensado pra outro prefixo), que deixava o "R$"
+        // encavalado no número.
+        const valInp = el('input', { type: 'number', class: 'orc-input orc-inp-money', step: '10' })
         valInp.value = it.valor > 0 ? it.valor : ''
         valInp.addEventListener('input', () => { itens[idx].valor = parseFloat(valInp.value) || 0 })
 
@@ -129,7 +100,6 @@ export function renderTabTabelaTroca(container, itensSalvos, onSaved) {
 
         tbody.appendChild(el('tr', {},
           el('td', {}, it.modelo),
-          el('td', {}, it.capacidade || '—'),
           el('td', { class: 'td-money' },
             el('div', { class: 'orc-pfx-wrap' }, el('span', { class: 'orc-pfx' }, 'R$'), valInp),
             delBtn,
@@ -142,14 +112,13 @@ export function renderTabTabelaTroca(container, itensSalvos, onSaved) {
   renderTable()
 
   const addModeloInp = el('input', { type: 'text', placeholder: 'Ex: iPhone 18 Pro Max' })
-  const addCapInp    = el('input', { type: 'text', placeholder: 'Capacidade (opcional)' })
   const addLinhaSel  = el('select', { class: 'field-select' },
     ...[...new Set(TABELA_TROCA_PADRAO.map(i => i.linha))].map(l => el('option', { value: l }, l)))
   const addBtn = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Adicionar modelo')
   addBtn.addEventListener('click', () => {
     if (!addModeloInp.value.trim()) { toastError('Digite o nome do modelo.'); return }
-    itens.push({ linha: addLinhaSel.value, modelo: addModeloInp.value.trim(), capacidade: addCapInp.value.trim() || null, valor: 0 })
-    addModeloInp.value = ''; addCapInp.value = ''
+    itens.push({ linha: addLinhaSel.value, modelo: addModeloInp.value.trim(), valor: 0 })
+    addModeloInp.value = ''
     renderTable()
   })
 
@@ -176,7 +145,7 @@ export function renderTabTabelaTroca(container, itensSalvos, onSaved) {
       searchInp,
       el('div', { class: 'table-wrapper' }, table),
       el('div', { class: 'config-list-header', style: 'margin-top:14px' },
-        addLinhaSel, addModeloInp, addCapInp, addBtn,
+        addLinhaSel, addModeloInp, addBtn,
       ),
     ),
     el('div', { class: 'config-actions' }, saveBtn)
