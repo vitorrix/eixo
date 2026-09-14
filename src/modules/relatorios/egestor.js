@@ -69,7 +69,7 @@ function _init(container) {
 
   const buscaInp = el('input', {
     type: 'search', class: 'busca-search-input', autocomplete: 'off',
-    placeholder: 'Buscar por cliente... ex: Ricardo Bayona',
+    placeholder: 'Buscar por cliente ou produto... ex: Ricardo Bayona, iPhone 15',
   })
   const deInp  = el('input', { type: 'date', class: 'field-select', autocomplete: 'off' })
   const ateInp = el('input', { type: 'date', class: 'field-select', autocomplete: 'off' })
@@ -99,7 +99,7 @@ function _init(container) {
     tbody
   )
   const tableWrap = el('div', { class: 'table-wrapper hidden' }, table)
-  const emptyMsg = el('p', {}, 'Busque por cliente ou selecione um período pra ver as vendas do sistema anterior.')
+  const emptyMsg = el('p', {}, 'Busque por cliente, produto, ou selecione um período pra ver as vendas do sistema anterior.')
   const emptyState = el('div', { class: 'empty-state' }, emptyMsg)
 
   const pageInfo = el('span', { class: 'busca-page-info' })
@@ -122,7 +122,11 @@ function _init(container) {
     const ate = ateInp.value
     if (!q && !de && !ate) return null // nenhum filtro ativo ainda
     const list = vendas.filter(v => {
-      if (q && !(v.clienteBusca || '').includes(q)) return false
+      if (q) {
+        const noCliente = (v.clienteBusca || '').includes(q)
+        const noProduto = (v.produtosBusca || '').includes(q)
+        if (!noCliente && !noProduto) return false
+      }
       if (de && v.dataConfirmacao < de) return false
       if (ate && v.dataConfirmacao > ate) return false
       return true
@@ -140,7 +144,7 @@ function _init(container) {
       paginationRow.classList.add('hidden')
       statsRow.classList.add('hidden')
       emptyState.classList.remove('hidden')
-      emptyMsg.textContent = 'Busque por cliente ou selecione um período pra ver as vendas do sistema anterior.'
+      emptyMsg.textContent = 'Busque por cliente, produto, ou selecione um período pra ver as vendas do sistema anterior.'
       return
     }
     if (!list.length) {
@@ -246,7 +250,16 @@ function _init(container) {
   async function carregar() {
     try {
       const snap = await getDocs(collection(db, 'vendasHistoricas'))
-      vendas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      // produtosBusca: string de busca com a descrição de todos os itens da
+      // venda, em minúsculo — dá pra achar "quem já comprou X" digitando o
+      // nome do produto, igual já funciona pra nome de cliente (clienteBusca,
+      // que já vem pronto do import). Calculado uma vez aqui, não fica salvo
+      // no Firestore (coleção é só leitura, ver comentário de renderEgestor).
+      vendas = snap.docs.map(d => {
+        const v = { id: d.id, ...d.data() }
+        v.produtosBusca = (v.itens || []).map(it => it.produto).filter(Boolean).join(' ').toLowerCase()
+        return v
+      })
 
       mount(container,
         buscaInp,
