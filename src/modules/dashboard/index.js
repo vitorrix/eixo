@@ -296,31 +296,43 @@ function buildRevenueChart(lancamentos) {
   const max = Math.max(...dados.map(d => d.value), 1)
   const temDados = dados.some(d => d.value > 0)
 
-  const last = dados[dados.length - 1]
-  const prev = dados[dados.length - 2]
-  const deltaPct = prev.value > 0 ? Math.round(((last.value - prev.value) / prev.value) * 100) : null
+  const lastIdx = dados.length - 1
 
-  const headlineValue = el('span', { class: 'chart-headline-value' }, brl(last.value))
-  const headlineDelta = deltaPct !== null
-    ? el('span', { class: `chart-headline-delta ${deltaPct >= 0 ? 'up' : 'down'}` }, `${deltaPct >= 0 ? '▲' : '▼'} ${Math.abs(deltaPct)}%`)
-    : el('span', {})
-  const headlineLabel = el('span', { class: 'chart-headline-label' }, last.label)
+  // Variação sempre contra o mês IMEDIATAMENTE anterior ao que está em
+  // destaque (não contra o mês mais recente fixo) — Abril não tem
+  // comparação (fora da janela de 6 meses), por isso null.
+  function calcDelta(idx) {
+    if (idx <= 0) return null
+    const cur = dados[idx], prev = dados[idx - 1]
+    if (!(prev.value > 0)) return null
+    return Math.round(((cur.value - prev.value) / prev.value) * 100)
+  }
 
-  function showMonth(d) {
+  const headlineValue = el('span', { class: 'chart-headline-value' }, brl(dados[lastIdx].value))
+  const headlineDelta = el('span', { class: 'chart-headline-delta' })
+  const headlineLabel = el('span', { class: 'chart-headline-label' }, dados[lastIdx].label)
+
+  function renderDelta(pct) {
+    if (pct === null) { headlineDelta.className = 'chart-headline-delta'; headlineDelta.textContent = ''; return }
+    headlineDelta.className = `chart-headline-delta ${pct >= 0 ? 'up' : 'down'}`
+    headlineDelta.textContent = `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct)}%`
+  }
+
+  function showMonth(idx) {
+    const d = dados[idx]
     headlineValue.textContent = brl(d.value)
     headlineLabel.textContent = d.label
+    renderDelta(calcDelta(idx))
   }
-  function resetHeadline() {
-    headlineValue.textContent = brl(last.value)
-    headlineLabel.textContent = last.label
-  }
+  function resetHeadline() { showMonth(lastIdx) }
+  renderDelta(calcDelta(lastIdx))
 
-  const barCols = dados.map(d => {
+  const barCols = dados.map((d, idx) => {
     const fill = el('div', { class: 'chart-bar-fill' })
     fill.style.height = `${Math.round((d.value / max) * 100)}%`
     const bar = el('div', { class: 'chart-bar' }, fill)
     const col = el('div', { class: 'chart-bar-col' }, bar)
-    col.addEventListener('mouseenter', () => showMonth(d))
+    col.addEventListener('mouseenter', () => showMonth(idx))
     col.addEventListener('mouseleave', resetHeadline)
     return col
   })
