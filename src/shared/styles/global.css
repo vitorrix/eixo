@@ -980,6 +980,7 @@ html, body {
   transition: background .15s;
 }
 .mural-item:hover { background: var(--color-bg); }
+.mural-item.row-clicavel { cursor: pointer; }
 
 .mural-item-icon {
   width: 36px;

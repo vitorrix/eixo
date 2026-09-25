@@ -1,7 +1,8 @@
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
 import { getCurrentProfile } from '../../auth/session.js'
-import { maskPhone, brl, relativeTime, toNumero } from '../../shared/utils/formatters.js'
+import { maskPhone, brl, relativeTime, toNumero, shortDate } from '../../shared/utils/formatters.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
+import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { subscribeAniversariantes } from '../clientes/service.js'
 import { subscribeBotStatus } from '../configuracoes/service.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
@@ -98,9 +99,12 @@ function buildRecadoIcon(tipo) {
   return svg
 }
 
-function muralItem({ tipo, titulo, detalhe, action }) {
+// onClick (hoje só usado pelo recado de pós-venda) abre um card de consulta
+// com mais detalhes — tornarLinhaClicavel já ignora clique em botão/link
+// dentro do item, então não conflita com o "Feito ✓" ao lado.
+function muralItem({ tipo, titulo, detalhe, action, onClick }) {
   const cfg = RECADO_TIPOS[tipo] || RECADO_TIPOS.aviso
-  return el('div', { class: 'mural-item' },
+  const row = el('div', { class: 'mural-item' },
     el('div', { class: 'mural-item-icon', style: `background:${cfg.color}1a` }, buildRecadoIcon(tipo)),
     el('div', { class: 'mural-item-body' },
       el('div', { class: 'mural-item-title' }, titulo),
@@ -108,6 +112,8 @@ function muralItem({ tipo, titulo, detalhe, action }) {
     ),
     action,
   )
+  if (onClick) tornarLinhaClicavel(row, onClick)
+  return row
 }
 
 function buildMuralEmptyIcon() {
@@ -239,6 +245,44 @@ function posVendaAction(vendaId) {
   return btn
 }
 
+const ENTREGA_LABELS_POSVENDA = {
+  aguardando: 'Aguardando',
+  retirada:   '🏠 Retirada',
+  motoboy:    '🏍️ Motoboy',
+  correio:    '✈️ Correio',
+  entregue:   '✅ Entregue',
+}
+
+// Card de consulta (só leitura) por trás do recado de pós-venda no Mural —
+// mesmo componente de detalhes usado em Vendas/Pedidos/Compras
+// (shared/components/DetalhesModal.js), sem os botões de ação (editar/
+// recibo), que dependem de catálogo/cliente carregados que o Dashboard não
+// tem em memória — pra isso, "Ver em Vendas" no módulo de verdade.
+function abrirDetalhesVendaPosVenda(v) {
+  const itens = Array.isArray(v.itens) && v.itens.length
+    ? v.itens
+    : (v.produto ? [{ produto: v.produto, valor: toNumero(v.valorVenda) }] : [])
+  const produtoValor = itens.length > 1
+    ? el('div', {}, ...itens.map(it => el('div', {}, `${it.produto} — ${brl(toNumero(it.valor))}`)))
+    : (itens[0]?.produto || '—')
+  const dataVenda    = v.criadoEm?.toDate    ? shortDate(v.criadoEm.toDate().toISOString().slice(0, 10))    : '—'
+  const dataEntrega  = v.dataEntrega?.toDate ? shortDate(v.dataEntrega.toDate().toISOString().slice(0, 10)) : '—'
+
+  abrirDetalhesModal({
+    title: 'Detalhes da Venda',
+    campos: [
+      ['Cliente', v.cliente || '—'],
+      ['Data da venda', dataVenda],
+      ['Produto', produtoValor],
+      ['Valor', brl(toNumero(v.valorVenda))],
+      ['Forma de pagamento', v.formaPagamento || '—'],
+      ['Entrega', ENTREGA_LABELS_POSVENDA[v.statusEntrega] || v.statusEntrega || '—'],
+      ['Data de entrega', dataEntrega],
+      ['Recibo', v.reciboEmitido ? 'Enviado' : 'Não enviado'],
+    ],
+  })
+}
+
 // Vendas entregues há 3 dias ou mais que ainda não tiveram o pós-venda
 // marcado como feito — fica no mural até alguém clicar "Feito", não some
 // sozinho. dataEntrega só existe em vendas entregues depois dessa mudança
@@ -255,6 +299,7 @@ function recadosPosVenda(vendas) {
         titulo: `Pós-venda: ${v.cliente || 'Cliente'}`,
         detalhe: `Entregue há ${dias} dia${dias === 1 ? '' : 's'}${produto ? ' · ' + produto : ''} — hora de dar um retorno.`,
         action: posVendaAction(v.id),
+        onClick: () => abrirDetalhesVendaPosVenda(v),
       }
     })
 }
