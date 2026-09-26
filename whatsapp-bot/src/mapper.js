@@ -1,5 +1,5 @@
 import { parseMessageWithAI } from './aiParser.js'
-import { normalizeColor } from './colorMap.js'
+import { normalizeColorForProduto } from './colorMap.js'
 
 const STORAGE_REGEX = /(\d+)\s?(GB|TB)\b/gi
 const TAMANHO_REGEX = /(\d+)\s?MM\b/i
@@ -156,7 +156,7 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
 
   return candidatos.map(c => {
     const { produtoNome, capacidade, ram, tamanho } = extractProdutoAtributos(c.produtoBruto)
-    const cor = normalizeColor(c.cor)
+    const cor = normalizeColorForProduto(produtoNome, c.cor)
     const origem = (c.origem || '').trim()
     // origem entra no docId pra não colidir o mesmo modelo/cor vendido em mercados
     // diferentes (ex: mesmo iPhone Americano e Japonês, preços distintos). ram entra

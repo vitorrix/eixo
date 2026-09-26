@@ -103,3 +103,41 @@ export function normalizeColor(raw) {
   if (key in COLOR_TABLE) return COLOR_TABLE[key]
   return raw.trim()
 }
+
+// Overrides por modelo — quando o Vitor decide usar um vocabulário de cores
+// mais enxuto pro filtro de Busca do que a tabela genérica acima (que vale
+// pra todos os outros modelos), entra aqui em vez de mexer na COLOR_TABLE
+// global. Chave: substring em minúsculo/sem acento que bate com produtoNome.
+const MODELO_COLOR_OVERRIDES = [
+  {
+    // Vitor pediu (2026-09-26): só 4 cores nesse modelo — Azul, Preto, Branco
+    // e Bordô — fundindo termos de marketing/variações de fornecedor (inglês,
+    // typo) nesses 4 baldes. "Roxo" e "Red Cherry" (achados na base) tratados
+    // como erro de digitação do fornecedor e jogados em Bordô, por decisão dele.
+    modelo: 'iphone 18 pro max',
+    tabela: {
+      'azul': 'Azul', 'blue': 'Azul', 'azul ceu': 'Azul', 'sky blue': 'Azul',
+      'glace azul': 'Azul', 'glacier blue': 'Azul',
+      'preto': 'Preto', 'black': 'Preto',
+      'branco': 'Branco', 'white': 'Branco',
+      'prateado': 'Branco', 'prata': 'Branco', 'silver': 'Branco',
+      'glacier': 'Branco', 'glacial': 'Branco', 'glarceir': 'Branco',
+      'bordo': 'Bordô', 'bordô': 'Bordô', 'burgundy': 'Bordô', 'burgunde': 'Bordô',
+      'borgonha': 'Bordô', 'burdo': 'Bordô', 'roxo': 'Bordô', 'purple': 'Bordô',
+      'red cherry': 'Bordô',
+    },
+  },
+]
+
+// Igual normalizeColor(), mas primeiro checa se o modelo tem um override
+// próprio (ver MODELO_COLOR_OVERRIDES) antes de cair na tabela genérica.
+export function normalizeColorForProduto(produtoNome, raw) {
+  if (!raw) return ''
+  const nomeKey = stripAccents((produtoNome || '').toLowerCase())
+  const override = MODELO_COLOR_OVERRIDES.find(o => nomeKey.includes(o.modelo))
+  if (override) {
+    const key = stripAccents(raw.trim().toLowerCase())
+    if (key in override.tabela) return override.tabela[key]
+  }
+  return normalizeColor(raw)
+}
