@@ -4,6 +4,7 @@ import { el, svgEl, mount } from '../shared/utils/dom.js'
 import { createCotacaoWidget } from '../shared/components/CotacaoDolar.js'
 import { openHelp } from '../shared/components/HelpPanel.js'
 import { valoresOcultosAtivos, alternarValoresOcultos } from '../shared/utils/valoresOcultos.js'
+import { temaEscuroAtivo, alternarTema } from '../shared/utils/tema.js'
 
 const PAGE_LABELS = {
   '/':              'Painel Inicial',
@@ -256,6 +257,31 @@ export function renderLayout(container, profile) {
   })
   valoresBtn.classList.toggle('active', valoresOcultosAtivos())
 
+  function temaIconPaths(escuro) {
+    return escuro
+      ? ['M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z'] // lua
+      : ['M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42',
+         'M12 17a5 5 0 100-10 5 5 0 000 10z'] // sol
+  }
+  function buildTemaIcon(escuro) {
+    const svg = svgEl('svg', {
+      viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+      'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      width: '17', height: '17',
+    })
+    for (const d of temaIconPaths(escuro)) svg.appendChild(svgEl('path', { d }))
+    return svg
+  }
+  const temaBtn = el('button', {
+    type: 'button', class: 'icon-btn icon-btn-edit header-tema-toggle',
+    title: temaEscuroAtivo() ? 'Tema claro' : 'Tema escuro',
+  }, buildTemaIcon(temaEscuroAtivo()))
+  temaBtn.addEventListener('click', () => {
+    const escuro = alternarTema()
+    temaBtn.replaceChildren(buildTemaIcon(escuro))
+    temaBtn.title = escuro ? 'Tema claro' : 'Tema escuro'
+  })
+
   const topHeader = el('header', { class: 'top-header' },
     el('h1', { class: 'top-header-title' }, pageTitle),
     el('div', { class: 'top-header-user' },
@@ -263,6 +289,7 @@ export function renderLayout(container, profile) {
         el('span', { class: 'top-header-name' }, `Olá, ${(profile.name || profile.email).split(' ')[0]}!`),
         el('span', { class: 'top-header-company' }, 'Baruk Technology & Consulting')
       ),
+      temaBtn,
       valoresBtn,
       logoutBtn
     )
