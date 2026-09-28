@@ -120,9 +120,18 @@ function montarItensPedido(pedido) {
 // cada item do pedido (specs, serial, IMEI) — não é o campo de observações do
 // Pedido em si. Sem rótulo de produto na frente (a descrição já está na tabela
 // de itens); com 2+ aparelhos, separa cada bloco por uma linha em branco.
+// Casa pelo compraId salvo em cada item (ver pedidos/service.js
+// criarCompraEVenda) — texto (nome+cor) é só fallback pra pedido lançado
+// antes dessa vinculação existir, e pode falhar em casar (daí o dado sumir
+// do recibo sem erro nenhum).
 function montarObservacoesPedido(pedido, comprasPedido) {
   return (pedido.produtos || [])
-    .map(p => (comprasPedido || []).find(c => c.produto === produtoLabel(p))?.observacoes)
+    .map(p => {
+      const lista = comprasPedido || []
+      const compra = (p.compraId && lista.find(c => c.id === p.compraId))
+        || lista.find(c => c.produto === produtoLabel(p))
+      return compra?.observacoes
+    })
     .map(s => (s || '').trim())
     .filter(Boolean)
     .join('\n\n')

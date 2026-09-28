@@ -607,7 +607,7 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
     const cliente = resolverCliente(pedido)
     const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
     const comprasSnap = await getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
-    const comprasPedido = comprasSnap.docs.map(d => d.data())
+    const comprasPedido = comprasSnap.docs.map(d => ({ id: d.id, ...d.data() }))
     return montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome, comprasPedido })
   }
 
@@ -986,14 +986,14 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           const produtosParaRetirar = (pedido.produtos || []).filter(pr => pr.tipo !== 'acessorio')
           getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
             .then(snap => {
-              const comprasPedido = snap.docs.map(d => d.data())
+              const comprasPedido = snap.docs.map(d => ({ id: d.id, ...d.data() }))
               let mudou = false
               retiradas.forEach((r, i) => {
                 if (r.loja) return
                 const produtoOriginal = produtosParaRetirar[i]
                 if (!produtoOriginal) return
-                const label = produtoLabel(produtoOriginal)
-                const compra = comprasPedido.find(c => c.produto === label)
+                const compra = (produtoOriginal.compraId && comprasPedido.find(c => c.id === produtoOriginal.compraId))
+                  || comprasPedido.find(c => c.produto === produtoLabel(produtoOriginal))
                 if (compra?.fornecedor) {
                   retiradas[i].loja = compra.fornecedor
                   lojaAcs[i]?.setValue(compra.fornecedor)

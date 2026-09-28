@@ -141,6 +141,11 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
   const totalItem = p => (parseFloat(p.valor) || 0) * (parseInt(p.quantidade) || 1) - (parseFloat(p.desconto) || 0)
 
   const itensVenda = []
+  // Compra vinculada a cada item compravel do pedido (na mesma ordem de
+  // itensCompraveis) — persistido depois em pedido.produtos[].compraId, pra
+  // o recibo achar a Compra certa (e os dados do aparelho nela) por id, em
+  // vez de tentar casar por texto (nome+cor), que quebra fácil.
+  const compraIdsPorItem = []
   // Acessório nunca entra aqui — mesma filtragem usada na tela de Confirmar
   // Pagamento (pedidos/list.js), pra "itensCompra[i]" bater com o item certo.
   const itensCompraveis = pedido.produtos.filter(p => p.tipo !== 'acessorio')
@@ -161,6 +166,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
       if (compraData.produtoId) {
         batch.update(doc(db, 'produtos', compraData.produtoId), { estoqueAtual: increment(-1) })
       }
+      compraIdsPorItem.push(compraRef.id)
       itensVenda.push({ produto: compraData.produto || produtoLabel(p), tipo: p.tipo || 'produto', valor: totalItem(p), quantidade: parseInt(p.quantidade) || 1 })
       continue
     }
@@ -171,6 +177,7 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
     const fornecedorId = item.fornecedorId || null
 
     const compraRef = doc(collection(db, 'compras'))
+    compraIdsPorItem.push(compraRef.id)
     batch.set(compraRef, {
       pedidoId:    pedido.id,
       cliente:     pedido.cliente,
@@ -211,6 +218,17 @@ async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma)
 
     itensVenda.push({ produto: label, tipo: p.tipo || 'produto', valor: totalItem(p), quantidade: parseInt(p.quantidade) || 1 })
   }
+
+  // Grava o compraId de volta em cada item do pedido (mesma ordem/filtro de
+  // itensCompraveis) — o recibo (Recibo.js montarObservacoesPedido) usa isso
+  // pra achar a Compra certa de cada item por id, sem depender de texto bater.
+  let compravelIdx = 0
+  const produtosComCompraId = pedido.produtos.map(p => {
+    if (p.tipo === 'acessorio') return p
+    const compraId = compraIdsPorItem[compravelIdx++]
+    return compraId ? { ...p, compraId } : p
+  })
+  batch.update(doc(db, COL, pedido.id), { produtos: produtosComCompraId })
 
   // Acessório: o custo já foi pago na compra em lote lançada direto em
   // Compras (nunca gera Compra/Pagamento novo aqui) — só desconta do estoque
