@@ -116,16 +116,17 @@ function montarItensPedido(pedido) {
   return itens.map(it => ({ ...it, total: it.precoUnit * it.quant - it.desconto }))
 }
 
-// Observações do recibo = "Dados do aparelho" registrados na Compra vinculada a
-// cada item do pedido (specs, serial, IMEI) — não é o campo de observações do
-// Pedido em si. Sem rótulo de produto na frente (a descrição já está na tabela
-// de itens); com 2+ aparelhos, separa cada bloco por uma linha em branco.
-// Casa pelo compraId salvo em cada item (ver pedidos/service.js
-// criarCompraEVenda) — texto (nome+cor) é só fallback pra pedido lançado
-// antes dessa vinculação existir, e pode falhar em casar (daí o dado sumir
-// do recibo sem erro nenhum).
+// Observações do recibo = "Dados do aparelho" (specs, serial, IMEI), juntando
+// duas fontes: a Compra vinculada a cada item (casada pelo compraId salvo em
+// cada item — ver pedidos/service.js criarCompraEVenda; texto nome+cor é só
+// fallback pra pedido lançado antes dessa vinculação existir) e o campo
+// "Observações" do Pedido em si — é ali que o serial/modelo às vezes é
+// anotado direto (placeholder do campo já diz "Observações, serial,
+// modelo..."), inclusive em pedido sem Compra nenhuma por trás. Sem rótulo de
+// produto na frente (a descrição já está na tabela de itens); cada bloco
+// separado por uma linha em branco, sem repetir texto idêntico duas vezes.
 function montarObservacoesPedido(pedido, comprasPedido) {
-  return (pedido.produtos || [])
+  const blocos = (pedido.produtos || [])
     .map(p => {
       const lista = comprasPedido || []
       const compra = (p.compraId && lista.find(c => c.id === p.compraId))
@@ -134,7 +135,11 @@ function montarObservacoesPedido(pedido, comprasPedido) {
     })
     .map(s => (s || '').trim())
     .filter(Boolean)
-    .join('\n\n')
+
+  const doPedido = (pedido.observacoes || '').trim()
+  if (doPedido && !blocos.includes(doPedido)) blocos.push(doPedido)
+
+  return blocos.join('\n\n')
 }
 
 // Monta o objeto de dados do recibo de um Pedido — mesma estrutura usada no
