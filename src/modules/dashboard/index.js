@@ -308,7 +308,9 @@ function aparelhosDaVenda(v) {
 function mensagemPosVenda(nomeCliente, aparelhos, nomeRemetente) {
   const cliente = (nomeCliente || '').trim().split(' ')[0]
   const remetente = (nomeRemetente || '').trim().split(' ')[0]
-  const quem = remetente ? `Aqui é o ${remetente}, da Baruk Technology.` : 'Aqui é da Baruk Technology.'
+  // "Meu nome é X" em vez de "Aqui é o/a X": não depende de adivinhar o gênero
+  // pelo nome (o cadastro de usuário não tem esse campo).
+  const quem = remetente ? `Meu nome é ${remetente}, da Baruk.` : 'Aqui é da Baruk.'
   const objeto = aparelhos.length ? `com o seu ${aparelhos.join(' e o seu ')}` : 'com a sua compra'
   return `Olá${cliente ? ', ' + cliente : ''}! Tudo bem? ${quem} `
     + `Passando para saber como está a sua experiência ${objeto}. `
