@@ -305,12 +305,15 @@ function aparelhosDaVenda(v) {
 
 // Mensagem-padrão de pós-venda — abre a conversa no WhatsApp com o texto já
 // escrito (wa.me); quem revisa/edita e envia é o Vitor, no WhatsApp dele.
-function mensagemPosVenda(nomeCliente, aparelhos, nomeRemetente) {
+function mensagemPosVenda(nomeCliente, aparelhos, nomeRemetente, generoRemetente) {
   const cliente = (nomeCliente || '').trim().split(' ')[0]
   const remetente = (nomeRemetente || '').trim().split(' ')[0]
-  // "Meu nome é X" em vez de "Aqui é o/a X": não depende de adivinhar o gênero
-  // pelo nome (o cadastro de usuário não tem esse campo).
-  const quem = remetente ? `Meu nome é ${remetente}, da Baruk.` : 'Aqui é da Baruk.'
+  // Artigo vem do campo "Gênero" do cadastro de usuário; sem ele, frase neutra
+  // (não adivinha pelo nome).
+  const artigo = generoRemetente === 'f' ? 'a' : generoRemetente === 'm' ? 'o' : ''
+  const quem = !remetente ? 'Aqui é da Baruk.'
+    : artigo ? `Aqui é ${artigo} ${remetente}, da Baruk.`
+    : `Meu nome é ${remetente}, da Baruk.`
   const objeto = aparelhos.length ? `com o seu ${aparelhos.join(' e o seu ')}` : 'com a sua compra'
   return `Olá${cliente ? ', ' + cliente : ''}! Tudo bem? ${quem} `
     + `Passando para saber como está a sua experiência ${objeto}. `
@@ -319,7 +322,7 @@ function mensagemPosVenda(nomeCliente, aparelhos, nomeRemetente) {
 
 function posVendaActions(v, cliente) {
   const link = cliente?.phone
-    ? whatsappLink(cliente.phone, cliente.phoneCountry, mensagemPosVenda(v.cliente, aparelhosDaVenda(v), getCurrentProfile()?.name))
+    ? whatsappLink(cliente.phone, cliente.phoneCountry, mensagemPosVenda(v.cliente, aparelhosDaVenda(v), getCurrentProfile()?.name, getCurrentProfile()?.genero))
     : null
   const wa = link
     ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title: 'Enviar mensagem de pós-venda no WhatsApp' }, whatsappIcon())

@@ -27,7 +27,7 @@ const ACTIONS = [
   { key: 'delete', label: 'Excluir' },
 ]
 
-async function createEmployee(name, email, password, permissions) {
+async function createEmployee(name, email, password, permissions, genero) {
   const tempApp = initializeApp(firebaseConfig, `eixo-create-${Date.now()}`)
   const tempAuth = getAuth(tempApp)
   try {
@@ -36,6 +36,7 @@ async function createEmployee(name, email, password, permissions) {
       name,
       email,
       role: 'employee',
+      genero,
       permissions,
       active: true,
       createdAt: serverTimestamp(),
@@ -91,10 +92,23 @@ function buildPermissionsSection(initialPermissions = {}) {
   return { el: grid, getState: () => state }
 }
 
+// 'm' | 'f' — só serve pra concordância ("Aqui é o Vitor" / "Aqui é a Ana")
+// nas mensagens automáticas; sem valor, a mensagem usa uma frase neutra.
+function generoSelect(valor) {
+  const sel = el('select', { class: 'field-select' },
+    el('option', { value: '' }, 'Selecione...'),
+    el('option', { value: 'f' }, 'Feminino'),
+    el('option', { value: 'm' }, 'Masculino'),
+  )
+  sel.value = valor || ''
+  return sel
+}
+
 function openUserForm() {
   const nameInput = el('input', { type: 'text',     class: 'field-input', placeholder: 'Nome completo' })
   const emailInput = el('input', { type: 'email',   class: 'field-input', placeholder: 'email@exemplo.com' })
   const passInput  = el('input', { type: 'password', class: 'field-input', placeholder: 'Mínimo 6 caracteres' })
+  const generoSel  = generoSelect('')
 
   openModal({
     title: 'Novo Usuário',
@@ -106,6 +120,7 @@ function openUserForm() {
         el('div', { class: 'field' }, el('label', {}, 'Nome'), nameInput),
         el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'E-mail'), emailInput),
         el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'Senha provisória'), passInput),
+        el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'Gênero (usado no "Aqui é o/a ..." das mensagens)'), generoSel),
         el('div', { class: 'field', style: 'margin-top:18px' },
           el('label', {}, 'Permissões de acesso'),
           permsEl
@@ -130,6 +145,7 @@ function openUserForm() {
         if (!name)           return toastError('Informe o nome da funcionária')
         if (!email)          return toastError('Informe o e-mail')
         if (pass.length < 6) return toastError('A senha deve ter ao menos 6 caracteres')
+        if (!generoSel.value) return toastError('Informe o gênero')
 
         const body = document.querySelector('.modal-body')
         const permissions = body?._getState?.() ?? {}
@@ -137,7 +153,7 @@ function openUserForm() {
         saveBtn.disabled = true
         saveBtn.textContent = 'Cadastrando...'
         try {
-          await createEmployee(name, email, pass, permissions)
+          await createEmployee(name, email, pass, permissions, generoSel.value)
           toastSuccess(`${name} cadastrada com sucesso!`)
           close()
         } catch (err) {
@@ -213,6 +229,7 @@ export function render(container) {
         el('th', {}, 'Nome'),
         el('th', {}, 'E-mail'),
         el('th', {}, 'Perfil'),
+        el('th', {}, 'Gênero'),
         el('th', {}, 'Status'),
         el('th', { class: 'col-actions' }, 'Ações'),
       )
@@ -273,10 +290,23 @@ export function render(container) {
       actionsWrap.appendChild(toggleBtn)
       const actionsCell = el('td', { class: 'col-actions' }, actionsWrap)
 
+      const generoSel = generoSelect(u.genero)
+      generoSel.addEventListener('change', async () => {
+        try {
+          await updateDoc(doc(db, 'users', u.id), { genero: generoSel.value || null })
+          toastSuccess('Gênero atualizado.')
+        } catch (err) {
+          console.error(err)
+          toastError('Erro ao atualizar o gênero.')
+          generoSel.value = u.genero || ''
+        }
+      })
+
       return el('tr', {},
         el('td', {}, u.name || '—'),
         el('td', {}, u.email || '—'),
         el('td', {}, u.role === 'master' ? 'Master' : 'Funcionária'),
+        el('td', {}, generoSel),
         el('td', {}, statusBadge),
         actionsCell,
       )
