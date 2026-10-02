@@ -11,7 +11,7 @@ import { subscribeVendasEntregues, marcarPosVendaFeito } from '../vendas/service
 import { buildTarefasWidget } from './tarefasWidget.js'
 import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { isoLocal } from '../../shared/utils/periodo.js'
-import { collection, query, where, getCountFromServer, getDocs } from 'firebase/firestore'
+import { collection, query, where, getCountFromServer, getDocs, getDoc, doc } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 
 const MODULE_CARDS = [
@@ -294,7 +294,28 @@ function abrirDetalhesVendaPosVenda(v) {
 // marcado como feito — fica no mural até alguém clicar "Feito", não some
 // sozinho. dataEntrega só existe em vendas entregues depois dessa mudança
 // (histórico antigo não retroage, pra não inundar o mural de recados velhos).
-function recadosPosVenda(vendas) {
+// Mensagem-padrão de pós-venda — abre a conversa no WhatsApp com o texto já
+// escrito (wa.me); quem envia é o Vitor, no WhatsApp dele, depois de revisar.
+function mensagemPosVenda(nomeCompleto, produto) {
+  const primeiroNome = (nomeCompleto || '').trim().split(' ')[0]
+  const aparelho = (produto || '').replace(/\s*S\/N\b/i, '').trim()
+  return `Olá${primeiroNome ? ', ' + primeiroNome : ''}! Tudo bem? Aqui é da Baruk Technology. `
+    + `Passando para saber como está sendo sua experiência com ${aparelho ? 'o seu ' + aparelho : 'a sua compra'}. `
+    + 'Está tudo certo? Se precisar de qualquer coisa, é só chamar por aqui. Um abraço!'
+}
+
+function posVendaActions(v, cliente) {
+  const produto = v.produto || v.itens?.[0]?.produto || ''
+  const link = cliente?.phone
+    ? whatsappLink(cliente.phone, cliente.phoneCountry, mensagemPosVenda(v.cliente, produto))
+    : null
+  const wa = link
+    ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title: 'Enviar mensagem de pós-venda no WhatsApp' }, whatsappIcon())
+    : null
+  return el('div', { class: 'mural-item-actions' }, wa, posVendaAction(v.id))
+}
+
+function recadosPosVenda(vendas, clientesPorId = {}) {
   return vendas
     .filter(v => !v.posVendaFeito && (diasDesde(v.dataEntrega) ?? -1) >= 3)
     .sort((a, b) => (a.dataEntrega?.toDate?.() ?? 0) - (b.dataEntrega?.toDate?.() ?? 0))
@@ -305,7 +326,7 @@ function recadosPosVenda(vendas) {
         tipo: 'posvenda',
         titulo: `Pós-venda: ${v.cliente || 'Cliente'}`,
         detalhe: `Entregue há ${dias} dia${dias === 1 ? '' : 's'}${produto ? ' · ' + produto : ''} — hora de dar um retorno.`,
-        action: posVendaAction(v.id),
+        action: posVendaActions(v, clientesPorId[v.clienteId]),
         onClick: () => abrirDetalhesVendaPosVenda(v),
       }
     })
@@ -497,6 +518,22 @@ export function render(container) {
   let aniversariantes = []
   let botStatus = null
   let vendasEntregues = []
+  // Telefone do cliente pro botão de WhatsApp do pós-venda — buscado só dos
+  // clientes com pós-venda pendente, uma vez por id (falha de permissão/rede
+  // só deixa o recado sem o botão).
+  const clientesPorId = {}
+  const clientesBuscados = new Set()
+
+  function carregarClientesPosVenda() {
+    vendasEntregues
+      .filter(v => !v.posVendaFeito && v.clienteId && !clientesBuscados.has(v.clienteId))
+      .forEach(v => {
+        clientesBuscados.add(v.clienteId)
+        getDoc(doc(db, 'clientes', v.clienteId))
+          .then(snap => { if (snap.exists()) { clientesPorId[v.clienteId] = snap.data(); renderMural() } })
+          .catch(err => console.error('Erro ao buscar cliente do pós-venda:', err))
+      })
+  }
 
   function renderMural() {
     const recados = []
@@ -504,7 +541,7 @@ export function render(container) {
     if (alertaBot) recados.push(alertaBot)
 
     recados.push(...recadosFinanceiro(lancamentos))
-    recados.push(...recadosPosVenda(vendasEntregues))
+    recados.push(...recadosPosVenda(vendasEntregues, clientesPorId))
 
     aniversariantes.forEach(c => {
       const phone = c.phone || ''
@@ -544,7 +581,7 @@ export function render(container) {
   )
 
   const unsubVendasEntregues = subscribeVendasEntregues(
-    lista => { vendasEntregues = lista; renderMural() },
+    lista => { vendasEntregues = lista; renderMural(); carregarClientesPosVenda() },
     err => console.error('Erro ao acompanhar vendas entregues:', err)
   )
 

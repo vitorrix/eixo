@@ -1064,6 +1064,7 @@ input, select, textarea {
   transition: background .15s;
 }
 .mural-item-action:hover { background: #d1f4e3; }
+.mural-item-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .mural-item-action:disabled { opacity: .6; cursor: default; }
 
 .mural-item-action-text {
