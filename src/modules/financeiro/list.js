@@ -57,7 +57,15 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   const formasPagamento = operacoes.formasPagamento || []
   const categorias = operacoes.categorias || []
 
+  // O Mural do dashboard ("Detalhar") pede a aba via sessionStorage — lido uma
+  // vez e apagado, pra um acesso normal ao Financeiro continuar abrindo em
+  // Recebimentos.
   let activeTipo = 'receber'
+  try {
+    const pedido = sessionStorage.getItem('eixo:financeiroTipo')
+    sessionStorage.removeItem('eixo:financeiroTipo')
+    if (pedido && TIPO_META[pedido]) activeTipo = pedido
+  } catch { /* sessionStorage indisponível: mantém o padrão */ }
   let periodo = presetRange('este-mes')
 
   // ── KPIs ─────────────────────────────────────────────────────────────────

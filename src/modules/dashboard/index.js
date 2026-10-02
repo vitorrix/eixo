@@ -170,8 +170,15 @@ function recadoBotStatus(status) {
   return null
 }
 
-function detalharAction() {
-  return el('a', { href: '#/financeiro', class: 'mural-item-action mural-item-action-text' }, 'Detalhar')
+// tipo: 'pagar' | 'receber' — aba do Financeiro que deve abrir. O router é
+// hash puro (sem query string), então a escolha vai por sessionStorage e o
+// Financeiro lê e limpa no início (ver FINANCEIRO_TIPO_KEY em financeiro/list.js).
+function detalharAction(tipo) {
+  const link = el('a', { href: '#/financeiro', class: 'mural-item-action mural-item-action-text' }, 'Detalhar')
+  link.addEventListener('click', () => {
+    try { sessionStorage.setItem('eixo:financeiroTipo', tipo) } catch { /* sem sessionStorage: abre na aba padrão */ }
+  })
+  return link
 }
 
 // Domingo da semana corrente (segunda como início), pra somar "o que vence
@@ -211,16 +218,16 @@ function recadosFinanceiro(lancamentos) {
 
   const recados = []
   if (pagarHoje > 0) {
-    recados.push({ tipo: 'pagamento', titulo: `Você tem ${brl(pagarHoje)} em pagamentos para hoje`, detalhe: 'Vencimento hoje, ainda não pago.', action: detalharAction() })
+    recados.push({ tipo: 'pagamento', titulo: `Você tem ${brl(pagarHoje)} em pagamentos para hoje`, detalhe: 'Vencimento hoje, ainda não pago.', action: detalharAction('pagar') })
   }
   if (receberHoje > 0) {
-    recados.push({ tipo: 'recebimento', titulo: `Você tem ${brl(receberHoje)} para receber hoje`, detalhe: 'Vencimento hoje, ainda não recebido.', action: detalharAction() })
+    recados.push({ tipo: 'recebimento', titulo: `Você tem ${brl(receberHoje)} para receber hoje`, detalhe: 'Vencimento hoje, ainda não recebido.', action: detalharAction('receber') })
   }
   if (pagarSemana > pagarHoje) {
-    recados.push({ tipo: 'pagamento', titulo: `${brl(pagarSemana)} em pagamentos essa semana`, detalhe: 'Total a pagar até domingo (inclui o de hoje).', action: detalharAction() })
+    recados.push({ tipo: 'pagamento', titulo: `${brl(pagarSemana)} em pagamentos essa semana`, detalhe: 'Total a pagar até domingo (inclui o de hoje).', action: detalharAction('pagar') })
   }
   if (receberSemana > receberHoje) {
-    recados.push({ tipo: 'recebimento', titulo: `${brl(receberSemana)} a receber essa semana`, detalhe: 'Total a receber até domingo (inclui o de hoje).', action: detalharAction() })
+    recados.push({ tipo: 'recebimento', titulo: `${brl(receberSemana)} a receber essa semana`, detalhe: 'Total a receber até domingo (inclui o de hoje).', action: detalharAction('receber') })
   }
   return recados
 }
