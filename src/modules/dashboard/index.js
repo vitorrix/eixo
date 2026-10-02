@@ -290,24 +290,34 @@ function abrirDetalhesVendaPosVenda(v) {
   })
 }
 
-// Vendas entregues há 3 dias ou mais que ainda não tiveram o pós-venda
-// marcado como feito — fica no mural até alguém clicar "Feito", não some
-// sozinho. dataEntrega só existe em vendas entregues depois dessa mudança
-// (histórico antigo não retroage, pra não inundar o mural de recados velhos).
+// Nome do aparelho pro texto da mensagem: só os aparelhos da venda (nunca
+// acessório/serviço), sem cor ("iPhone 17 Pro Max 256GB · azul" -> "iPhone 17
+// Pro Max 256GB") e sem "S/N". Venda avulsa não tem itens[], usa v.produto.
+function aparelhosDaVenda(v) {
+  const nomes = (v.itens || [])
+    .filter(it => (it.tipo || 'produto') === 'produto')
+    .map(it => it.produto)
+  if (!nomes.length && v.produto) nomes.push(v.produto)
+  return nomes
+    .map(n => (n || '').split(' · ')[0].replace(/\s*S\/N\b/i, '').trim())
+    .filter(Boolean)
+}
+
 // Mensagem-padrão de pós-venda — abre a conversa no WhatsApp com o texto já
-// escrito (wa.me); quem envia é o Vitor, no WhatsApp dele, depois de revisar.
-function mensagemPosVenda(nomeCompleto, produto) {
-  const primeiroNome = (nomeCompleto || '').trim().split(' ')[0]
-  const aparelho = (produto || '').replace(/\s*S\/N\b/i, '').trim()
-  return `Olá${primeiroNome ? ', ' + primeiroNome : ''}! Tudo bem? Aqui é da Baruk Technology. `
-    + `Passando para saber como está sendo sua experiência com ${aparelho ? 'o seu ' + aparelho : 'a sua compra'}. `
+// escrito (wa.me); quem revisa/edita e envia é o Vitor, no WhatsApp dele.
+function mensagemPosVenda(nomeCliente, aparelhos, nomeRemetente) {
+  const cliente = (nomeCliente || '').trim().split(' ')[0]
+  const remetente = (nomeRemetente || '').trim().split(' ')[0]
+  const quem = remetente ? `Aqui é o ${remetente}, da Baruk Technology.` : 'Aqui é da Baruk Technology.'
+  const objeto = aparelhos.length ? `com o seu ${aparelhos.join(' e o seu ')}` : 'com a sua compra'
+  return `Olá${cliente ? ', ' + cliente : ''}! Tudo bem? ${quem} `
+    + `Passando para saber como está a sua experiência ${objeto}. `
     + 'Está tudo certo? Se precisar de qualquer coisa, é só chamar por aqui. Um abraço!'
 }
 
 function posVendaActions(v, cliente) {
-  const produto = v.produto || v.itens?.[0]?.produto || ''
   const link = cliente?.phone
-    ? whatsappLink(cliente.phone, cliente.phoneCountry, mensagemPosVenda(v.cliente, produto))
+    ? whatsappLink(cliente.phone, cliente.phoneCountry, mensagemPosVenda(v.cliente, aparelhosDaVenda(v), getCurrentProfile()?.name))
     : null
   const wa = link
     ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title: 'Enviar mensagem de pós-venda no WhatsApp' }, whatsappIcon())
@@ -315,6 +325,10 @@ function posVendaActions(v, cliente) {
   return el('div', { class: 'mural-item-actions' }, wa, posVendaAction(v.id))
 }
 
+// Vendas entregues há 3 dias ou mais que ainda não tiveram o pós-venda
+// marcado como feito — fica no mural até alguém clicar "Feito", não some
+// sozinho. dataEntrega só existe em vendas entregues depois dessa mudança
+// (histórico antigo não retroage, pra não inundar o mural de recados velhos).
 function recadosPosVenda(vendas, clientesPorId = {}) {
   return vendas
     .filter(v => !v.posVendaFeito && (diasDesde(v.dataEntrega) ?? -1) >= 3)
