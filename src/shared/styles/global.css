@@ -1001,6 +1001,7 @@ input, select, textarea {
 }
 
 .mural-title { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.mural-header-link { margin-left: auto; font-size: 12px; }
 
 .mural-list {
   display: flex;

@@ -1,6 +1,6 @@
 import {
   collection, addDoc, updateDoc,
-  doc, onSnapshot, query, orderBy, where, getDocs, serverTimestamp, writeBatch, increment,
+  doc, onSnapshot, query, orderBy, where, getDocs, serverTimestamp, deleteField, writeBatch, increment,
 } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
@@ -64,6 +64,18 @@ export function subscribeVendasEntregues(callback, onError) {
 
 export async function marcarPosVendaFeito(id) {
   return updateDoc(doc(db, COL, id), { posVendaFeito: true, posVendaFeitoEm: serverTimestamp() })
+}
+
+// Volta o pós-venda pra fila do Mural (clique em "Feito" sem querer, ou
+// mensagem que ainda não foi enviada).
+export async function reabrirPosVenda(id) {
+  return updateDoc(doc(db, COL, id), { posVendaFeito: false, posVendaFeitoEm: deleteField() })
+}
+
+// Registra que a mensagem de pós-venda foi ABERTA no WhatsApp (clique no botão)
+// — o sistema não tem como saber se o envio de fato aconteceu depois disso.
+export async function registrarPosVendaWhatsapp(id) {
+  return updateDoc(doc(db, COL, id), { posVendaWhatsappEm: serverTimestamp() })
 }
 
 // Desfaz a entrada de estoque se a venda avulsa tinha descontado 1 na criação —

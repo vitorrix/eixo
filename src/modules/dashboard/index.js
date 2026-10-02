@@ -7,7 +7,9 @@ import { subscribeAniversariantes } from '../clientes/service.js'
 import { subscribeBotStatus } from '../configuracoes/service.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
 import { subscribeTarefas } from '../tarefas/service.js'
-import { subscribeVendasEntregues, marcarPosVendaFeito } from '../vendas/service.js'
+import { subscribeVendasEntregues, marcarPosVendaFeito, reabrirPosVenda, registrarPosVendaWhatsapp } from '../vendas/service.js'
+import { openModal } from '../../shared/components/Modal.js'
+import { toastError } from '../../shared/components/Toast.js'
 import { buildTarefasWidget } from './tarefasWidget.js'
 import { nowMonth, monthKey, monthLabel, shiftMonth } from '../../shared/utils/month.js'
 import { isoLocal } from '../../shared/utils/periodo.js'
@@ -320,14 +322,95 @@ function mensagemPosVenda(nomeCliente, aparelhos, nomeRemetente, generoRemetente
     + 'Está tudo certo? Se precisar de qualquer coisa, é só chamar por aqui. Um abraço!'
 }
 
+function posVendaWhatsappLink(v, cliente) {
+  if (!cliente?.phone) return null
+  return whatsappLink(cliente.phone, cliente.phoneCountry, mensagemPosVenda(v.cliente, aparelhosDaVenda(v), getCurrentProfile()?.name, getCurrentProfile()?.genero))
+}
+
+function posVendaWhatsappBtn(v, cliente, title = 'Enviar mensagem de pós-venda no WhatsApp') {
+  const link = posVendaWhatsappLink(v, cliente)
+  if (!link) return null
+  const a = el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title }, whatsappIcon())
+  // Só registra que a conversa foi aberta (não dá pra saber se foi enviada).
+  a.addEventListener('click', () => {
+    registrarPosVendaWhatsapp(v.id).catch(err => console.error('Erro ao registrar abertura do WhatsApp:', err))
+  })
+  return a
+}
+
 function posVendaActions(v, cliente) {
-  const link = cliente?.phone
-    ? whatsappLink(cliente.phone, cliente.phoneCountry, mensagemPosVenda(v.cliente, aparelhosDaVenda(v), getCurrentProfile()?.name, getCurrentProfile()?.genero))
-    : null
-  const wa = link
-    ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title: 'Enviar mensagem de pós-venda no WhatsApp' }, whatsappIcon())
-    : null
-  return el('div', { class: 'mural-item-actions' }, wa, posVendaAction(v.id))
+  return el('div', { class: 'mural-item-actions' }, posVendaWhatsappBtn(v, cliente), posVendaAction(v.id))
+}
+
+function tsDia(ts) {
+  return ts?.toDate ? shortDate(isoLocal(ts.toDate())) : null
+}
+
+// Lista dos pós-vendas já marcados como feitos (últimos 60 dias): dá pra
+// desfazer um "Feito" clicado sem querer (Reabrir) e mandar/reenviar a mensagem
+// quando quiser. "WhatsApp aberto" = o botão foi clicado; o sistema não sabe se
+// a mensagem foi realmente enviada depois.
+function abrirPosVendaConcluidos({ getVendas, getClientes, buscarClientes }) {
+  const limite = Date.now() - 60 * 24 * 60 * 60 * 1000
+  const lista = () => getVendas()
+    .filter(v => v.posVendaFeito)
+    .filter(v => (v.posVendaFeitoEm?.toDate?.() ?? v.dataEntrega?.toDate?.() ?? new Date(0)).getTime() >= limite)
+    .sort((a, b) => (b.posVendaFeitoEm?.toDate?.() ?? 0) - (a.posVendaFeitoEm?.toDate?.() ?? 0))
+
+  openModal({
+    title: 'Pós-venda concluídos',
+    size: 'lg',
+    renderBody: (body, close) => {
+      const removidos = new Set()
+      const listEl = el('div', { class: 'mural-list', style: 'max-height:none' })
+
+      function desenhar() {
+        const vendas = lista().filter(v => !removidos.has(v.id))
+        if (!vendas.length) {
+          listEl.replaceChildren(el('p', { class: 'text-muted' }, 'Nenhum pós-venda concluído nos últimos 60 dias.'))
+          return
+        }
+        listEl.replaceChildren(...vendas.map(v => {
+          const aparelhos = aparelhosDaVenda(v).join(' + ')
+          const feitoEm = tsDia(v.posVendaFeitoEm)
+          const abertoEm = tsDia(v.posVendaWhatsappEm)
+          const status = abertoEm
+            ? el('span', { class: 'badge badge-pago' }, `WhatsApp aberto em ${abertoEm}`)
+            : el('span', { class: 'badge badge-pendente' }, 'Mensagem não enviada')
+
+          const reabrirBtn = el('button', { type: 'button', class: 'mural-item-action mural-item-action-text' }, 'Reabrir')
+          reabrirBtn.addEventListener('click', async () => {
+            reabrirBtn.disabled = true
+            try {
+              await reabrirPosVenda(v.id)
+              removidos.add(v.id)
+              desenhar()
+            } catch (err) {
+              console.error('Erro ao reabrir pós-venda:', err)
+              toastError('Erro ao reabrir.')
+              reabrirBtn.disabled = false
+            }
+          })
+
+          const wa = posVendaWhatsappBtn(v, getClientes()[v.clienteId], abertoEm ? 'Reenviar mensagem no WhatsApp' : 'Enviar mensagem no WhatsApp')
+          return el('div', { class: 'mural-item' },
+            el('div', { class: 'mural-item-body' },
+              el('div', { class: 'mural-item-title' }, v.cliente || 'Cliente'),
+              el('div', { class: 'mural-item-detalhe' }, `${feitoEm ? 'Feito em ' + feitoEm : 'Feito'}${aparelhos ? ' · ' + aparelhos : ''}`),
+              el('div', { style: 'margin-top:4px' }, status),
+            ),
+            el('div', { class: 'mural-item-actions' }, wa, reabrirBtn),
+          )
+        }))
+      }
+
+      desenhar()
+      buscarClientes(lista()).then(desenhar)
+      const fechar = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
+      fechar.addEventListener('click', close)
+      mount(body, listEl, el('div', { class: 'modal-footer' }, fechar))
+    },
+  })
 }
 
 // Vendas entregues há 3 dias ou mais que ainda não tiveram o pós-venda
@@ -351,7 +434,13 @@ function recadosPosVenda(vendas, clientesPorId = {}) {
     })
 }
 
-function buildMural(recados) {
+function concluidosBtn(onClick) {
+  const btn = el('button', { type: 'button', class: 'btn-link mural-header-link' }, 'Pós-venda concluídos')
+  btn.addEventListener('click', onClick)
+  return btn
+}
+
+function buildMural(recados, onConcluidos) {
   const body = recados.length
     ? el('div', { class: 'mural-list' }, ...recados.map(muralItem))
     : el('div', { class: 'mural-empty' }, buildMuralEmptyIcon(), el('p', {}, 'Tudo em dia — nenhum recado por aqui.'))
@@ -360,6 +449,7 @@ function buildMural(recados) {
     el('div', { class: 'mural-header' },
       el('span', { class: 'mural-title' }, 'Mural de Recados'),
       recados.length ? el('span', { class: 'count-badge' }, String(recados.length)) : null,
+      onConcluidos ? concluidosBtn(onConcluidos) : null,
     ),
     body,
   )
@@ -543,15 +633,20 @@ export function render(container) {
   const clientesPorId = {}
   const clientesBuscados = new Set()
 
-  function carregarClientesPosVenda() {
-    vendasEntregues
-      .filter(v => !v.posVendaFeito && v.clienteId && !clientesBuscados.has(v.clienteId))
-      .forEach(v => {
+  function buscarClientes(vendas) {
+    const promessas = vendas
+      .filter(v => v.clienteId && !clientesBuscados.has(v.clienteId))
+      .map(v => {
         clientesBuscados.add(v.clienteId)
-        getDoc(doc(db, 'clientes', v.clienteId))
-          .then(snap => { if (snap.exists()) { clientesPorId[v.clienteId] = snap.data(); renderMural() } })
+        return getDoc(doc(db, 'clientes', v.clienteId))
+          .then(snap => { if (snap.exists()) clientesPorId[v.clienteId] = snap.data() })
           .catch(err => console.error('Erro ao buscar cliente do pós-venda:', err))
       })
+    return Promise.all(promessas)
+  }
+
+  function carregarClientesPosVenda() {
+    buscarClientes(vendasEntregues.filter(v => !v.posVendaFeito)).then(renderMural)
   }
 
   function renderMural() {
@@ -581,7 +676,11 @@ export function render(container) {
       })
     })
 
-    mount(muralWrap, buildMural(recados))
+    mount(muralWrap, buildMural(recados, () => abrirPosVendaConcluidos({
+      getVendas: () => vendasEntregues,
+      getClientes: () => clientesPorId,
+      buscarClientes,
+    })))
   }
 
   const unsubBirthday = subscribeAniversariantes(lista => {
