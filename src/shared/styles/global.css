@@ -3260,6 +3260,18 @@ input, select, textarea {
 .lead-col--sem_resposta .lead-col-head { border-bottom-color: #fecaca; }
 .lead-col--convertido   .lead-col-head { border-bottom-color: #a7f3d0; }
 .lead-col--descartado   .lead-col-head { border-bottom-color: #e5e7eb; }
+/* Tema escuro: colunas do quadro com tom escuro da mesma cor — o fundo pastel
+   fixo deixava o título (cor de texto clara) ilegível. */
+:root.tema-escuro .lead-col--novo         { background: #2b2616; border-color: #5c4d1a; }
+:root.tema-escuro .lead-col--em_followup  { background: #16263a; border-color: #254a75; }
+:root.tema-escuro .lead-col--sem_resposta { background: #321a1c; border-color: #6b2a2e; }
+:root.tema-escuro .lead-col--convertido   { background: #14301f; border-color: #1f6b43; }
+:root.tema-escuro .lead-col--descartado   { background: #1d2a2d; border-color: #2f4549; }
+:root.tema-escuro .lead-col--novo         .lead-col-head { border-bottom-color: #5c4d1a; }
+:root.tema-escuro .lead-col--em_followup  .lead-col-head { border-bottom-color: #254a75; }
+:root.tema-escuro .lead-col--sem_resposta .lead-col-head { border-bottom-color: #6b2a2e; }
+:root.tema-escuro .lead-col--convertido   .lead-col-head { border-bottom-color: #1f6b43; }
+:root.tema-escuro .lead-col--descartado   .lead-col-head { border-bottom-color: #2f4549; }
 .lead-col-head {
   display: flex;
   align-items: center;
