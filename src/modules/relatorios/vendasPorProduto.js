@@ -5,6 +5,7 @@ import { toastError } from '../../shared/components/Toast.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { presetRange } from '../../shared/utils/periodo.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 
 export function renderVendasPorProduto(container) {
   mount(container, el('div', { class: 'loading' }, 'Carregando vendas...'))
@@ -67,7 +68,7 @@ function _init(container) {
 }
 
 function dataVenda(v) {
-  return v.criadoEm?.toDate ? v.criadoEm.toDate().toISOString().slice(0, 10) : null
+  return v.criadoEm?.toDate ? isoLocal(v.criadoEm.toDate()) : null
 }
 
 function vendasNoPeriodo(vendas, de, ate) {

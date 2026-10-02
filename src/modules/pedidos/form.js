@@ -7,8 +7,9 @@ import { createEntityPeek } from '../../shared/components/EntityPeek.js'
 import { renderClienteForm } from '../clientes/form.js'
 import { openModal } from '../../shared/components/Modal.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 
-function todayISO() { return new Date().toISOString().slice(0, 10) }
+function todayISO() { return isoLocal(new Date()) }
 
 export function renderPedidoForm(container, close, pedido, { clientes, produtosCatalogo, operacoes = {} }) {
   const formasPagamentoConfig = operacoes.formasPagamento || []

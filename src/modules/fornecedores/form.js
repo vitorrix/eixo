@@ -7,6 +7,7 @@ import { createFornecedor, updateFornecedor, validarFornecedor } from './service
 import { validationStatus, VALIDATION_LABELS } from './validation.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { createChipSelect } from '../../shared/components/ChipSelect.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 
 // Marca/tipo do que o fornecedor vende. "Semi-Novo" saiu daqui: condição
 // (novo/usado) é outra dimensão, controlada pelo seletor CONDICOES abaixo — um
@@ -227,7 +228,7 @@ export function renderFornecedorForm(container, close, fornecedor = null) {
     validationBadge.textContent = VALIDATION_LABELS[status]
     validationBadge.className = `badge badge-validation-${status}`
     validationDetail.textContent = dueDate
-      ? `Válido até ${fullDate(dueDate.toISOString().slice(0, 10))}`
+      ? `Válido até ${fullDate(isoLocal(dueDate))}`
       : 'Este fornecedor ainda não foi validado por chamada de vídeo.'
     validarBtn.classList.remove('hidden')
   }

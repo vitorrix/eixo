@@ -5,6 +5,7 @@ import {
 import { db } from '../../firebase.js'
 import { getCurrentProfile } from '../../auth/session.js'
 import { getOperacoes, proximoNumeroFinanceiro } from '../configuracoes/service.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 
 const COL = 'pedidos'
 
@@ -126,7 +127,7 @@ async function limparCompraEVenda(pedidoId, batch) {
 // que "confirmar pagamento"/"efetuar compra" representa o dinheiro já ter
 // saído/entrado nesse momento.
 async function criarCompraEVenda(batch, pedido, itensCompra, pagamentosPorForma) {
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = isoLocal(new Date())
   const operacoes = await getOperacoes()
   const formasNorm = normalizarFormasPagamento(pedido)
   const formaPag = formasNorm.map(f => f.nome).filter(Boolean).join(' + ')

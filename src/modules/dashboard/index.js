@@ -272,8 +272,8 @@ function abrirDetalhesVendaPosVenda(v) {
   const produtoValor = itens.length > 1
     ? el('div', {}, ...itens.map(it => el('div', {}, `${it.produto} — ${brl(toNumero(it.valor))}`)))
     : (itens[0]?.produto || '—')
-  const dataVenda    = v.criadoEm?.toDate    ? shortDate(v.criadoEm.toDate().toISOString().slice(0, 10))    : '—'
-  const dataEntrega  = v.dataEntrega?.toDate ? shortDate(v.dataEntrega.toDate().toISOString().slice(0, 10)) : '—'
+  const dataVenda    = v.criadoEm?.toDate    ? shortDate(isoLocal(v.criadoEm.toDate()))    : '—'
+  const dataEntrega  = v.dataEntrega?.toDate ? shortDate(isoLocal(v.dataEntrega.toDate())) : '—'
 
   abrirDetalhesModal({
     title: 'Detalhes da Venda',

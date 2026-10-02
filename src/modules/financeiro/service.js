@@ -24,7 +24,7 @@ export function subscribeFinanceiro(callback, onError) {
 function addMonths(dataISO, n) {
   const [y, m, d] = dataISO.split('-').map(Number)
   const data = new Date(y, m - 1 + n, d)
-  return data.toISOString().slice(0, 10)
+  return isoLocal(data)
 }
 
 // Uma ocorrência por mês entre dataInicial e dataFinal (inclusive), todas

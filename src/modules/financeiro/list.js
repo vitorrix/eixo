@@ -18,6 +18,7 @@ import { buildNomeMap, nomeVivo } from '../../shared/utils/nomeVivo.js'
 import { createLancamento, updateLancamento, deleteLancamento, marcarLiquidado } from './service.js'
 import { deleteVenda } from '../vendas/service.js'
 import { deleteCompra } from '../compras/service.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 
 const TIPO_META = {
   receber: { label: 'Recebimentos', novo: '+ Novo Recebimento', situacaoOk: 'Recebida', contatoLabel: 'Recebido de' },
@@ -25,7 +26,7 @@ const TIPO_META = {
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10)
+  return isoLocal(new Date())
 }
 
 // Data mostrada na coluna "Data": pendente = vencimento; liquidado = quando o

@@ -11,6 +11,7 @@ import { montarEmpresa, criarBotaoImprimir } from '../../shared/components/Recib
 import { montarDadosOrcamentoPdf, renderOrcamentoPdfPreview } from '../../shared/components/OrcamentoPdf.js'
 import { getEmpresa, getTabelaTroca } from '../configuracoes/service.js'
 import { toastError } from '../../shared/components/Toast.js'
+import { isoLocal } from '../../shared/utils/periodo.js'
 
 function R(v) {
   if (!v || isNaN(v)) return 'R$ 0,00'
@@ -668,7 +669,7 @@ function buildParc(prodData, empresa) {
 
     const dados = montarDadosOrcamentoPdf({
       empresa: montarEmpresa(empresa),
-      data: fullDate(new Date().toISOString().slice(0, 10)),
+      data: fullDate(isoLocal(new Date())),
       tipo: 'parcelamento',
       clienteNome: ultimoCalc.cli || 'Cliente',
       clienteDocLabel: tipo === 'pf' ? 'CPF' : 'CNPJ',
@@ -848,7 +849,7 @@ function buildTroca(prodData, empresa) {
 
     const dados = montarDadosOrcamentoPdf({
       empresa: montarEmpresa(empresa),
-      data: fullDate(new Date().toISOString().slice(0, 10)),
+      data: fullDate(isoLocal(new Date())),
       tipo: 'troca',
       clienteNome: ultimoCalc.cli || 'Cliente',
       clienteDocLabel: tipo === 'pf' ? 'CPF' : 'CNPJ',

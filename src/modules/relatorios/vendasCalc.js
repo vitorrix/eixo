@@ -1,10 +1,11 @@
+import { isoLocal } from '../../shared/utils/periodo.js'
 // Cálculos compartilhados dos relatórios baseados em Vendas (Vendas
 // Detalhadas, ABC de Produtos). O custo por item não vive na Venda: venda de
 // pedido guarda o custo na Compra vinculada (pedidoId), venda avulsa no
 // cadastro do produto (produtoId → precoCusto).
 
 export function dataVenda(v) {
-  return v.criadoEm?.toDate ? v.criadoEm.toDate().toISOString().slice(0, 10) : null
+  return v.criadoEm?.toDate ? isoLocal(v.criadoEm.toDate()) : null
 }
 
 export function vendasNoPeriodo(vendas, de, ate) {
