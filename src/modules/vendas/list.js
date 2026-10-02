@@ -267,7 +267,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
         reciboCell.appendChild(reciboBtn)
       }
 
-      const dateStr = v.criadoEm?.toDate ? shortDate(v.criadoEm.toDate().toISOString().slice(0,10)) : '—'
+      const dateStr = v.criadoEm?.toDate ? shortDate(dataLocal(v.criadoEm)) : '—'
       const pagIcones = iconesFormaPagamento(v.formaPagamento)
 
       const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
@@ -506,7 +506,7 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   function abrirDetalhesVendaModal(v) {
     const entregaMeta = ENTREGA_META[v.statusEntrega] || ENTREGA_META.aguardando
     const pagLabel = v.formaPagamento || '—'
-    const dateStr = v.criadoEm?.toDate ? shortDate(v.criadoEm.toDate().toISOString().slice(0, 10)) : '—'
+    const dateStr = v.criadoEm?.toDate ? shortDate(dataLocal(v.criadoEm)) : '—'
     const podeRecibo = v.statusEntrega === 'entregue'
 
     // Venda de pedido pode ter vários itens — lista todos, um por linha, em

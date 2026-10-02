@@ -104,6 +104,13 @@ function filterGroup(labelText, iconKey, widgetEl) {
   )
 }
 
+// "256GB" -> 256, "1TB" -> 1024. parseInt sozinho lia "1TB" como 1 e jogava o
+// terabyte antes de 128GB na lista de filtros.
+function capacidadeEmGB(txt) {
+  const n = parseFloat(txt) || 0
+  return /tb/i.test(txt) ? n * 1024 : n
+}
+
 export function renderBuscaList(container, ofertas) {
   const searchInput = el('input', {
     type: 'search',
@@ -343,21 +350,21 @@ export function renderBuscaList(container, ofertas) {
 
   function refreshFilterOptions() {
     const capacidades = [...new Set(baseFilter('capacidade').map(o => o.capacidade).filter(Boolean))]
-      .sort((a, b) => parseInt(a) - parseInt(b))
+      .sort((a, b) => capacidadeEmGB(a) - capacidadeEmGB(b))
     capacidadeMs.setOptions(capacidades)
 
     const rams = [...new Set(baseFilter('ram').map(o => o.ram).filter(Boolean))]
-      .sort((a, b) => parseInt(a) - parseInt(b))
+      .sort((a, b) => capacidadeEmGB(a) - capacidadeEmGB(b))
     ramMs.setOptions(rams)
 
     const tamanhos = [...new Set(baseFilter('tamanho').map(o => o.tamanho).filter(Boolean))]
       .sort((a, b) => parseInt(a) - parseInt(b))
     tamanhoMs.setOptions(tamanhos)
 
-    const cores = [...new Set(baseFilter('cor').map(o => o.cor).filter(Boolean))].sort()
+    const cores = [...new Set(baseFilter('cor').map(o => o.cor).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
     corMs.setOptions(cores)
 
-    const fornecedores = [...new Set(baseFilter('fornecedor').map(o => o.fornecedorNome).filter(Boolean))].sort()
+    const fornecedores = [...new Set(baseFilter('fornecedor').map(o => o.fornecedorNome).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
     fornecedorMs.setOptions(fornecedores)
   }
 

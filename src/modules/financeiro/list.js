@@ -28,6 +28,13 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10)
 }
 
+// Data mostrada na coluna "Data": pendente = vencimento; liquidado = quando o
+// dinheiro de fato entrou/saiu. A ordenação usa a MESMA data — ordenar por
+// vencimento enquanto a coluna mostra outra data deixava a lista "embaralhada".
+function dataExibida(l) {
+  return l.liquidado ? (l.dataLiquidacao || l.dataVencimento) : (l.dataVencimento || l.dataLiquidacao)
+}
+
 export function renderFinanceiroList(container, lancamentos, { operacoes = {}, clientes = [], fornecedores = [] } = {}) {
   const canCreate = can('financeiro', 'create')
   const canEdit   = can('financeiro', 'edit')
@@ -148,7 +155,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
         case 'descricao': return l.descricao || ''
         case 'contato':   return nomeContatoVivo(l)
         case 'conta':     return l.conta || ''
-        case 'data':      return l.dataVencimento || ''
+        case 'data':      return dataExibida(l) || ''
         case 'situacao':  return l.liquidado ? 1 : 0
         case 'valor':     return toNumero(l.valor)
         default:          return ''
@@ -219,7 +226,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       // tivesse qualquer valor perdido (ver fix em updateLancamento,
       // financeiro/service.js), a tela ficava presa nele e não refletia uma
       // edição no vencimento.
-      const dataParaExibir = l.liquidado ? (l.dataLiquidacao || l.dataVencimento) : (l.dataVencimento || l.dataLiquidacao)
+      const dataParaExibir = dataExibida(l)
       const dateStr = dataParaExibir ? shortDate(dataParaExibir) : '—'
       const descricao = l.parcela?.total > 1 ? `${l.descricao} (${l.parcela.numero}/${l.parcela.total})` : l.descricao
 

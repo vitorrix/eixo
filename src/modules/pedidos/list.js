@@ -152,9 +152,10 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       } else if (sortCol === 'status') {
         va = a.status || ''; vb = b.status || ''
       } else { return 0 }
-      if (va < vb) return sortDir === 'asc' ? -1 : 1
-      if (va > vb) return sortDir === 'asc' ? 1 : -1
-      return 0
+      const cmp = typeof va === 'string' && typeof vb === 'string'
+        ? va.localeCompare(vb, 'pt-BR', { sensitivity: 'base' })
+        : (va < vb ? -1 : va > vb ? 1 : 0)
+      return sortDir === 'asc' ? cmp : -cmp
     })
   }
 

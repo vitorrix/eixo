@@ -288,7 +288,7 @@ export function renderComprasList(container, compras, { fornecedores, produtosCa
         onDelete: () => confirmDelete(c),
       }))
 
-      const dateStr = c.criadoEm?.toDate ? shortDate(c.criadoEm.toDate().toISOString().slice(0,10)) : '—'
+      const dateStr = c.criadoEm?.toDate ? shortDate(dataLocal(c.criadoEm)) : '—'
 
       const row = el('tr', {},
         el('td', { class: 'td-date' }, dateStr),
