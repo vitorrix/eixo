@@ -4,6 +4,7 @@ import { validateCPF, validateCNPJ, validateEmail, validatePhone } from '../../s
 import { buscarCEP } from '../../shared/utils/cep.js'
 import { createCliente, updateCliente } from './service.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
+import { abrirHistoricoCliente } from './historico.js'
 
 const UFs = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT',
              'PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
@@ -121,7 +122,13 @@ export function renderClienteForm(container, close, cliente = null, { prefillNam
   cancelBtn.addEventListener('click', close)
   submitBtn.addEventListener('click', () => form.requestSubmit())
 
-  container.append(form, el('div', { class: 'modal-footer' }, cancelBtn, submitBtn))
+  const footerBtns = [cancelBtn, submitBtn]
+  if (isEdit) {
+    const historicoBtn = el('button', { type: 'button', class: 'btn btn-outline', style: 'margin-right:auto' }, 'Histórico')
+    historicoBtn.addEventListener('click', () => abrirHistoricoCliente(cliente))
+    footerBtns.unshift(historicoBtn)
+  }
+  container.append(form, el('div', { class: 'modal-footer' }, ...footerBtns))
 
   // ── Estado inicial ───────────────────────────────────────────────────────
   setType(currentType)

@@ -3056,6 +3056,9 @@ input, select, textarea {
     width: auto !important;
     max-height: none !important;
   }
+  /* Recibo aberto por cima de outra janela (ex: Histórico do cliente): imprime
+     só a de cima. */
+  .modal-overlay:has(~ .modal-overlay) { display: none !important; }
   .modal-header, .modal-footer, .no-print { display: none !important; }
   .recibo-doc { border: none !important; }
   @page { size: A4; margin: 14mm; }

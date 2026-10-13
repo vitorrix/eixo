@@ -3,13 +3,9 @@ import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl, fullDate } from '../../shared/utils/formatters.js'
 import { toastError } from '../../shared/components/Toast.js'
-import { openModal } from '../../shared/components/Modal.js'
+import { abrirReciboHistorico } from '../../shared/components/ReciboModais.js'
 import { getEmpresa } from '../configuracoes/service.js'
 import { subscribeClientes } from '../clientes/service.js'
-import {
-  montarDadosReciboHistorico, renderReciboPreview, criarBotaoImprimir,
-  toWhatsappNumber, enviarReciboFila, FILA_STATUS_LABEL,
-} from '../../shared/components/Recibo.js'
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100]
 
@@ -202,44 +198,7 @@ function _init(container) {
   }
 
   function abrirReciboModal(venda) {
-    openModal({
-      title: 'Recibo',
-      size: 'lg',
-      renderBody: (body, closeModal) => {
-        const cliente = clientes.find(c => c.name === venda.cliente)
-        const dados = montarDadosReciboHistorico(venda, { empresa, cliente })
-        const previewWrap = el('div', {})
-        renderReciboPreview(previewWrap, dados)
-
-        const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
-        fecharBtn.addEventListener('click', closeModal)
-        const imprimirBtn = criarBotaoImprimir()
-
-        const telefone = toWhatsappNumber(cliente?.phone)
-        const statusEl = el('span', { class: 'text-muted', style: 'margin-left:10px;font-size:13px' })
-        const enviarBtn = el('button', { type: 'button', class: 'btn btn-success' }, 'Enviar por WhatsApp')
-        enviarBtn.addEventListener('click', async () => {
-          enviarBtn.disabled = true
-          try {
-            await enviarReciboFila({ dados, telefone })
-            statusEl.textContent = FILA_STATUS_LABEL.pendente
-          } catch (err) {
-            console.error(err)
-            statusEl.textContent = 'Erro ao enviar.'
-            enviarBtn.disabled = false
-          }
-        })
-        if (!telefone) {
-          enviarBtn.disabled = true
-          statusEl.textContent = 'Cliente sem telefone cadastrado no Eixo.'
-        }
-
-        mount(body,
-          previewWrap,
-          el('div', { class: 'modal-footer no-print' }, fecharBtn, imprimirBtn, enviarBtn, statusEl)
-        )
-      },
-    })
+    abrirReciboHistorico(venda, { empresa, cliente: clientes.find(c => c.name === venda.cliente) })
   }
 
   buscaInp.addEventListener('input', resetPageAndRefresh)

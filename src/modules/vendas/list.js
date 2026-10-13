@@ -1,18 +1,12 @@
-import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../firebase.js'
 import { el, mount } from '../../shared/utils/dom.js'
 import { brl, shortDate, toNumero } from '../../shared/utils/formatters.js'
 import { iconesFormaPagamento } from '../../shared/utils/formaPagamento.js'
 import { can } from '../../auth/session.js'
-import { openModal, openConfirm } from '../../shared/components/Modal.js'
+import { openConfirm } from '../../shared/components/Modal.js'
 import { renderRowActions } from '../../shared/components/RowActions.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { toastSuccess, toastError } from '../../shared/components/Toast.js'
-import {
-  montarDadosRecibo, montarDadosReciboVendaAvulsa, renderReciboPreview,
-  garantirNumeroRecibo, toWhatsappNumber, enviarReciboFila, FILA_STATUS_LABEL, criarBotaoImprimir,
-  imprimirReciboAutomaticamente,
-} from '../../shared/components/Recibo.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { createFullPageSwitcher } from '../../shared/components/FullPageForm.js'
@@ -21,7 +15,7 @@ import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { toolbarCard, searchWithIcon, toolbarMeta } from '../../shared/components/ToolbarCard.js'
 import { presetRange } from '../../shared/utils/periodo.js'
 import { buildNomeMap, nomeVivo } from '../../shared/utils/nomeVivo.js'
-import { patchPedido } from '../pedidos/service.js'
+import { abrirReciboDaVenda } from '../../shared/components/ReciboModais.js'
 import { createVenda, patchVenda, deleteVenda } from './service.js'
 
 const ENTREGA_META = {
@@ -306,107 +300,10 @@ export function renderVendasList(container, vendas, { produtosCatalogo, clientes
   }
 
   // ── Recibo ────────────────────────────────────────────────────────────────
-  // Venda vinda de pedido: o recibo é o do pedido inteiro (todos os itens juntos,
-  // igual à tela de Pedidos). Venda avulsa: recibo de item único, puxando os
-  // dados do aparelho da Compra mais recente com esse produtoId (melhor esforço
-  // — se houver mais de uma compra em aberto do mesmo produto, pode não bater
-  // com a unidade exata vendida).
-  async function montarReciboVenda(venda) {
-    if (venda.pedidoId) {
-      const snap = await getDoc(doc(db, 'pedidos', venda.pedidoId))
-      if (!snap.exists()) throw new Error('Pedido de origem não encontrado.')
-      const pedido = { id: snap.id, ...snap.data() }
-      const numero = await garantirNumeroRecibo(pedido, patchPedido)
-      const cliente = resolverClientePorIdOuNome(pedido.clienteId, pedido.cliente)
-      const vendedorNome = usuariosPorUid[pedido.criadoPor] || '—'
-      const comprasSnap = await getDocs(query(collection(db, 'compras'), where('pedidoId', '==', pedido.id)))
-      const comprasPedido = comprasSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-      return { dados: montarDadosRecibo(pedido, { numero, empresa, cliente, vendedorNome, comprasPedido }), tipo: 'pedido', entidade: pedido }
-    }
-
-    const numero = await garantirNumeroRecibo(venda, patchVenda)
-    const cliente = resolverClientePorIdOuNome(venda.clienteId, venda.cliente)
-    const vendedorNome = usuariosPorUid[venda.criadoPor] || '—'
-    let compra = null
-    if (venda.produtoId) {
-      const snap = await getDocs(query(collection(db, 'compras'), where('produtoId', '==', venda.produtoId)))
-      const candidatas = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(c => c.observacoes)
-        .sort((a, b) => (b.criadoEm?.toMillis?.() || 0) - (a.criadoEm?.toMillis?.() || 0))
-      compra = candidatas[0] || null
-    }
-    return {
-      dados: montarDadosReciboVendaAvulsa(venda, { numero, empresa, cliente, vendedorNome, compra }),
-      tipo: 'venda', entidade: venda,
-    }
-  }
-
+  // Montagem e modal ficam em shared/components/ReciboModais.js (o Histórico do
+  // cliente abre o mesmo recibo).
   function abrirReciboVendaModal(venda, { autoImprimir = false } = {}) {
-    openModal({
-      title: 'Recibo',
-      size:  'lg',
-      renderBody: (body, closeModal) => {
-        mount(body, el('div', { class: 'loading' }, 'Montando recibo...'))
-
-        montarReciboVenda(venda).then(({ dados, tipo, entidade }) => {
-          const previewWrap = el('div', {})
-          renderReciboPreview(previewWrap, dados)
-          if (autoImprimir) imprimirReciboAutomaticamente(previewWrap)
-
-          const cliente = tipo === 'pedido'
-            ? resolverClientePorIdOuNome(entidade.clienteId, entidade.cliente)
-            : resolverClientePorIdOuNome(venda.clienteId, venda.cliente)
-          const temTelefone = !!toWhatsappNumber(cliente?.phone)
-
-          const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
-          fecharBtn.addEventListener('click', () => { unsubFila?.(); closeModal() })
-
-          const imprimirBtn = criarBotaoImprimir()
-
-          const statusEl = el('span', { class: 'text-muted', style: 'margin-left:10px;font-size:13px' })
-
-          let unsubFila = null
-          const enviarBtn = el('button', { type: 'button', class: 'btn btn-success' }, 'Enviar por WhatsApp')
-          enviarBtn.addEventListener('click', async () => {
-            enviarBtn.disabled = true
-            try {
-              const telefone = toWhatsappNumber(cliente?.phone)
-              const ref = await enviarReciboFila({
-                dados, telefone,
-                pedidoId: tipo === 'pedido' ? entidade.id : null,
-                vendaId:  tipo === 'venda'  ? entidade.id : null,
-              })
-              await patchVenda(venda.id, { reciboEmitido: true })
-              toastSuccess('Enviado para a fila — o bot manda pro cliente em instantes.')
-              statusEl.textContent = FILA_STATUS_LABEL.pendente
-              unsubFila = onSnapshot(ref, snap => {
-                const fila = snap.data()
-                if (!fila) return
-                statusEl.textContent = FILA_STATUS_LABEL[fila.status] || fila.status
-                if (fila.status === 'erro') enviarBtn.disabled = false
-              })
-            } catch (err) {
-              console.error(err)
-              toastError(err.message || 'Erro ao enviar recibo.')
-              enviarBtn.disabled = false
-            }
-          })
-          if (!temTelefone) {
-            enviarBtn.disabled = true
-            statusEl.textContent = 'Cliente sem telefone cadastrado.'
-          }
-
-          mount(body,
-            previewWrap,
-            el('div', { class: 'modal-footer no-print' }, fecharBtn, imprimirBtn, enviarBtn, statusEl)
-          )
-        }).catch(err => {
-          console.error(err)
-          mount(body, el('p', { class: 'text-muted' }, 'Erro ao montar o recibo.'))
-        })
-      },
-    })
+    abrirReciboDaVenda(venda, { empresa, usuariosPorUid, resolverCliente: resolverClientePorIdOuNome, autoImprimir })
   }
 
   function abrirEditarVendaModal(venda) {

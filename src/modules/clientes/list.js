@@ -8,6 +8,7 @@ import { toastError, toastSuccess } from '../../shared/components/Toast.js'
 import { createSortableHead } from '../../shared/components/SortableHead.js'
 import { deleteCliente, importarClientes, deletarClientes } from './service.js'
 import { renderClienteForm } from './form.js'
+import { abrirHistoricoCliente } from './historico.js'
 
 export function renderClienteList(container, clientes) {
   const canCreate = can('clientes', 'create')
@@ -126,7 +127,7 @@ export function renderClienteList(container, clientes) {
     { key: 'documento', label: 'Documento' },
     { key: 'telefone',  label: 'Telefone' },
     { key: 'email',     label: 'E-mail' },
-    ...(canEdit || canDelete ? [{ key: null, label: 'Ações', cls: 'col-actions' }] : []),
+    { key: null, label: 'Ações', cls: 'col-actions' },
   ], {
     initialCol: 'nome',
     initialDir: 'asc',
@@ -189,13 +190,15 @@ export function renderClienteList(container, clientes) {
         el('td', {}, c.email),
       ]
 
-      if (canEdit || canDelete) {
-        cells.push(el('td', { class: 'col-actions' }, renderRowActions({
-          canEdit, canDelete,
-          onEdit: () => openClienteModal(c),
-          onDelete: () => confirmDelete(c),
-        })))
-      }
+      const historicoBtn = el('button', { type: 'button', class: 'btn btn-sm btn-outline' }, 'Histórico')
+      historicoBtn.addEventListener('click', () => abrirHistoricoCliente(c))
+      const acoes = renderRowActions({
+        canEdit, canDelete,
+        onEdit: () => openClienteModal(c),
+        onDelete: () => confirmDelete(c),
+      })
+      acoes.prepend(historicoBtn)
+      cells.push(el('td', { class: 'col-actions' }, acoes))
 
       tbody.appendChild(el('tr', {}, ...cells))
     }
