@@ -3472,3 +3472,67 @@ input, select, textarea {
   border-radius: 99px;
   flex-shrink: 0;
 }
+
+/* ── Tema escuro: ilhas claras e contraste ───────────────────────────────
+   Caixas com fundo pastel fixo (análise interna, troca, manutenção, ajuda...)
+   continuam claras no tema escuro — mas o texto sem cor própria herdava o
+   branco do tema e sumia. Em vez de pintar cada filho, a ilha volta as
+   variáveis de cor pros valores do tema claro: tudo dentro dela (texto,
+   inputs, bordas) se comporta como no tema claro. Os estados de hover/ativo
+   com fundo pastel recebem o mesmo reset. */
+:root.tema-escuro .orc-avc,
+:root.tema-escuro .troca-section,
+:root.tema-escuro .form-produto-block.manutencao,
+:root.tema-escuro .orc-msgh,
+:root.tema-escuro .orc-total-row,
+:root.tema-escuro .ajuda-tips,
+:root.tema-escuro .orc-tbl tbody tr.hl td {
+  --color-bg: #e8f0f2;
+  --color-surface: #ffffff;
+  --color-border: #cad8dc;
+  --color-text: #0d2b32;
+  --color-muted: #5a7a82;
+  --color-surface-alt: #f9f9fb;
+  --color-row-stripe: #eef5f6;
+  --color-row-hover: #ddeef1;
+  --color-table-border: #f0f0f2;
+  --color-detalhes-border: #edf0f0;
+  --color-label: #6b7280;
+  --color-strong: #1a1a1a;
+  --shadow: 0 1px 3px rgba(18,60,67,.08), 0 4px 12px rgba(18,60,67,.06);
+  color: var(--color-text);
+}
+/* Hover/ativo com fundo pastel: só reset das variáveis (o texto desses botões
+   já tem cor própria; forçar color aqui apagaria o verde/azul deles). */
+:root.tema-escuro .ac-opt-extra:hover,
+:root.tema-escuro .ac-opt-extra.active,
+:root.tema-escuro .btn-outline-blue:hover:not(:disabled),
+:root.tema-escuro .btn-active-outline:hover:not(:disabled),
+:root.tema-escuro .logistica-opt-btn:hover,
+:root.tema-escuro .orc-add-btn:hover,
+:root.tema-escuro .orc-add-btn--trade:hover,
+:root.tema-escuro .lead-card-del-btn:hover,
+:root.tema-escuro .mural-item-action:hover {
+  --color-bg: #e8f0f2;
+  --color-surface: #ffffff;
+  --color-border: #cad8dc;
+  --color-text: #0d2b32;
+  --color-muted: #5a7a82;
+  --color-surface-alt: #f9f9fb;
+  --color-row-stripe: #eef5f6;
+  --color-row-hover: #ddeef1;
+  --color-table-border: #f0f0f2;
+  --color-detalhes-border: #edf0f0;
+  --color-label: #6b7280;
+  --color-strong: #1a1a1a;
+  --shadow: 0 1px 3px rgba(18,60,67,.08), 0 4px 12px rgba(18,60,67,.06);
+}
+
+/* Textos coloridos escuros (marrom, verde, azul, ciano) direto sobre a
+   superfície escura: clareados pra manter contraste. */
+:root.tema-escuro .orc-card--trade .orc-card-label,
+:root.tema-escuro .orc-add-btn--trade { color: #fbbf24; }
+:root.tema-escuro .orc-card--novo .orc-card-label,
+:root.tema-escuro .acessorio-remove-btn { color: #34d399; }
+:root.tema-escuro .btn-outline-blue { color: #60a5fa; }
+:root.tema-escuro .form-produto-block.acessorio .form-produto-label { color: #22d3ee; }
