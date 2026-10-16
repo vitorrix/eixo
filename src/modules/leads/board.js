@@ -410,7 +410,7 @@ function handleDrop(lead, targetStatus) {
 // WhatsApp e Instagram misturados nas mesmas colunas — o ícone de canal em
 // cada card (ver leadCard) já resolve a identificação. Os números separados
 // por canal ficam na aba Histórico, não aqui.
-export function renderLeadsBoard(container, leads) {
+export function renderLeadsBoard(container, leads, { onVerHistorico } = {}) {
   const bodies = {}
   const counts = {}
 
@@ -458,7 +458,9 @@ export function renderLeadsBoard(container, leads) {
       const limitado = c.limite ? doStatus.slice(0, c.limite) : doStatus
       const filhos = limitado.map(leadCard)
       if (c.limite && doStatus.length > c.limite) {
-        filhos.push(el('a', { href: '#/leads', class: 'lead-col-vertodos' }, `+${doStatus.length - c.limite} no Histórico →`))
+        const verMais = el('a', { href: '#/leads', class: 'lead-col-vertodos' }, `+${doStatus.length - c.limite} no Histórico →`)
+        verMais.addEventListener('click', e => { e.preventDefault(); onVerHistorico?.(c.status) })
+        filhos.push(verMais)
       }
       bodies[c.status].replaceChildren(...filhos)
     })

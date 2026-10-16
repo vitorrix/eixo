@@ -33,9 +33,12 @@ export function render(container) {
           el('div', { class: 'orc-tabs-center' }, el('div', { class: 'config-tab-bar' }, tabQuadro, tabHistorico)),
           secQuadro, secHistorico,
         )
+        const historico = renderLeadsHistorico(secHistorico, leads)
         controllers = {
-          quadro: renderLeadsBoard(secQuadro, leads),
-          historico: renderLeadsHistorico(secHistorico, leads),
+          quadro: renderLeadsBoard(secQuadro, leads, {
+            onVerHistorico: status => { historico.mostrar(status); ativar(tabHistorico, secHistorico) },
+          }),
+          historico,
         }
       } else {
         controllers?.quadro.update(leads)

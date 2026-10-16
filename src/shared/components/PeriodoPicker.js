@@ -87,5 +87,16 @@ export function createPeriodoPicker({ initialPreset = 'este-mes', onChange } = {
     customWrap,
   )
 
-  return { el: root, getValue: () => ({ de, ate }) }
+  // Define o intervalo por código (ex: um link que abre a tela já em "tudo") —
+  // o select vai pra "Escolher datas" mostrando as datas aplicadas.
+  function setRange(novoDe, novoAte) {
+    de = novoDe; ate = novoAte
+    sel.value = 'custom'
+    customWrap.style.display = ''
+    deInp.value = de
+    ateInp.value = ate
+    emit()
+  }
+
+  return { el: root, getValue: () => ({ de, ate }), setRange }
 }

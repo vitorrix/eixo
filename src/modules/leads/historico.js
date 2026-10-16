@@ -1,7 +1,7 @@
 import { el, mount } from '../../shared/utils/dom.js'
 import { toolbarCard, toolbarMeta, searchWithIcon } from '../../shared/components/ToolbarCard.js'
 import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
-import { presetRange } from '../../shared/utils/periodo.js'
+import { presetRange, isoLocal } from '../../shared/utils/periodo.js'
 import { STATUS_META, DISCARD_REASON_META, nomeExibicao, canalDoLead, canalIcon } from './constants.js'
 import { buildKpisPorCanal } from './kpisPorCanal.js'
 
@@ -30,6 +30,7 @@ const STATUS_HISTORICO = ['descartado', 'convertido', 'sem_resposta']
 export function renderLeadsHistorico(container, leads) {
   let periodo = presetRange('este-mes')
   let motivoFiltro = 'todos'
+  let statusFiltro = 'todos'
   let busca = ''
 
   const picker = createPeriodoPicker({ initialPreset: 'este-mes', onChange: p => { periodo = p; refresh() } })
@@ -40,11 +41,17 @@ export function renderLeadsHistorico(container, leads) {
   )
   motivoSel.addEventListener('change', () => { motivoFiltro = motivoSel.value; refresh() })
 
+  const statusSel = el('select', { class: 'field-select' },
+    el('option', { value: 'todos' }, 'Todos os status'),
+    ...STATUS_HISTORICO.map(st => el('option', { value: st }, STATUS_META[st]?.label || st)),
+  )
+  statusSel.addEventListener('change', () => { statusFiltro = statusSel.value; refresh() })
+
   const searchInp = el('input', { type: 'text', class: 'search-input', placeholder: 'Buscar por nome ou telefone...' })
   searchInp.addEventListener('input', () => { busca = searchInp.value.trim().toLowerCase(); refresh() })
 
   const countBadge = el('span', { class: 'count-badge' })
-  const toolbar = toolbarCard(picker.el, motivoSel, searchWithIcon(searchInp), toolbarMeta(countBadge))
+  const toolbar = toolbarCard(picker.el, statusSel, motivoSel, searchWithIcon(searchInp), toolbarMeta(countBadge))
 
   // Painel de números por canal (WhatsApp e Instagram separados) — o quadro
   // em si mistura os dois nas mesmas colunas, mas pra saber "quanto veio de
@@ -66,6 +73,7 @@ export function renderLeadsHistorico(container, leads) {
   function refresh() {
     let filtrados = leads.filter(l => {
       if (!STATUS_HISTORICO.includes(l.status)) return false
+      if (statusFiltro !== 'todos' && l.status !== statusFiltro) return false
       const dISO = dataISO(l.updatedAt || l.createdAt)
       if (!dISO || dISO < periodo.de || dISO > periodo.ate) return false
       if (motivoFiltro !== 'todos' && l.discardReason !== motivoFiltro) return false
@@ -100,5 +108,16 @@ export function renderLeadsHistorico(container, leads) {
   mount(container, toolbar, kpisWrap, tableWrap, emptyState)
   refresh()
 
-  return { update(newLeads) { leads = newLeads; refresh() } }
+  return {
+    update(newLeads) { leads = newLeads; refresh() },
+    // Chamado pelo "+N no Histórico" do Quadro: abre já no status da coluna e
+    // sem limite de período (o quadro mostra só os primeiros, o resto é antigo).
+    mostrar(status) {
+      statusFiltro = STATUS_HISTORICO.includes(status) ? status : 'todos'
+      statusSel.value = statusFiltro
+      motivoFiltro = 'todos'
+      motivoSel.value = 'todos'
+      picker.setRange('2000-01-01', isoLocal(new Date()))
+    },
+  }
 }
