@@ -4,6 +4,8 @@ import { createPeriodoPicker } from '../../shared/components/PeriodoPicker.js'
 import { presetRange, isoLocal } from '../../shared/utils/periodo.js'
 import { STATUS_META, DISCARD_REASON_META, nomeExibicao, canalDoLead, canalIcon } from './constants.js'
 import { buildKpisPorCanal } from './kpisPorCanal.js'
+import { abrirHistoricoLead } from './historicoLeadModal.js'
+import { tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 
 function toDate(ts) {
   if (!ts) return null
@@ -63,7 +65,7 @@ export function renderLeadsHistorico(container, leads) {
   const table = el('table', { class: 'data-table' },
     el('thead', {}, el('tr', {},
       el('th', {}, 'Data'), el('th', {}, 'Canal'), el('th', {}, 'Nome/Telefone'), el('th', {}, 'Status'),
-      el('th', {}, 'Motivo'), el('th', {}, 'Nota'),
+      el('th', {}, 'Motivo'), el('th', {}, 'Nota'), el('th', {}, 'Tentativas'), el('th', {}, ''),
     )),
     tbody,
   )
@@ -94,14 +96,20 @@ export function renderLeadsHistorico(container, leads) {
 
     tbody.replaceChildren(...filtrados.map(l => {
       const statusMeta = STATUS_META[l.status] || STATUS_META.novo
-      return el('tr', {},
+      const verBtn = el('button', { type: 'button', class: 'btn-link' }, 'Ver atendimento')
+      verBtn.addEventListener('click', () => abrirHistoricoLead(l))
+      const row = el('tr', {},
         el('td', { class: 'td-date' }, shortDate(l.updatedAt || l.createdAt)),
         el('td', { class: 'lead-td-canal' }, canalIcon(canalDoLead(l))),
         el('td', {}, nomeExibicao(l)),
         el('td', {}, el('span', { class: `badge ${statusMeta.cls}` }, statusMeta.label)),
         el('td', {}, l.discardReason ? (DISCARD_REASON_META[l.discardReason] || l.discardReason) : '—'),
         el('td', { class: 'td-name', title: l.discardNote || '' }, l.discardNote || '—'),
+        el('td', { class: 'col-center' }, String(l.notes?.length || 0)),
+        el('td', { class: 'col-actions' }, verBtn),
       )
+      tornarLinhaClicavel(row, () => abrirHistoricoLead(l))
+      return row
     }))
   }
 

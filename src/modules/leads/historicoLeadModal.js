@@ -25,7 +25,7 @@ export function abrirHistoricoLead(lead) {
 
   openModal({
     title: `Histórico — ${nomeExibicao(lead)}`,
-    size: 'md',
+    size: 'lg',
     renderBody: (body) => {
       const linhas = []
 
@@ -54,49 +54,55 @@ export function abrirHistoricoLead(lead) {
       // mouse pra ver completo.
       if (lead.adContext) linhas.push(el('span', { class: 'lead-ad-chip', title: lead.adContext }, `📢 ${resumoAnuncio(lead.adContext, 90)}`))
 
-      linhas.push(el('div', { class: 'lead-hist-section' },
-        el('h4', {}, 'Primeira mensagem'),
-        el('p', { class: 'lead-hist-msg' }, lead.firstMessageText || '—'),
-        el('span', { class: 'lead-hist-hora' }, formatDataHora(lead.firstMessageAt)),
+      // Resumo do atendimento: quantas tentativas, interesse e há quanto tempo
+      // o lead entrou até o último registro.
+      const notas = notasOrdenadas(lead).reverse() // mais antiga primeiro
+      const inicio = toDate(lead.firstMessageAt) || toDate(lead.createdAt)
+      const fim = toDate(lead.updatedAt)
+      const dias = inicio && fim ? Math.max(0, Math.round((fim - inicio) / 86400000)) : null
+      linhas.push(el('div', { class: 'lead-hist-resumo' },
+        el('span', { class: 'lead-hist-tentativa-count' }, `${notas.length} tentativa${notas.length === 1 ? '' : 's'} de contato`),
+        lead.interesse && INTERESSE_META[lead.interesse]
+          ? el('span', { class: 'lead-hist-hora' }, `Interesse: ${INTERESSE_META[lead.interesse].estrelas} ${INTERESSE_META[lead.interesse].label}`) : null,
+        dias != null ? el('span', { class: 'lead-hist-hora' }, `Atendimento de ${dias === 0 ? 'menos de 1 dia' : dias + ' dia' + (dias === 1 ? '' : 's')} (da primeira mensagem ao último registro)`) : null,
       ))
 
-      if (lead.status === 'em_followup' || lead.status === 'sem_resposta') {
-        linhas.push(el('div', { class: 'lead-hist-section' },
-          el('h4', {}, 'Tentativas de contato'),
-          el('span', { class: 'lead-hist-tentativa-count' }, `Tentativa ${contarTentativas(lead)}`),
-          lead.interesse ? el('span', { class: 'lead-hist-hora' }, `Interesse: ${INTERESSE_META[lead.interesse].estrelas} ${INTERESSE_META[lead.interesse].label}`) : null,
-          lead.nextFollowUpAt ? el('span', { class: 'lead-hist-hora' }, `Próximo retorno: ${formatDataHora(lead.nextFollowUpAt)}`) : null,
-        ))
-      }
-
-      const notas = notasOrdenadas(lead)
-      const notasSection = el('div', { class: 'lead-hist-section' }, el('h4', {}, 'Contatos registrados'))
-      if (notas.length) {
-        notas.forEach(n => {
-          notasSection.appendChild(el('div', { class: 'lead-hist-nota' },
-            el('div', { class: 'lead-hist-nota-head' },
-              el('span', { class: 'lead-hist-nota-autor' }, n.author || '—'),
-              el('span', { class: 'lead-hist-nota-data' }, formatDataHora(n.at)),
-            ),
-            el('p', { class: 'lead-hist-nota-texto' }, n.text),
-          ))
-        })
-      } else {
-        notasSection.appendChild(el('p', { class: 'lead-hist-vazio' }, 'Nenhum contato registrado ainda.'))
-      }
-      linhas.push(notasSection)
+      // Linha do tempo em ordem cronológica: entrada → cada tentativa com o
+      // comentário → situação atual / desfecho.
+      const etapas = []
+      etapas.push({ titulo: 'Lead entrou', data: lead.firstMessageAt || lead.createdAt, texto: lead.firstMessageText || null })
+      notas.forEach((n, i) => etapas.push({ titulo: `Tentativa ${i + 1}`, autor: n.author, data: n.at, texto: n.text }))
 
       if (lead.status === 'descartado') {
-        linhas.push(el('div', { class: 'lead-hist-section' },
-          el('h4', {}, 'Descarte'),
-          el('p', {}, DISCARD_REASON_META[lead.discardReason] || lead.discardReason || '—'),
-          lead.discardNote ? el('p', { class: 'lead-hist-hora' }, lead.discardNote) : null,
-        ))
+        etapas.push({
+          titulo: 'Descartado', data: lead.updatedAt, tom: 'fim',
+          texto: [DISCARD_REASON_META[lead.discardReason] || lead.discardReason, lead.discardNote].filter(Boolean).join(' — ') || null,
+        })
+      } else if (lead.status === 'convertido') {
+        etapas.push({ titulo: 'Convertido em cliente', data: lead.updatedAt, tom: 'ok' })
+      } else if (lead.status === 'sem_resposta') {
+        etapas.push({ titulo: 'Marcado como sem resposta', data: lead.updatedAt, tom: 'fim' })
+      } else if (lead.nextFollowUpAt) {
+        etapas.push({ titulo: 'Próximo retorno agendado', data: lead.nextFollowUpAt, tom: 'pendente' })
       }
 
-      if (lead.status === 'convertido') {
-        linhas.push(el('div', { class: 'lead-hist-section' }, el('p', {}, '✅ Convertido em cliente.')))
+      const timeline = el('div', { class: 'lead-hist-section' }, el('h4', {}, 'Linha do tempo do atendimento'))
+      const lista = el('div', { class: 'lead-tl' })
+      etapas.forEach(e => {
+        lista.appendChild(el('div', { class: `lead-tl-item ${e.tom ? 'lead-tl-' + e.tom : ''}` },
+          el('div', { class: 'lead-tl-head' },
+            el('span', { class: 'lead-tl-titulo' }, e.titulo),
+            e.autor ? el('span', { class: 'lead-tl-autor' }, `por ${e.autor}`) : null,
+            el('span', { class: 'lead-tl-data' }, formatDataHora(e.data)),
+          ),
+          e.texto ? el('p', { class: 'lead-tl-texto' }, e.texto) : null,
+        ))
+      })
+      if (!notas.length) {
+        lista.appendChild(el('p', { class: 'lead-hist-vazio' }, 'Nenhuma tentativa de contato registrada neste lead.'))
       }
+      timeline.appendChild(lista)
+      linhas.push(timeline)
 
       mount(body, ...linhas.filter(Boolean))
     },
