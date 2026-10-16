@@ -2,33 +2,83 @@ import { el, mount } from '../utils/dom.js'
 
 const TIPS = {
   '/': [
-    { ico: '📊', txt: 'O Dashboard mostra o total de clientes e pedidos em tempo real via Firestore.' },
-    { ico: '🔗', txt: 'Clique nos cards para navegar diretamente ao módulo correspondente.' },
+    { ico: '📊', txt: 'O Mural de Recados mostra o que precisa de atenção hoje: pagamentos, pós-venda, aniversários e o status do bot.' },
+    { ico: '📲', txt: 'Nos recados de pós-venda, o botão do WhatsApp abre a conversa com a mensagem pronta. Depois clique em "Feito ✓".' },
+    { ico: '↩️', txt: 'Clicou em Feito sem querer? Abra "Pós-venda concluídos" no canto do Mural e use Reabrir.' },
   ],
   '/orcamentos': [
-    { ico: '💳', txt: 'Na aba Parcelamento: busque o produto no campo de busca — o preço é preenchido automaticamente ao selecionar do catálogo.' },
-    { ico: '🔄', txt: 'Na aba Troca: o nome do cliente e o aparelho desejado são sincronizados automaticamente com o Parcelamento.' },
-    { ico: '🔧', txt: 'Análise Interna: marque os defeitos do aparelho trazido na troca. Os itens marcados aparecem na mensagem ao cliente com o valor do desconto.' },
-    { ico: '📲', txt: 'Clique em "Enviar" para abrir o WhatsApp com a mensagem pronta.' },
-    { ico: '👤', txt: 'Se o nome do cliente ficar em branco, a mensagem será enviada para "Baruker".' },
+    { ico: '💳', txt: 'Parcelamento: busque o produto — o preço do catálogo é preenchido. As parcelas vão de 1x a 18x.' },
+    { ico: '🔄', txt: 'Troca: cliente e aparelho desejado são levados do Parcelamento. A análise interna abate o valor da troca.' },
+    { ico: '⬆️', txt: 'Upgrade: avalia o aparelho do cliente pela Tabela de Troca (Configurações) menos as avarias.' },
+    { ico: '🕓', txt: 'Todo orçamento fica salvo na aba Histórico.' },
   ],
   '/pedidos': [
-    { ico: '➕', txt: 'Clique em "+ Novo Pedido" para abrir o formulário. O campo de data é preenchido automaticamente com hoje.' },
-    { ico: '🔍', txt: 'No campo cliente: comece a digitar o nome — o autocomplete busca no cadastro. Ou cadastre um cliente novo com "+ Cadastrar" sem sair do formulário.' },
-    { ico: '📦', txt: 'Adicione quantos produtos quiser. O campo busca no catálogo e preenche valores automaticamente.' },
-    { ico: '📋', txt: 'Use o Roteiro (ícone 📋 no topo) para ver todos os pedidos do dia organizados.' },
-    { ico: '🔎', txt: 'Filtre por nome, status ou data. A lista atualiza em tempo real.' },
+    { ico: '➕', txt: 'Anote serial/modelo nas Observações do pedido — o texto aparece no recibo do cliente.' },
+    { ico: '✅', txt: 'Fluxo: Negociando → Pagamento → Confirmar Pgto → Logística → Entregue.' },
+    { ico: '📦', txt: 'Ao confirmar o pagamento, marque "Já em estoque" no item para usar um aparelho que já foi comprado.' },
+    { ico: '⚠️', txt: 'Editar um pedido já confirmado volta o fluxo para Negociando e refaz Compra/Venda/Financeiro.' },
+  ],
+  '/compras': [
+    { ico: '🛒', txt: 'Uma Compra por aparelho. Pedidos geram as compras sozinhos; "+ Nova Compra" é para compras avulsas e estoque.' },
+    { ico: '🔢', txt: 'Preencha "Dados do aparelho" (serial/IMEI): aparece no recibo do cliente.' },
+  ],
+  '/vendas': [
+    { ico: '💰', txt: 'Uma venda por pedido (com todos os itens). A coluna Entrega pode ser alterada direto na linha.' },
+    { ico: '🧾', txt: 'O botão Recibo abre o recibo para imprimir ou enviar pelo WhatsApp.' },
+  ],
+  '/busca': [
+    { ico: '🔎', txt: 'Digite o produto (ex.: iPhone 17 Pro Max) para ver todos os fornecedores e comparar preços.' },
+    { ico: '🎚️', txt: 'Filtre por capacidade, RAM, tamanho, cor e fornecedor; o filtro de Data esconde ofertas antigas.' },
+    { ico: '📲', txt: 'O ícone do WhatsApp ao lado do fornecedor abre a conversa para perguntar.' },
   ],
   '/clientes': [
-    { ico: '➕', txt: 'Clique em "+ Novo Cliente" para cadastrar. O CEP preenche endereço automaticamente.' },
-    { ico: '✏️', txt: 'Clique em qualquer cliente da lista para editar os dados.' },
-    { ico: '📤', txt: 'Use o botão de exportação para baixar a lista completa em Excel.' },
-    { ico: '🔍', txt: 'Busca em tempo real por nome ou telefone.' },
+    { ico: '📜', txt: 'O botão Histórico mostra tudo do cliente: cadastro, compras (com recibo) e pedidos.' },
+    { ico: '📍', txt: 'O CEP preenche o endereço sozinho.' },
+    { ico: '🎂', txt: 'A data de nascimento gera o aviso de aniversário no Dashboard.' },
+  ],
+  '/leads': [
+    { ico: '🖱️', txt: 'Arraste os cards entre as colunas: Em Follow-up, Sem Resposta, Convertido ou Descartado.' },
+    { ico: '📝', txt: 'Em Follow-up, use "Nota" a cada contato e sempre reagende o retorno.' },
+    { ico: '🕓', txt: 'Clique num card para ver a linha do tempo completa do atendimento.' },
+  ],
+  '/fornecedores': [
+    { ico: '✅', txt: 'Fornecedor validado por videochamada ganha o selo na Busca.' },
+    { ico: '⚙️', txt: 'A "Condição dos aparelhos" define se as ofertas dele entram como novas, semi-novas ou mistas.' },
+  ],
+  '/produtos': [
+    { ico: '🏷️', txt: 'O preço de venda do catálogo é preenchido automaticamente em Orçamentos, Pedidos e Vendas.' },
+    { ico: '📦', txt: 'Ligue o controle de estoque para acompanhar o estoque atual e o mínimo.' },
+  ],
+  '/financeiro': [
+    { ico: '💵', txt: 'Duas abas: Recebimentos e Pagamentos. A caixinha da Situação marca como pago/recebido.' },
+    { ico: '🔁', txt: 'Lançamento recorrente: informe dia do mês, data inicial e final para criar uma parcela por mês.' },
+    { ico: '⚠️', txt: 'Excluir um lançamento é definitivo. Preencha sempre a categoria — ela define o lugar no DRE.' },
+  ],
+  '/relatorios': [
+    { ico: '📈', txt: 'O DRE é por regime de caixa: conta o que foi pago/recebido de fato.' },
+    { ico: '🖨️', txt: 'Todos os relatórios imprimem só o conteúdo, sem o menu.' },
+  ],
+  '/tarefas': [
+    { ico: '✅', txt: 'Clique no status para avançar: Pendente → Em andamento → Concluída.' },
+    { ico: '➕', txt: 'O botão + verde cria tarefas de qualquer tela.' },
   ],
   '/configuracoes': [
-    { ico: '💳', txt: 'Cadastre as formas de pagamento aceitas — elas aparecem no formulário de Pedidos.' },
-    { ico: '➕', txt: 'Clique em "+ Adicionar" para incluir novas formas de pagamento.' },
+    { ico: '💳', txt: 'Cadastre formas de pagamento e contas antes de lançar pedidos.' },
+    { ico: '🗂️', txt: 'Em Categorias, o "Grupo no DRE" define como o DRE é montado.' },
   ],
+  '/usuarios': [
+    { ico: '🔐', txt: 'Defina por módulo: Ver, Criar, Editar e Excluir. Relatórios, Configurações e Usuários são só do master.' },
+    { ico: '👤', txt: 'O gênero do usuário é usado na mensagem de pós-venda ("Aqui é o/a ...").' },
+  ],
+}
+
+// Rota -> tópico do tutorial que o link "Ver tutorial completo" deve abrir.
+const TOPICO_POR_ROTA = {
+  '/': 'dashboard', '/orcamentos': 'orcamentos', '/pedidos': 'pedidos', '/compras': 'compras',
+  '/vendas': 'vendas', '/busca': 'busca', '/clientes': 'clientes', '/leads': 'leads',
+  '/fornecedores': 'fornecedores', '/produtos': 'produtos', '/financeiro': 'financeiro',
+  '/relatorios': 'relatorios', '/tarefas': 'tarefas', '/configuracoes': 'configuracoes',
+  '/usuarios': 'usuarios',
 }
 
 let panelMounted = false
@@ -48,7 +98,11 @@ function buildPanel() {
   panelTitle = el('div', { class: 'help-panel-title' }, '⚡ Dicas rápidas')
 
   const tutorialLink = el('a', { href: '#/ajuda', class: 'help-tutorial-link' }, '📖 Ver tutorial completo →')
-  tutorialLink.addEventListener('click', closeHelp)
+  tutorialLink.addEventListener('click', () => {
+    const topico = TOPICO_POR_ROTA[window.location.hash.replace('#', '') || '/']
+    try { if (topico) sessionStorage.setItem('eixo:ajudaTopico', topico) } catch { /* abre no primeiro tópico */ }
+    closeHelp()
+  })
 
   panelEl = el('div', { class: 'help-panel' },
     el('div', { class: 'help-panel-header' }, panelTitle, closeBtn),
