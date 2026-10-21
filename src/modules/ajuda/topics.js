@@ -26,7 +26,7 @@ export const GROUPS = [
             titulo: 'Menu lateral',
             passos: [
               '<strong>Dashboard</strong>: resumo do dia, recados e tarefas.',
-              '<strong>Financeiro, Orçamentos, Pedidos, Compras, Vendas</strong>: o dia a dia das vendas e do caixa.',
+              '<strong>Financeiro, Orçamentos, Pedidos, Compras, Vendas, Motoboy</strong>: o dia a dia das vendas e do caixa (Motoboy = acerto das entregas).',
               '<strong>Busca</strong>: preços que os fornecedores mandam nas listas diárias.',
               '<strong>Clientes, Leads, Fornecedores, Produtos</strong>: cadastros e relacionamento.',
               '<strong>Relatórios, Configurações, Usuários</strong>: gestão (restritos ao usuário master).',
@@ -490,6 +490,40 @@ export const GROUPS = [
         ],
       },
       {
+        id: 'motoboy',
+        icon: '🏍️',
+        label: 'Acerto do motoboy',
+        intro: 'Fecha o dia do motoboy: km rodados x valor do km + extras, e já lança o Pagamento no Financeiro.',
+        sections: [
+          {
+            titulo: 'Como fechar o dia',
+            passos: [
+              'Em <strong>Motoboy</strong>, clique em <strong>+ Novo acerto</strong>. Informe a <strong>data</strong>, o <strong>motoboy</strong> e confira o <strong>valor por km</strong> (padrão em Configurações → Motoboy, hoje R$ 2,50).',
+              '<strong>⬇ Importar entregas do dia</strong> traz os trechos dos pedidos entregues por motoboy naquele dia (retirada → entrega, a partir do Roteiro de Entrega). Você também pode usar <strong>+ Adicionar trecho</strong> e digitar os endereços.',
+              'Em cada trecho clique em <strong>🗺️ Maps</strong>: o Google Maps abre o trajeto no modo moto. Leia a distância e digite o <strong>km</strong> no trecho.',
+              '<strong>+ Adicionar extra</strong> inclui o que o motoboy pagou (ex.: um acessório pego no fornecedor); o valor entra no total a pagar.',
+              'O quadro de resumo mostra o total de km, km × valor, extras e o <strong>TOTAL A PAGAR</strong>. Marque <strong>Já foi pago</strong> se acertou na hora e, se quiser, a conta.',
+              '<strong>Salvar acerto</strong> grava o fechamento e cria 1 Pagamento no Financeiro (categoria de frete/motoboy), vencendo na data do acerto.',
+            ],
+          },
+          {
+            titulo: 'Depois de salvo',
+            passos: [
+              'Clique no acerto na lista para ver o detalhe dos trechos e extras. <strong>📋 Copiar resumo</strong> gera o texto pronto para mandar ao motoboy pelo WhatsApp.',
+              'O Pagamento fica no Financeiro (aba Pagamentos): é lá que você marca como pago e é dele que o valor entra no DRE.',
+            ],
+          },
+        ],
+        avisos: [
+          'Excluir um acerto (só o master) apaga também o Pagamento dele no Financeiro.',
+        ],
+        tips: [
+          'O km é digitado por você, lendo o Maps — o Eixo ainda não calcula a distância sozinho.',
+          'Trecho sem km é descartado ao salvar; se tiver endereço preenchido e km vazio, o sistema avisa.',
+          'Cada trecho é uma retirada → entrega. Se o trajeto do dia for encadeado, cadastre os trechos na ordem percorrida (inclusive a volta, se for cobrada).',
+        ],
+      },
+      {
         id: 'relatorios',
         icon: '📈',
         label: 'Relatórios',
@@ -544,7 +578,7 @@ export const GROUPS = [
         id: 'configuracoes',
         icon: '⚙️',
         label: 'Configurações',
-        intro: 'Dados de base que o resto do sistema usa (acesso do master). Cinco abas.',
+        intro: 'Dados de base que o resto do sistema usa (acesso do master). Seis abas.',
         sections: [
           {
             titulo: 'As abas',
@@ -554,6 +588,7 @@ export const GROUPS = [
               '<strong>Contas</strong>: as contas/destinos do dinheiro (ex.: Nubank).',
               '<strong>Categorias</strong>: categorias de receita e despesa. Cada uma tem <strong>Grupo no DRE</strong> e subgrupo (ex.: Custo dos Produtos Vendidos, Despesas Operacionais), que define como o DRE é montado.',
               '<strong>Tabela de Troca</strong>: valor-base de cada aparelho (1 valor por modelo) usado na aba Upgrade dos Orçamentos; <strong>+ Adicionar modelo</strong> inclui um modelo novo.',
+              '<strong>Motoboy</strong>: valor cobrado por km, usado como padrão no Acerto do motoboy.',
             ],
           },
         ],

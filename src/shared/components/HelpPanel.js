@@ -54,6 +54,11 @@ const TIPS = {
     { ico: '🔁', txt: 'Lançamento recorrente: informe dia do mês, data inicial e final para criar uma parcela por mês.' },
     { ico: '⚠️', txt: 'Excluir um lançamento é definitivo. Preencha sempre a categoria — ela define o lugar no DRE.' },
   ],
+  '/motoboy': [
+    { ico: '🏍️', txt: 'Novo acerto: importe as entregas do dia, abra cada trecho no Maps e digite o km. O total é km × valor do km + extras.' },
+    { ico: '🛍️', txt: 'Acessório que o motoboy pagou? Use "+ Adicionar extra" — o valor entra no total a pagar.' },
+    { ico: '💵', txt: 'Ao salvar, o acerto vira um Pagamento no Financeiro.' },
+  ],
   '/relatorios': [
     { ico: '📈', txt: 'O DRE é por regime de caixa: conta o que foi pago/recebido de fato.' },
     { ico: '🖨️', txt: 'Todos os relatórios imprimem só o conteúdo, sem o menu.' },
@@ -75,7 +80,7 @@ const TIPS = {
 // Rota -> tópico do tutorial que o link "Ver tutorial completo" deve abrir.
 const TOPICO_POR_ROTA = {
   '/': 'dashboard', '/orcamentos': 'orcamentos', '/pedidos': 'pedidos', '/compras': 'compras',
-  '/vendas': 'vendas', '/busca': 'busca', '/clientes': 'clientes', '/leads': 'leads',
+  '/vendas': 'vendas', '/motoboy': 'motoboy', '/busca': 'busca', '/clientes': 'clientes', '/leads': 'leads',
   '/fornecedores': 'fornecedores', '/produtos': 'produtos', '/financeiro': 'financeiro',
   '/relatorios': 'relatorios', '/tarefas': 'tarefas', '/configuracoes': 'configuracoes',
   '/usuarios': 'usuarios',

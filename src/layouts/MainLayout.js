@@ -19,6 +19,7 @@ const PAGE_LABELS = {
   '/orcamentos':    'Orçamentos',
   '/relatorios':    'Relatórios',
   '/financeiro':    'Financeiro',
+  '/motoboy':       'Acerto do Motoboy',
   '/tarefas':       'Tarefas',
   '/configuracoes': 'Configurações',
   '/usuarios':      'Usuários',
@@ -60,6 +61,10 @@ const NAV_ICONS = {
   financeiro: [
     'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'
   ],
+  motoboy: [
+    'M5 18a3 3 0 100-6 3 3 0 000 6zM19 18a3 3 0 100-6 3 3 0 000 6z',
+    'M12 17.5h-4.5M15 6h-3l-2 5.5 5 6M12 11.5H7M16.5 6H19',
+  ],
   tarefas: [
     'M9 11l3 3L22 4',
     'M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'
@@ -94,6 +99,7 @@ const NAV_ITEMS = [
   { path: '/',              label: 'Dashboard',      module: null,            iconKey: 'dashboard'     },
   { path: '/financeiro',    label: 'Financeiro',     module: 'financeiro',    iconKey: 'financeiro' },
   { path: '/orcamentos',    label: 'Orçamentos',     module: null,            iconKey: 'orcamentos'    },
+  { path: '/motoboy',       label: 'Motoboy',        module: 'financeiro',    iconKey: 'motoboy'       },
   { path: '/pedidos',       label: 'Pedidos',        module: 'pedidos',       iconKey: 'pedidos'       },
   { path: '/compras',       label: 'Compras',        module: 'compras',       iconKey: 'compras'       },
   { path: '/vendas',        label: 'Vendas',         module: 'vendas',        iconKey: 'vendas'        },

@@ -12,6 +12,7 @@ const routes = {
   '/fornecedores':  { module: 'fornecedores',  loader: () => import('../modules/fornecedores/index.js') },
   '/produtos':      { module: 'produtos',      loader: () => import('../modules/produtos/index.js') },
   '/busca':         { module: 'busca',         loader: () => import('../modules/busca/index.js') },
+  '/motoboy':       { module: 'financeiro',    loader: () => import('../modules/motoboy/index.js') },
   '/orcamentos':    { module: null,             loader: () => import('../modules/orcamentos/index.js') },
   '/relatorios':    { module: 'relatorios',    loader: () => import('../modules/relatorios/index.js') },
   '/financeiro':    { module: 'financeiro',    loader: () => import('../modules/financeiro/index.js') },

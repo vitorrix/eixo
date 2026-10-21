@@ -112,6 +112,16 @@ service cloud.firestore {
     }
 
     // ── /orcamentos ───────────────────────────────────────────────────────
+    // ── /acertosMotoboy ───────────────────────────────────────────────────
+    // Fechamento diário do motoboy (km rodados x valor do km + extras). Segue o
+    // financeiro porque gera um Pagamento lá — e a exclusão é só do master, igual
+    // ao lançamento que ela apaga junto.
+    match /acertosMotoboy/{id} {
+      allow read:   if hasPermission('financeiro', 'view');
+      allow create: if hasPermission('financeiro', 'create');
+      allow update: if hasPermission('financeiro', 'edit');
+      allow delete: if isMaster();
+    }
     match /orcamentos/{id} {
       allow read:   if hasPermission('orcamentos', 'view');
       allow create: if hasPermission('orcamentos', 'create');

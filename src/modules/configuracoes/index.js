@@ -5,6 +5,7 @@ import { renderTabFormasPagamento } from './tabFormasPagamento.js'
 import { renderTabContas } from './tabContas.js'
 import { renderTabCategorias } from './tabCategorias.js'
 import { renderTabTabelaTroca } from './tabTabelaTroca.js'
+import { renderTabMotoboy } from './tabMotoboy.js'
 import { toastError } from '../../shared/components/Toast.js'
 
 const TABS = [
@@ -13,6 +14,7 @@ const TABS = [
   { key: 'contas',      label: 'Contas' },
   { key: 'categorias',  label: 'Categorias' },
   { key: 'tabelaTroca', label: 'Tabela de Troca' },
+  { key: 'motoboy',     label: 'Motoboy' },
 ]
 
 export function render(container) {
@@ -59,6 +61,8 @@ async function _load(container) {
       renderTabCategorias(tabContent, state.operacoes, saved => { state.operacoes = saved })
     } else if (key === 'tabelaTroca') {
       renderTabTabelaTroca(tabContent, state.tabelaTroca, saved => { state.tabelaTroca = saved })
+    } else if (key === 'motoboy') {
+      renderTabMotoboy(tabContent, state.operacoes, saved => { state.operacoes = saved })
     }
   }
 
