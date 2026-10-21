@@ -38,13 +38,21 @@ function resumoTexto(a) {
   return linhas.join('\n')
 }
 
+const rotuloFornecedor = f => (f.box ? `${f.name} - ${f.box}` : f.name)
+
 export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
   const canCreate = can('financeiro', 'create')
   const canDelete = isMaster() // exclui também o lançamento, que só o master apaga (firestore.rules)
   let lista = acertos
 
   const valorKmConfig = parseFloat(operacoes.motoboy?.valorKm) || VALOR_KM_PADRAO
-  const nomesMotoboy = () => [...new Set(lista.map(a => a.motoboy).filter(Boolean))]
+  const rotulosFornecedores = fornecedores.map(rotuloFornecedor)
+  const fornecedorPorRotulo = rotulo => fornecedores.find(f => rotuloFornecedor(f) === (rotulo || '').trim())
+  // Motoboy é um fornecedor cadastrado — sugere o último usado quando ele ainda existe
+  const ultimoMotoboy = () => {
+    const f = fornecedores.find(f => f.id === lista.find(a => a.motoboyId)?.motoboyId)
+    return f ? rotuloFornecedor(f) : ''
+  }
 
   const tbody = document.createElement('tbody')
   const table = el('table', { class: 'data-table' },
@@ -147,7 +155,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         let valorKm = valorKmConfig
 
         const dataInp = el('input', { type: 'date', class: 'field-input', value: isoLocal(new Date()) })
-        const motoAc = createAutocomplete({ placeholder: 'Nome do motoboy', items: nomesMotoboy(), initialValue: nomesMotoboy()[0] || '' })
+        const motoAc = createAutocomplete({ placeholder: 'Buscar fornecedor (motoboy)...', items: rotulosFornecedores, initialValue: ultimoMotoboy() })
         const valorKmInp = el('input', { type: 'number', class: 'field-input', step: '0.1', value: String(valorKm) })
         valorKmInp.addEventListener('input', () => { valorKm = parseFloat(valorKmInp.value) || 0; atualizarResumo() })
 
@@ -265,7 +273,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         salvar.addEventListener('click', async () => {
           const t = calcularAcerto({ trechos, extras, valorKm })
           if (!dataInp.value) return toastError('Informe a data.')
-          if (!motoAc.getValue().trim()) return toastError('Informe o nome do motoboy.')
+          if (!motoAc.getValue().trim()) return toastError('Informe o motoboy.')
           if (t.total <= 0) return toastError('Informe o km dos trechos ou algum extra.')
           if (trechos.some(x => (parseFloat(x.km) || 0) <= 0 && (x.origem || x.destino))) {
             return toastError('Tem trecho sem km — preencha ou remova.')
@@ -275,7 +283,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           salvar.disabled = true; salvar.textContent = 'Salvando...'
           try {
             await createAcerto(
-              { data: dataInp.value, motoboy: motoAc.getValue(), valorKm, trechos: trechos.filter(x => (parseFloat(x.km) || 0) > 0), extras },
+              { data: dataInp.value, motoboy: (fornecedorPorRotulo(motoAc.getValue())?.name || motoAc.getValue()), motoboyId: fornecedorPorRotulo(motoAc.getValue())?.id || null, valorKm, trechos: trechos.filter(x => (parseFloat(x.km) || 0) > 0), extras },
               { liquidado: pagoChk.checked, conta: contaSel.value, categoria },
             )
             toastSuccess('Acerto salvo e lançado no Financeiro (Pagamentos).')
@@ -290,7 +298,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         mount(body,
           el('div', { class: 'motoboy-topo' },
             el('div', { class: 'field' }, el('label', {}, 'Data'), dataInp),
-            el('div', { class: 'field' }, el('label', {}, 'Motoboy'), motoAc.el),
+            el('div', { class: 'field' }, el('label', {}, 'Motoboy (fornecedor)'), motoAc.el),
             el('div', { class: 'field' }, el('label', {}, 'Valor por km (R$)'), valorKmInp),
           ),
           el('div', { class: 'motoboy-secao-head' },

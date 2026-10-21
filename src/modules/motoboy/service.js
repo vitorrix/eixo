@@ -49,7 +49,7 @@ export async function createAcerto(data, { liquidado, conta, categoria }) {
   const [y, m, d] = data.data.split('-')
 
   batch.set(acertoRef, {
-    data: data.data, motoboy: (data.motoboy || '').trim(), valorKm,
+    data: data.data, motoboy: (data.motoboy || '').trim(), motoboyId: data.motoboyId || null, valorKm,
     trechos, extras, ...totais,
     lancamentoNumero: numero,
     criadoPor: uid, criadoEm: serverTimestamp(),
@@ -59,8 +59,8 @@ export async function createAcerto(data, { liquidado, conta, categoria }) {
     descricao:       `Motoboy ${(data.motoboy || '').trim()} — ${d}/${m}/${y}`.replace('Motoboy  —', 'Motoboy —'),
     valor:           totais.total,
     contato:         (data.motoboy || '').trim(),
-    contatoId:       null,
-    contatoTipo:     null,
+    contatoId:       data.motoboyId || null,
+    contatoTipo:     data.motoboyId ? 'fornecedor' : null,
     categoria:       categoria || '',
     conta:           conta || '',
     formaPagamento:  '',

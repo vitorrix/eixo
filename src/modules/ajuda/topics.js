@@ -498,7 +498,7 @@ export const GROUPS = [
           {
             titulo: 'Como fechar o dia',
             passos: [
-              'Em <strong>Motoboy</strong>, clique em <strong>+ Novo acerto</strong>. Informe a <strong>data</strong>, o <strong>motoboy</strong> e confira o <strong>valor por km</strong> (padrão em Configurações → Motoboy, hoje R$ 2,50).',
+              'Em <strong>Motoboy</strong>, clique em <strong>+ Novo acerto</strong>. Informe a <strong>data</strong>, escolha o <strong>motoboy</strong> (ele precisa estar cadastrado em Fornecedores; digite o nome para buscar) e confira o <strong>valor por km</strong> (padrão em Configurações → Motoboy, hoje R$ 2,50).',
               '<strong>⬇ Importar entregas do dia</strong> traz os trechos dos pedidos entregues por motoboy naquele dia (retirada → entrega, a partir do Roteiro de Entrega). Você também pode usar <strong>+ Adicionar trecho</strong> e digitar os endereços.',
               'Em cada trecho clique em <strong>🗺️ Maps</strong>: o Google Maps abre o trajeto no modo moto. Leia a distância e digite o <strong>km</strong> no trecho.',
               '<strong>+ Adicionar extra</strong> inclui o que o motoboy pagou (ex.: um acessório pego no fornecedor); o valor entra no total a pagar.',
@@ -516,6 +516,7 @@ export const GROUPS = [
         ],
         avisos: [
           'Excluir um acerto (só o master) apaga também o Pagamento dele no Financeiro.',
+          'O Pagamento fica vinculado ao fornecedor-motoboy escolhido, então aparece no extrato dele em Relatórios → Por Categoria/Contato.',
         ],
         tips: [
           'O km é digitado por você, lendo o Maps — o Eixo ainda não calcula a distância sozinho.',
