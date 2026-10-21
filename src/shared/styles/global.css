@@ -3572,16 +3572,30 @@ input, select, textarea {
 :root.tema-escuro .ajuda-aviso-title { color: #fbbf24; }
 
 /* ── Motoboy: acerto do dia ── */
-.motoboy-topo { display: grid; grid-template-columns: 160px 1fr 160px; gap: 14px; }
-.motoboy-trecho { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 10px; background: var(--color-bg); }
-.motoboy-trecho-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.motoboy-topo { display: grid; grid-template-columns: 170px 1fr 170px; gap: 14px; }
+.motoboy-secao-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 22px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border); }
+.motoboy-secao-head h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--color-text); }
+.motoboy-msg { margin: -2px 0 10px; font-size: 12.5px; color: var(--color-muted); min-height: 0; }
+.motoboy-msg:empty { display: none; }
+.motoboy-trecho { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px 14px 14px; margin-bottom: 12px; background: var(--color-bg); }
+.motoboy-trecho-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.motoboy-trecho-num { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--color-primary); }
+.motoboy-trecho-desc { flex: 1; min-width: 0; font-size: 13px; color: var(--color-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.motoboy-trecho-head .btn { margin-left: auto; }
+.motoboy-linha { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.motoboy-rotulo { flex: 0 0 82px; font-size: 12.5px; font-weight: 600; color: var(--color-muted); }
+.motoboy-linha .field-input { flex: 1; min-width: 0; }
+.motoboy-trecho-rodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; padding-left: 92px; }
+.motoboy-trecho-rodape .btn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.motoboy-km-wrap { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--color-muted); }
+.motoboy-km-wrap .field-input { width: 110px; text-align: right; font-weight: 600; }
 .motoboy-trecho-campos { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .motoboy-trecho-campos .field-input { flex: 1; min-width: 0; }
-.motoboy-trecho-campos .motoboy-km { flex: 0 0 90px; }
+.motoboy-trecho-campos .motoboy-km { flex: 0 0 120px; text-align: right; }
 .btn.disabled { opacity: .45; pointer-events: none; }
-.motoboy-resumo { margin-top: 18px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 12px 14px; }
+.motoboy-resumo { margin-top: 22px; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 12px 16px; }
 .motoboy-resumo > div { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
-.motoboy-resumo-total { border-top: 1px solid var(--color-border); margin-top: 6px; padding-top: 8px !important; font-size: 16px !important; }
-.motoboy-resumo-total strong { color: var(--color-primary); font-size: 18px; }
-.motoboy-pagamento { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.motoboy-resumo-total { border-top: 1px solid var(--color-border); margin-top: 6px; padding-top: 10px !important; font-size: 16px !important; }
+.motoboy-resumo-total strong { color: var(--color-primary); font-size: 20px; }
+.motoboy-pagamento { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
 .motoboy-pagamento .field-select { max-width: 240px; }

@@ -160,7 +160,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         const trechosWrap = el('div', { class: 'motoboy-trechos' })
         const extrasWrap = el('div', { class: 'motoboy-trechos' })
         const resumoEl = el('div', { class: 'motoboy-resumo' })
-        const importMsg = el('span', { class: 'text-muted', style: 'font-size:12px;margin-left:8px' })
+        const importMsg = el('p', { class: 'motoboy-msg' })
 
         function atualizarResumo() {
           const t = calcularAcerto({ trechos, extras, valorKm })
@@ -181,11 +181,11 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
 
         function renderTrechos() {
           trechosWrap.replaceChildren(...trechos.map((t, i) => {
-            const kmInp = el('input', { type: 'number', class: 'field-input motoboy-km', step: '0.1', min: '0', placeholder: 'km' })
+            const kmInp = el('input', { type: 'number', class: 'field-input motoboy-km', step: '0.1', min: '0', placeholder: '0,0' })
             kmInp.value = t.km
             kmInp.addEventListener('input', () => { t.km = kmInp.value; atualizarResumo() })
 
-            const mapsBtn = el('a', { class: 'btn btn-sm btn-outline', target: '_blank', rel: 'noopener', title: 'Abrir o trajeto no Google Maps (moto)' }, '🗺️ Maps')
+            const mapsBtn = el('a', { class: 'btn btn-sm btn-outline', target: '_blank', rel: 'noopener', title: 'Abrir o trajeto no Google Maps (moto)' }, '🗺️ Ver no Maps')
             const atualizarMaps = () => {
               const l = linkMaps(t.origem, t.destino)
               if (l) { mapsBtn.href = l; mapsBtn.classList.remove('disabled') }
@@ -196,15 +196,22 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
             const remover = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
             remover.addEventListener('click', () => { trechos.splice(i, 1); renderTrechos(); atualizarResumo() })
 
+            const linhaEndereco = (rotulo, valor, placeholder, onInput) => el('div', { class: 'motoboy-linha' },
+              el('span', { class: 'motoboy-rotulo' }, rotulo),
+              campo(valor, placeholder, onInput),
+            )
+
             return el('div', { class: 'motoboy-trecho' },
               el('div', { class: 'motoboy-trecho-head' },
-                el('span', { class: 'roteiro-parada-num' }, `Trecho ${i + 1}`),
-                t.descricao ? el('span', { class: 'text-muted', style: 'font-size:12px' }, t.descricao) : null,
+                el('span', { class: 'motoboy-trecho-num' }, `Trecho ${i + 1}`),
+                t.descricao ? el('span', { class: 'motoboy-trecho-desc' }, t.descricao) : null,
+                remover,
               ),
-              el('div', { class: 'motoboy-trecho-campos' },
-                campo(t.origem, 'Endereço de retirada', v => { t.origem = v; atualizarMaps() }),
-                campo(t.destino, 'Endereço de entrega', v => { t.destino = v; atualizarMaps() }),
-                kmInp, mapsBtn, remover,
+              linhaEndereco('↑ Retirada', t.origem, 'Endereço ou nome da loja', v => { t.origem = v; atualizarMaps() }),
+              linhaEndereco('↓ Entrega', t.destino, 'Endereço de entrega', v => { t.destino = v; atualizarMaps() }),
+              el('div', { class: 'motoboy-trecho-rodape' },
+                mapsBtn,
+                el('div', { class: 'motoboy-km-wrap' }, kmInp, el('span', {}, 'km')),
               ),
             )
           }))
@@ -212,7 +219,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
 
         function renderExtras() {
           extrasWrap.replaceChildren(...extras.map((e, i) => {
-            const valInp = el('input', { type: 'number', class: 'field-input motoboy-km', step: '0.01', min: '0', placeholder: 'R$' })
+            const valInp = el('input', { type: 'number', class: 'field-input motoboy-km', step: '0.01', min: '0', placeholder: 'R$ 0,00' })
             valInp.value = e.valor
             valInp.addEventListener('input', () => { e.valor = valInp.value; atualizarResumo() })
             const remover = el('button', { type: 'button', class: 'btn btn-sm btn-danger-outline' }, '×')
@@ -286,11 +293,12 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
             el('div', { class: 'field' }, el('label', {}, 'Motoboy'), motoAc.el),
             el('div', { class: 'field' }, el('label', {}, 'Valor por km (R$)'), valorKmInp),
           ),
-          el('div', { class: 'config-list-header', style: 'margin-top:16px' },
-            el('p', { class: 'config-section-title', style: 'margin:0' }, 'Trechos (retirada → entrega)'),
-            importBtn, importMsg),
+          el('div', { class: 'motoboy-secao-head' },
+            el('h4', {}, 'Trechos (retirada → entrega)'),
+            importBtn),
+          importMsg,
           trechosWrap, addTrecho,
-          el('p', { class: 'config-section-title', style: 'margin-top:18px' }, 'Extras'),
+          el('div', { class: 'motoboy-secao-head', style: 'margin-top:22px' }, el('h4', {}, 'Extras (pagos pelo motoboy)')),
           extrasWrap, addExtra,
           resumoEl,
           el('div', { class: 'motoboy-pagamento' },
