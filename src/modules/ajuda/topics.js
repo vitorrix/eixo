@@ -509,7 +509,7 @@ export const GROUPS = [
           {
             titulo: 'Depois de salvo',
             passos: [
-              'Clique no acerto na lista para ver o detalhe dos trechos e extras. <strong>📋 Copiar resumo</strong> gera o texto pronto para mandar ao motoboy pelo WhatsApp.',
+              'Clique no acerto na lista para ver o detalhe dos trechos e extras. <strong>📋 Copiar roteiro</strong> gera o texto "Roteiro Portador" pronto para mandar pelo WhatsApp: portador, cada corrida (coleta e entrega; nas importadas, também o item e o cliente), extras e o total a pagar.',
               'O Pagamento fica no Financeiro (aba Pagamentos): é lá que você marca como pago e é dele que o valor entra no DRE.',
             ],
           },

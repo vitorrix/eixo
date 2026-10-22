@@ -35,6 +35,7 @@ export async function createAcerto(data, { liquidado, conta, categoria }) {
   const { uid } = getCurrentProfile()
   const trechos = data.trechos.map(t => ({
     origem: (t.origem || '').trim(), destino: (t.destino || '').trim(),
+    cliente: (t.cliente || '').trim(), item: (t.item || '').trim(),
     descricao: (t.descricao || '').trim(), km: parseFloat(t.km) || 0, pedidoId: t.pedidoId || null,
   }))
   const extras = data.extras
@@ -138,6 +139,8 @@ export async function trechosDasEntregasDoDia(dataISO, fornecedores = []) {
       trechos.push({
         origem:   r.loja ? enderecoLoja(r.loja) : '',
         destino:  entrega.endereco || '',
+        cliente:  pedido.cliente || entrega.cliente || '',
+        item:     r.item || '',
         descricao: `${pedido.cliente || entrega.cliente || ''}${r.item ? ' — ' + r.item : ''}`,
         km: '',
         pedidoId: `${pedido.id}#${i}`,

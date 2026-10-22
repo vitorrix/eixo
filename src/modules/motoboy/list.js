@@ -21,21 +21,31 @@ function linkMaps(origem, destino) {
 const kmTxt = n => `${String(n).replace('.', ',')} km`
 const dataBR = iso => { const [y, m, d] = (iso || '').split('-'); return `${d}/${m}/${y}` }
 
+// Texto pro portador (WhatsApp): corridas com coleta/entrega, extras e total.
+// Corrida importada do Roteiro traz item e cliente; corrida digitada à mão sai
+// só com os endereços. "N) Corrida" só aparece quando há mais de uma.
 function resumoTexto(a) {
-  const linhas = [`🏍️ *ACERTO MOTOBOY — ${dataBR(a.data)}*`]
-  if (a.motoboy) linhas.push(`Motoboy: ${a.motoboy}`)
-  linhas.push('')
+  const L = ['🏍️ *ROTEIRO PORTADOR*', `📆 ${dataBR(a.data)}`]
+  if (a.motoboy) L.push(`👤 Portador: ${a.motoboy}`)
+  L.push('')
+  const varias = a.trechos.length > 1
   a.trechos.forEach((t, i) => {
-    const rota = [t.origem, t.destino].filter(Boolean).join(' → ')
-    linhas.push(`${i + 1}) ${rota || t.descricao || 'Trecho'} — ${kmTxt(t.km)}`)
+    if (varias) L.push(`*${i + 1}) Corrida*`)
+    L.push('📦 *Coleta*', t.origem || '—')
+    if (t.item) L.push(`🛍️ ${t.item}`)
+    L.push('✅ *Entrega*', t.destino || '—')
+    if (t.cliente) L.push(`🙋 Cliente: ${t.cliente}`)
+    L.push(`📏 ${kmTxt(t.km)}`, '')
   })
-  linhas.push('', `Total: ${kmTxt(a.totalKm)} × ${brl(a.valorKm)} = ${brl(a.valorRodado)}`)
   if (a.extras?.length) {
-    linhas.push('', 'Extras (pago pelo motoboy):')
-    a.extras.forEach(e => linhas.push(`• ${e.descricao || 'Item'} — ${brl(e.valor)}`))
+    L.push('🧾 *Extras (pago pelo portador)*')
+    a.extras.forEach(e => L.push(`• ${e.descricao || 'Item'} — ${brl(e.valor)}`))
+    L.push('')
   }
-  linhas.push('', `*TOTAL A PAGAR: ${brl(a.total)}*`)
-  return linhas.join('\n')
+  L.push('━━━━━━━━━━━━━━', `🧮 Total: ${kmTxt(a.totalKm)} × ${brl(a.valorKm)} = ${brl(a.valorRodado)}`)
+  if (a.extras?.length) L.push(`➕ Extras: ${brl(a.totalExtras)}`)
+  L.push(`💰 *TOTAL A PAGAR: ${brl(a.total)}*`)
+  return L.join('\n')
 }
 
 const rotuloFornecedor = f => (f.box ? `${f.name} - ${f.box}` : f.name)
@@ -103,9 +113,9 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         const linha = (l, v) => el('div', { class: 'detalhes-linha' },
           el('span', { class: 'detalhes-label' }, l), el('span', { class: 'detalhes-valor' }, v))
 
-        const copiarBtn = el('button', { type: 'button', class: 'btn btn-outline' }, '📋 Copiar resumo')
+        const copiarBtn = el('button', { type: 'button', class: 'btn btn-outline' }, '📋 Copiar roteiro')
         copiarBtn.addEventListener('click', async () => {
-          try { await navigator.clipboard.writeText(resumoTexto(a)); toastSuccess('Resumo copiado.') }
+          try { await navigator.clipboard.writeText(resumoTexto(a)); toastSuccess('Roteiro copiado.') }
           catch { toastError('Não foi possível copiar.') }
         })
         const fecharBtn = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Fechar')
