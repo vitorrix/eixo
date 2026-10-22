@@ -1,0 +1,2586 @@
+{
+  "versao": "rascunho 2026-10-22",
+  "regras": [
+    "Comparação de apelidos: minúsculas, sem acento, hífen vira espaço (função normalizar)",
+    "Cada modelo tem lista FECHADA de cores; só pode mapear para uma cor do próprio modelo",
+    "Cor da lista que não bate com nenhum apelido do modelo -> fila de revisão, nunca adivinhar",
+    "Texto da cor vale mais que o emoji",
+    "Modelos com 'Sem cor' ignoram a cor da lista",
+    "Modelo novo só é lido depois de entrar no dicionário"
+  ],
+  "modelos": {
+    "iPhone 18 Pro Max": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Black / Space Black",
+          "status": "Confirmado por você",
+          "obs": "18 Pro: mesmas cores vistas nas listas (HYH, Tokyo)"
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver",
+            "white"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Silver vira Branco"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue",
+            "glacial",
+            "glaciar",
+            "glacier",
+            "glarceir"
+          ],
+          "nome_oficial_apple": "Glacier",
+          "status": "Confirmado por você",
+          "obs": "Glacier vira Azul"
+        },
+        "Bordô": {
+          "apelidos": [
+            "bordeaux",
+            "bordo",
+            "burgundy",
+            "roxo",
+            "vinho"
+          ],
+          "nome_oficial_apple": "Burgundy",
+          "status": "Confirmado por você",
+          "obs": "Nunca usar 'Bordeaux' na tela"
+        }
+      }
+    },
+    "iPhone 18 Pro": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Black / Space Black",
+          "status": "Confirmado por você",
+          "obs": "18 Pro: mesmas cores vistas nas listas (HYH, Tokyo)"
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver",
+            "white"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Silver vira Branco"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue",
+            "glacial",
+            "glaciar",
+            "glacier",
+            "glarceir"
+          ],
+          "nome_oficial_apple": "Glacier",
+          "status": "Confirmado por você",
+          "obs": "Glacier vira Azul"
+        },
+        "Bordô": {
+          "apelidos": [
+            "bordeaux",
+            "bordo",
+            "burgundy",
+            "roxo",
+            "vinho"
+          ],
+          "nome_oficial_apple": "Burgundy",
+          "status": "Confirmado por você",
+          "obs": "Nunca usar 'Bordeaux' na tela"
+        }
+      }
+    },
+    "iPhone 17 Pro Max": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver",
+            "white"
+          ],
+          "nome_oficial_apple": "Silver / Prateado",
+          "status": "Confirmado por você",
+          "obs": "Hoje o filtro mostra Branco e Prateado separados: unificar"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul profundo",
+            "blue",
+            "deep blue"
+          ],
+          "nome_oficial_apple": "Deep Blue / Azul-profundo",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Laranja": {
+          "apelidos": [
+            "cosmic orange",
+            "laranja",
+            "laranja cosmico",
+            "larnaja",
+            "orange"
+          ],
+          "nome_oficial_apple": "Cosmic Orange / Laranja-cósmico",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 17 Pro": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver",
+            "white"
+          ],
+          "nome_oficial_apple": "Silver / Prateado",
+          "status": "Confirmado por você",
+          "obs": "Hoje o filtro mostra Branco e Prateado separados: unificar"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul profundo",
+            "blue",
+            "deep blue"
+          ],
+          "nome_oficial_apple": "Deep Blue / Azul-profundo",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Laranja": {
+          "apelidos": [
+            "cosmic orange",
+            "laranja",
+            "laranja cosmico",
+            "larnaja",
+            "orange"
+          ],
+          "nome_oficial_apple": "Cosmic Orange / Laranja-cósmico",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 17": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "white"
+          ],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul nevoa",
+            "blue",
+            "mist blue"
+          ],
+          "nome_oficial_apple": "Mist Blue / Azul-névoa",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "green",
+            "sage",
+            "salvia",
+            "verde"
+          ],
+          "nome_oficial_apple": "Sage / Sálvia",
+          "status": "Confirmado por você",
+          "obs": "Sálvia vira Verde"
+        },
+        "Lilás": {
+          "apelidos": [
+            "lavanda",
+            "lavender",
+            "lilas",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Lavender / Lavanda",
+          "status": "Confirmado por você",
+          "obs": "Lavanda vira Lilás"
+        }
+      }
+    },
+    "iPhone Air": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": "Fornecedor escreve '17 Air'; no catálogo é 'iPhone Air'"
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "branco nuvem",
+            "cloud white",
+            "white"
+          ],
+          "nome_oficial_apple": "Cloud White",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Dourado": {
+          "apelidos": [
+            "dourado",
+            "dourado claro",
+            "gold",
+            "light gold"
+          ],
+          "nome_oficial_apple": "Light Gold",
+          "status": "Confirmado por você",
+          "obs": "HYH: '17 AIR GOLD'"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul ceu",
+            "blue",
+            "sky blue"
+          ],
+          "nome_oficial_apple": "Sky Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 17e": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "—",
+          "status": "Confirmado por você",
+          "obs": "Confirmar a lista oficial de cores"
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "white"
+          ],
+          "nome_oficial_apple": "—",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "—",
+          "status": "Confirmado por você",
+          "obs": "Tokyo: 17E Rosa"
+        }
+      }
+    },
+    "iPhone 16 Pro Max": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "black titanium",
+            "preto",
+            "titanio preto"
+          ],
+          "nome_oficial_apple": "Black Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "silver",
+            "titanio branco",
+            "white",
+            "white titanium"
+          ],
+          "nome_oficial_apple": "White Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Natural": {
+          "apelidos": [
+            "cinza",
+            "natural",
+            "natural titanium",
+            "titanio natural"
+          ],
+          "nome_oficial_apple": "Natural Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Deserto": {
+          "apelidos": [
+            "desert",
+            "desert titanium",
+            "deserto",
+            "dourado",
+            "titanio deserto"
+          ],
+          "nome_oficial_apple": "Desert Titanium",
+          "status": "Confirmado por você",
+          "obs": "Nome no sistema: 'Deserto' ou 'Desert'?"
+        }
+      }
+    },
+    "iPhone 16 Pro": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "black titanium",
+            "preto",
+            "titanio preto"
+          ],
+          "nome_oficial_apple": "Black Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "silver",
+            "titanio branco",
+            "white",
+            "white titanium"
+          ],
+          "nome_oficial_apple": "White Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Natural": {
+          "apelidos": [
+            "cinza",
+            "natural",
+            "natural titanium",
+            "titanio natural"
+          ],
+          "nome_oficial_apple": "Natural Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Deserto": {
+          "apelidos": [
+            "desert",
+            "desert titanium",
+            "deserto",
+            "dourado",
+            "titanio deserto"
+          ],
+          "nome_oficial_apple": "Desert Titanium",
+          "status": "Confirmado por você",
+          "obs": "Nome no sistema: 'Deserto' ou 'Desert'?"
+        }
+      }
+    },
+    "iPhone 16": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "white"
+          ],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "Pink",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "green",
+            "teal",
+            "verde",
+            "verde acinzentado"
+          ],
+          "nome_oficial_apple": "Teal",
+          "status": "Confirmado por você",
+          "obs": "Teal vira Verde"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue",
+            "ultramarine",
+            "ultramarino"
+          ],
+          "nome_oficial_apple": "Ultramarine",
+          "status": "Confirmado por você",
+          "obs": "Ultramarine vira Azul"
+        }
+      }
+    },
+    "iPhone 16 Plus": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "white"
+          ],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "Pink",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "green",
+            "teal",
+            "verde",
+            "verde acinzentado"
+          ],
+          "nome_oficial_apple": "Teal",
+          "status": "Confirmado por você",
+          "obs": "Teal vira Verde"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue",
+            "ultramarine",
+            "ultramarino"
+          ],
+          "nome_oficial_apple": "Ultramarine",
+          "status": "Confirmado por você",
+          "obs": "Ultramarine vira Azul"
+        }
+      }
+    },
+    "iPhone 16e": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "white"
+          ],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 15 Pro Max": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "black titanium",
+            "preto",
+            "titanio preto"
+          ],
+          "nome_oficial_apple": "Black Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "titanio branco",
+            "white",
+            "white titanium"
+          ],
+          "nome_oficial_apple": "White Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue",
+            "blue titanium",
+            "titanio azul"
+          ],
+          "nome_oficial_apple": "Blue Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Natural": {
+          "apelidos": [
+            "natural",
+            "natural titanium",
+            "titanio natural"
+          ],
+          "nome_oficial_apple": "Natural Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 15 Pro": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "black titanium",
+            "preto",
+            "titanio preto"
+          ],
+          "nome_oficial_apple": "Black Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "titanio branco",
+            "white",
+            "white titanium"
+          ],
+          "nome_oficial_apple": "White Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue",
+            "blue titanium",
+            "titanio azul"
+          ],
+          "nome_oficial_apple": "Blue Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Natural": {
+          "apelidos": [
+            "natural",
+            "natural titanium",
+            "titanio natural"
+          ],
+          "nome_oficial_apple": "Natural Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 15": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "green",
+            "verde"
+          ],
+          "nome_oficial_apple": "Green",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Amarelo": {
+          "apelidos": [
+            "amarelo",
+            "yellow"
+          ],
+          "nome_oficial_apple": "Yellow",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "Pink",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 15 Plus": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "green",
+            "verde"
+          ],
+          "nome_oficial_apple": "Green",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Amarelo": {
+          "apelidos": [
+            "amarelo",
+            "yellow"
+          ],
+          "nome_oficial_apple": "Yellow",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "Pink",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 14 Pro Max": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver",
+            "white"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Mesma regra: Silver vira Branco"
+        },
+        "Dourado": {
+          "apelidos": [
+            "dourado",
+            "gold"
+          ],
+          "nome_oficial_apple": "Gold",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Roxo": {
+          "apelidos": [
+            "deep purple",
+            "purple",
+            "roxo",
+            "roxo profundo"
+          ],
+          "nome_oficial_apple": "Deep Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 14 Pro": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver",
+            "white"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Mesma regra: Silver vira Branco"
+        },
+        "Dourado": {
+          "apelidos": [
+            "dourado",
+            "gold"
+          ],
+          "nome_oficial_apple": "Gold",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Roxo": {
+          "apelidos": [
+            "deep purple",
+            "purple",
+            "roxo",
+            "roxo profundo"
+          ],
+          "nome_oficial_apple": "Deep Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 14": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "black",
+            "meia noite",
+            "midnight",
+            "preto"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": "Ver decisão Midnight/Starlight"
+        },
+        "Starlight": {
+          "apelidos": [
+            "branco",
+            "estelar",
+            "starlight",
+            "white"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": "Ver decisão Midnight/Starlight"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Roxo": {
+          "apelidos": [
+            "lilas",
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Vermelho": {
+          "apelidos": [
+            "(product)red",
+            "product red",
+            "red",
+            "vermelho"
+          ],
+          "nome_oficial_apple": "(PRODUCT)RED",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Amarelo": {
+          "apelidos": [
+            "amarelo",
+            "yellow"
+          ],
+          "nome_oficial_apple": "Yellow",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 14 Plus": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "black",
+            "meia noite",
+            "midnight",
+            "preto"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": "Ver decisão Midnight/Starlight"
+        },
+        "Starlight": {
+          "apelidos": [
+            "branco",
+            "estelar",
+            "starlight",
+            "white"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": "Ver decisão Midnight/Starlight"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Roxo": {
+          "apelidos": [
+            "lilas",
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Vermelho": {
+          "apelidos": [
+            "(product)red",
+            "product red",
+            "red",
+            "vermelho"
+          ],
+          "nome_oficial_apple": "(PRODUCT)RED",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Amarelo": {
+          "apelidos": [
+            "amarelo",
+            "yellow"
+          ],
+          "nome_oficial_apple": "Yellow",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 13 Pro Max": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Grafite": {
+          "apelidos": [
+            "black",
+            "grafite",
+            "graphite",
+            "preto"
+          ],
+          "nome_oficial_apple": "Graphite",
+          "status": "Confirmado por você",
+          "obs": "Nasser: '13 Pro CPO Grafite'"
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver",
+            "white"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Dourado": {
+          "apelidos": [
+            "dourado",
+            "gold"
+          ],
+          "nome_oficial_apple": "Gold",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul sierra",
+            "blue",
+            "sierra blue"
+          ],
+          "nome_oficial_apple": "Sierra Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "alpine green",
+            "green",
+            "verde",
+            "verde alpino"
+          ],
+          "nome_oficial_apple": "Alpine Green",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 13 Pro": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Grafite": {
+          "apelidos": [
+            "black",
+            "grafite",
+            "graphite",
+            "preto"
+          ],
+          "nome_oficial_apple": "Graphite",
+          "status": "Confirmado por você",
+          "obs": "Nasser: '13 Pro CPO Grafite'"
+        },
+        "Branco": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver",
+            "white"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Dourado": {
+          "apelidos": [
+            "dourado",
+            "gold"
+          ],
+          "nome_oficial_apple": "Gold",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul sierra",
+            "blue",
+            "sierra blue"
+          ],
+          "nome_oficial_apple": "Sierra Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "alpine green",
+            "green",
+            "verde",
+            "verde alpino"
+          ],
+          "nome_oficial_apple": "Alpine Green",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 13": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "black",
+            "meia noite",
+            "midnight",
+            "preto"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": "Você: 'não existe 13 preto, é o Midnight'"
+        },
+        "Starlight": {
+          "apelidos": [
+            "branco",
+            "estelar",
+            "starlight",
+            "white"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": "Ver decisão Midnight/Starlight"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "Pink",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Vermelho": {
+          "apelidos": [
+            "(product)red",
+            "product red",
+            "red",
+            "vermelho"
+          ],
+          "nome_oficial_apple": "(PRODUCT)RED",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "green",
+            "verde"
+          ],
+          "nome_oficial_apple": "Green",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPhone 13 mini": {
+      "linha": "iPhone",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "black",
+            "meia noite",
+            "midnight",
+            "preto"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": "Você: 'não existe 13 preto, é o Midnight'"
+        },
+        "Starlight": {
+          "apelidos": [
+            "branco",
+            "estelar",
+            "starlight",
+            "white"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": "Ver decisão Midnight/Starlight"
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "Pink",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Vermelho": {
+          "apelidos": [
+            "(product)red",
+            "product red",
+            "red",
+            "vermelho"
+          ],
+          "nome_oficial_apple": "(PRODUCT)RED",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Verde": {
+          "apelidos": [
+            "green",
+            "verde"
+          ],
+          "nome_oficial_apple": "Green",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Air M5 13\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul ceu",
+            "blue",
+            "sky",
+            "sky blue",
+            "skyblue"
+          ],
+          "nome_oficial_apple": "Sky Blue",
+          "status": "Confirmado por você",
+          "obs": "A3449 / A3448 / A3240 / A3241"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Em Mac, Silver fica Prateado? (ver decisão)"
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Midnight": {
+          "apelidos": [
+            "meia noite",
+            "midnight"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Air M5 15\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul ceu",
+            "blue",
+            "sky",
+            "sky blue",
+            "skyblue"
+          ],
+          "nome_oficial_apple": "Sky Blue",
+          "status": "Confirmado por você",
+          "obs": "A3449 / A3448 / A3240 / A3241"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Em Mac, Silver fica Prateado? (ver decisão)"
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Midnight": {
+          "apelidos": [
+            "meia noite",
+            "midnight"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Air M4 13\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul ceu",
+            "blue",
+            "sky",
+            "sky blue",
+            "skyblue"
+          ],
+          "nome_oficial_apple": "Sky Blue",
+          "status": "Confirmado por você",
+          "obs": "A3449 / A3448 / A3240 / A3241"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Em Mac, Silver fica Prateado? (ver decisão)"
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Midnight": {
+          "apelidos": [
+            "meia noite",
+            "midnight"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Air M4 15\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "azul ceu",
+            "blue",
+            "sky",
+            "sky blue",
+            "skyblue"
+          ],
+          "nome_oficial_apple": "Sky Blue",
+          "status": "Confirmado por você",
+          "obs": "A3449 / A3448 / A3240 / A3241"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Em Mac, Silver fica Prateado? (ver decisão)"
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Midnight": {
+          "apelidos": [
+            "meia noite",
+            "midnight"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Air M3 13\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "meia noite",
+            "midnight"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": "HYH: Air M3 Midnight | A3114 e afins"
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Air M3 15\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "meia noite",
+            "midnight"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": "HYH: Air M3 Midnight | A3114 e afins"
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Air M2 13\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "meia noite",
+            "midnight"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": "HYH: Air M3 Midnight | A3114 e afins"
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Pro M5 14\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": "Fornecedores escrevem 'MAC PRO': é MacBook Pro, não Mac Pro (A3429, A3426, A3434)"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Pro M5 Pro/Max 14\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": "Fornecedores escrevem 'MAC PRO': é MacBook Pro, não Mac Pro (A3429, A3426, A3434)"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Pro M5 Pro/Max 16\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": "Fornecedores escrevem 'MAC PRO': é MacBook Pro, não Mac Pro (A3429, A3426, A3434)"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Pro M4 14\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": "Fornecedores escrevem 'MAC PRO': é MacBook Pro, não Mac Pro (A3429, A3426, A3434)"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Pro M4 Pro/Max 16\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": "Fornecedores escrevem 'MAC PRO': é MacBook Pro, não Mac Pro (A3429, A3426, A3434)"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "MacBook Neo 13\"": {
+      "linha": "MacBook",
+      "obs": "",
+      "cores": {
+        "Amarelo": {
+          "apelidos": [
+            "amarelo",
+            "cit",
+            "citrus",
+            "yellow"
+          ],
+          "nome_oficial_apple": "Citrus",
+          "status": "Confirmado por você",
+          "obs": "HYH '(CIT)' = Citrus, não é origem | A3404. Confirmar lista oficial de cores"
+        },
+        "Silver": {
+          "apelidos": [
+            "branco",
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue",
+            "ind",
+            "indigo"
+          ],
+          "nome_oficial_apple": "Indigo",
+          "status": "Confirmado por você",
+          "obs": "HYH '(IND)' = Indigo, não é indiano"
+        },
+        "Rosa": {
+          "apelidos": [
+            "blush",
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "—",
+          "status": "Confirmado por você",
+          "obs": "HYH: Mac Neo Rosa"
+        }
+      }
+    },
+    "iMac M4 24\"": {
+      "linha": "Mac",
+      "obs": "",
+      "cores": {
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": "A3247 / A3137. Versão 8C só tem 4 cores"
+        },
+        "Verde": {
+          "apelidos": [
+            "green",
+            "verde"
+          ],
+          "nome_oficial_apple": "Green",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Prateado": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "Pink",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Amarelo": {
+          "apelidos": [
+            "amarelo",
+            "yellow"
+          ],
+          "nome_oficial_apple": "Yellow",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Laranja": {
+          "apelidos": [
+            "laranja",
+            "orange"
+          ],
+          "nome_oficial_apple": "Orange",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Roxo": {
+          "apelidos": [
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "Mac mini": {
+      "linha": "Mac",
+      "obs": "",
+      "cores": {
+        "Sem cor": {
+          "apelidos": [],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Ignorar cor; HYH escreveu 'WITH' no Mac mini"
+        }
+      }
+    },
+    "Mac Studio": {
+      "linha": "Mac",
+      "obs": "",
+      "cores": {
+        "Sem cor": {
+          "apelidos": [],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": "Ignorar cor; HYH escreveu 'WITH' no Mac mini"
+        }
+      }
+    },
+    "iPad A16": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rosa": {
+          "apelidos": [
+            "pink",
+            "rosa"
+          ],
+          "nome_oficial_apple": "Pink",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Amarelo": {
+          "apelidos": [
+            "amarelo",
+            "yellow"
+          ],
+          "nome_oficial_apple": "Yellow",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad Air M4 11\"": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Roxo": {
+          "apelidos": [
+            "lilas",
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad Air M4 13\"": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Roxo": {
+          "apelidos": [
+            "lilas",
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad Air M3 11\"": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Roxo": {
+          "apelidos": [
+            "lilas",
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad Air M3 13\"": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Roxo": {
+          "apelidos": [
+            "lilas",
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad Pro M5 11\"": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad Pro M5 13\"": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad Pro M4 11\"": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad Pro M4 13\"": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto",
+            "preto espacial",
+            "space black"
+          ],
+          "nome_oficial_apple": "Space Black",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "iPad mini A17 Pro": {
+      "linha": "iPad",
+      "obs": "",
+      "cores": {
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Roxo": {
+          "apelidos": [
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "Apple Watch SE 3": {
+      "linha": "Apple Watch",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "black",
+            "meia noite",
+            "midnight",
+            "preto"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": "Cor = caixa. Pulseira vai em campo separado"
+        },
+        "Starlight": {
+          "apelidos": [
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "Apple Watch Series 10": {
+      "linha": "Apple Watch",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "jet black",
+            "preto",
+            "preto brilhante"
+          ],
+          "nome_oficial_apple": "Jet Black",
+          "status": "Confirmado por você",
+          "obs": "Fornecedor escreve 'Apple S10/S11'. Titânio (Natural, Dourado, Ardósia) fica fora até aparecer"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rose Gold": {
+          "apelidos": [
+            "ouro rosa",
+            "rosa",
+            "rosa gold",
+            "rose",
+            "rose gold"
+          ],
+          "nome_oficial_apple": "Rose Gold",
+          "status": "Confirmado por você",
+          "obs": "Nasser: 'Rosa Gold'"
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": "Só Series 11"
+        }
+      }
+    },
+    "Apple Watch Series 11": {
+      "linha": "Apple Watch",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "jet black",
+            "preto",
+            "preto brilhante"
+          ],
+          "nome_oficial_apple": "Jet Black",
+          "status": "Confirmado por você",
+          "obs": "Fornecedor escreve 'Apple S10/S11'. Titânio (Natural, Dourado, Ardósia) fica fora até aparecer"
+        },
+        "Silver": {
+          "apelidos": [
+            "prata",
+            "prateado",
+            "silver"
+          ],
+          "nome_oficial_apple": "Silver",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Rose Gold": {
+          "apelidos": [
+            "ouro rosa",
+            "rosa",
+            "rosa gold",
+            "rose",
+            "rose gold"
+          ],
+          "nome_oficial_apple": "Rose Gold",
+          "status": "Confirmado por você",
+          "obs": "Nasser: 'Rosa Gold'"
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Space Gray",
+          "status": "Confirmado por você",
+          "obs": "Só Series 11"
+        }
+      }
+    },
+    "Apple Watch Series 12": {
+      "linha": "Apple Watch",
+      "obs": "",
+      "cores": {
+        "Bronze Escuro": {
+          "apelidos": [
+            "bronze",
+            "bronze escuro",
+            "dark bronze"
+          ],
+          "nome_oficial_apple": "Bronze-escuro",
+          "status": "Confirmado por você",
+          "obs": "Nasser: S12 Black | Completar com as cores oficiais"
+        },
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Preto",
+          "status": "Confirmado por você",
+          "obs": "Nasser: S12 Black | Completar com as cores oficiais"
+        },
+        "Cinza Espacial": {
+          "apelidos": [
+            "cinza",
+            "cinza espacial",
+            "space gray",
+            "space grey"
+          ],
+          "nome_oficial_apple": "Cinza-espacial",
+          "status": "Confirmado por você",
+          "obs": "Nasser: S12 Black | Completar com as cores oficiais"
+        },
+        "Dourado Claro": {
+          "apelidos": [
+            "dourado",
+            "dourado claro",
+            "gold",
+            "light gold"
+          ],
+          "nome_oficial_apple": "Dourado‑claro",
+          "status": "Confirmado por você",
+          "obs": "Nasser: S12 Black | Completar com as cores oficiais"
+        }
+      }
+    },
+    "Apple Watch Ultra 3": {
+      "linha": "Apple Watch",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Black Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Natural": {
+          "apelidos": [
+            "natural"
+          ],
+          "nome_oficial_apple": "Natural Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "Apple Watch Ultra 4": {
+      "linha": "Apple Watch",
+      "obs": "",
+      "cores": {
+        "Preto": {
+          "apelidos": [
+            "black",
+            "preto"
+          ],
+          "nome_oficial_apple": "Black Titanium",
+          "status": "Confirmado por você",
+          "obs": "Pulseira (Ocean, Trail Loop, Alpine, Milanese) é atributo separado"
+        },
+        "Natural": {
+          "apelidos": [
+            "natural"
+          ],
+          "nome_oficial_apple": "Natural Titanium",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "AirPods 4": {
+      "linha": "AirPods",
+      "obs": "",
+      "cores": {
+        "Sem cor": {
+          "apelidos": [],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": "Só existe branco: ignorar cor"
+        }
+      }
+    },
+    "AirPods 4 ANC": {
+      "linha": "AirPods",
+      "obs": "",
+      "cores": {
+        "Sem cor": {
+          "apelidos": [],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": "Só existe branco: ignorar cor"
+        }
+      }
+    },
+    "AirPods Pro 3": {
+      "linha": "AirPods",
+      "obs": "",
+      "cores": {
+        "Sem cor": {
+          "apelidos": [],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": "Só existe branco: ignorar cor"
+        }
+      }
+    },
+    "AirPods Max (USB-C)": {
+      "linha": "AirPods",
+      "obs": "",
+      "cores": {
+        "Midnight": {
+          "apelidos": [
+            "black",
+            "meia noite",
+            "midnight",
+            "preto"
+          ],
+          "nome_oficial_apple": "Midnight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Starlight": {
+          "apelidos": [
+            "branco",
+            "estelar",
+            "starlight"
+          ],
+          "nome_oficial_apple": "Starlight",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Azul": {
+          "apelidos": [
+            "azul",
+            "blue"
+          ],
+          "nome_oficial_apple": "Blue",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Roxo": {
+          "apelidos": [
+            "purple",
+            "roxo"
+          ],
+          "nome_oficial_apple": "Purple",
+          "status": "Confirmado por você",
+          "obs": ""
+        },
+        "Laranja": {
+          "apelidos": [
+            "laranja",
+            "orange"
+          ],
+          "nome_oficial_apple": "Orange",
+          "status": "Confirmado por você",
+          "obs": ""
+        }
+      }
+    },
+    "AirTag": {
+      "linha": "Acessórios",
+      "obs": "",
+      "cores": {
+        "Sem cor": {
+          "apelidos": [],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": "Ignorar cor"
+        }
+      }
+    },
+    "Apple Pencil Pro": {
+      "linha": "Acessórios",
+      "obs": "",
+      "cores": {
+        "Sem cor": {
+          "apelidos": [],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": "Ignorar cor"
+        }
+      }
+    },
+    "Apple Pencil USB-C": {
+      "linha": "Acessórios",
+      "obs": "",
+      "cores": {
+        "Sem cor": {
+          "apelidos": [],
+          "nome_oficial_apple": "White",
+          "status": "Confirmado por você",
+          "obs": "Ignorar cor"
+        }
+      }
+    }
+  }
+}

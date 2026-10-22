@@ -326,7 +326,9 @@ export const GROUPS = [
           },
         ],
         tips: [
-          'Os nomes de cores são padronizados na entrada (ex.: "Burgundy" vira "Bordô" no iPhone 18 Pro Max) para o filtro não ficar com várias grafias da mesma cor.',
+          'As cores são padronizadas por um <strong>dicionário de cores por modelo</strong>: "Silver", "Prateado" e "Glacier" viram a cor oficial daquele modelo (ex.: Branco ou Azul no iPhone 18 Pro Max). Ao pesquisar um modelo, o filtro Cor mostra só as cores oficiais dele.',
+          'Quando o dicionário não reconhece a cor de uma lista, a oferta entra <strong>sem cor</strong> e o texto vai para a <strong>🎨 Revisão de cores</strong> (botão ao lado do título da Busca): escolha a cor oficial do modelo e o sistema corrige as ofertas e aprende o apelido, ou use Ignorar.',
+          'Modelos que ainda não estão no dicionário continuam aparecendo normalmente, com a cor como veio da lista.',
           'Cada fornecedor tem só o preço atual: uma lista nova do mesmo fornecedor substitui o preço anterior.',
           'Se as ofertas pararem de atualizar, confira o alerta do bot no Dashboard.',
         ],

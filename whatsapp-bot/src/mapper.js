@@ -1,5 +1,6 @@
 import { parseMessageWithAI } from './aiParser.js'
 import { normalizeColorForProduto } from './colorMap.js'
+import { aplicarCor, normalizarTexto } from '../../src/shared/utils/dicionarioCores.js'
 
 const STORAGE_REGEX = /(\d+)\s?(GB|TB)\b/gi
 const TAMANHO_REGEX = /(\d+)\s?MM\b/i
@@ -122,6 +123,14 @@ export function extractProdutoAtributos(produtoBruto) {
   return { produtoNome, capacidade, ram, tamanho }
 }
 
+// A mensagem da lista vem inteira em textoOriginal — mostra só a linha que cita a cor.
+function linhaDaCor(texto, cor) {
+  const alvo = normalizarTexto(cor)
+  const linhas = (texto || '').split('\n').map(l => l.trim()).filter(Boolean)
+  const achou = linhas.find(l => alvo && normalizarTexto(l).includes(alvo))
+  return (achou || linhas[0] || '').slice(0, 140)
+}
+
 export function buildDocId({ fornecedorKey, produtoNome, variante, seminovo }) {
   return [
     slugify(fornecedorKey),
@@ -156,7 +165,15 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
 
   return candidatos.map(c => {
     const { produtoNome, capacidade, ram, tamanho } = extractProdutoAtributos(c.produtoBruto)
-    const cor = normalizeColorForProduto(produtoNome, c.cor)
+    // Cor: dicionário de cores por modelo (dicionario-cores.json). Modelo fora do
+    // dicionário segue o caminho antigo (colorMap.js); cor que o dicionário não
+    // reconhece nunca é adivinhada — a oferta entra sem cor e o texto vai pra
+    // fila de revisão (coresRevisao).
+    const rc = aplicarCor(produtoNome, c.cor)
+    const cor = rc.estado === 'modelo-fora' ? normalizeColorForProduto(produtoNome, c.cor) : rc.cor
+    const revisaoCor = rc.estado === 'revisar'
+      ? { modelo: rc.modeloOficial, textoCor: (c.cor || '').trim(), fornecedor: groupMeta.fornecedorNome || '', exemplo: linhaDaCor(c.textoOriginal, c.cor) }
+      : null
     const origem = (c.origem || '').trim()
     // origem entra no docId pra não colidir o mesmo modelo/cor vendido em mercados
     // diferentes (ex: mesmo iPhone Americano e Japonês, preços distintos). ram entra
@@ -170,6 +187,7 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
 
     return {
       docId,
+      revisaoCor,
       data: {
         fornecedorId: groupMeta.fornecedorId || null,
         fornecedorNome: groupMeta.fornecedorNome || '',
@@ -183,6 +201,9 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
         ram,
         tamanho,
         cor,
+        corOriginal: (c.cor || '').trim(),
+        corRevisao: !!revisaoCor,
+        modeloOficial: rc.modeloOficial,
         origem,
         variante,
         categorias,

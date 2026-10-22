@@ -1,0 +1,14 @@
+{
+  "versao": "rascunho 2026-10-22",
+  "comentario": "Complementos ao dicionario-cores.json (que continua sendo a fonte oficial). Aqui ficam só os apelidos de cor decididos depois e aliases de modelo avulsos. Os padrões gerais de nome de modelo (CPO, eSim, WiFi, capacidade, Watch S11, iPad Air 11 inch M4...) são tratados por regras em src/shared/utils/dicionarioCores.js.",
+  "modelos": {
+    "iphone 17 air": "iPhone Air"
+  },
+  "cores": [
+    { "modelos": ["MacBook Neo 13\""], "cor": "Amarelo", "apelidos": ["citrico", "citros", "citrus"] },
+    { "modelosComCor": "Rosa", "cor": "Rosa", "apelidos": ["rosé"] },
+    { "modelos": ["iPhone 18 Pro", "iPhone 18 Pro Max"], "cor": "Azul", "apelidos": ["glacé", "glaciê", "geleira", "azul glacier", "glacê azul", "glace azul"] },
+    { "modelos": ["iPhone 18 Pro", "iPhone 18 Pro Max"], "cor": "Bordô", "apelidos": ["burgandy"] },
+    { "modelos": ["iPhone 16"], "cor": "Azul", "apelidos": ["azul ultramarino", "ultramarino", "ultramarine"] }
+  ]
+}

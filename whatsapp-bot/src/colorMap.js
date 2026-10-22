@@ -104,6 +104,16 @@ export function normalizeColor(raw) {
   return raw.trim()
 }
 
+// Textos crus que colorMap traduz para um nome canônico (ex: "Prateado" <- prata,
+// silver, prateado). Usado só pra reprocessar ofertas antigas, cuja cor já foi
+// traduzida e o texto original da lista não foi guardado.
+export function chavesQueGeram(nomeCanonico) {
+  const alvo = stripAccents((nomeCanonico || '').trim().toLowerCase())
+  return Object.entries(COLOR_TABLE)
+    .filter(([, v]) => v && stripAccents(v.toLowerCase()) === alvo)
+    .map(([k]) => k)
+}
+
 // Overrides por modelo — quando o Vitor decide usar um vocabulário de cores
 // mais enxuto pro filtro de Busca do que a tabela genérica acima (que vale
 // pra todos os outros modelos), entra aqui em vez de mexer na COLOR_TABLE

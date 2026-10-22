@@ -22,3 +22,7 @@ CadastroDeProdutos.xlsx
 
 # sobras de sessões de teste do playwright-mcp
 .playwright-mcp/
+
+whatsapp-bot/backups/
+whatsapp-bot/relatorio-cores-*.md
+whatsapp-bot/bot.error.log.old-*

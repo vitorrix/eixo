@@ -6,7 +6,7 @@
 // Uso: node src/ingestManual.js "<fornecedor>" "<texto>" ["<data ISO, ex 2026-07-07T08:58:00>"] [--dry-run]
 import { readFileSync } from 'fs'
 import { mapMessageToOfertas } from './mapper.js'
-import { upsertOferta } from './firestoreWriter.js'
+import { upsertOferta, registrarCorRevisao } from './firestoreWriter.js'
 
 const groups = JSON.parse(
   readFileSync(new URL('../config/groups.json', import.meta.url))
@@ -48,12 +48,13 @@ if (!ofertas.length) {
   process.exit(0)
 }
 
-for (const { docId, data } of ofertas) {
+for (const { docId, data, revisaoCor } of ofertas) {
   if (dryRun) {
     console.log(`[dry-run] ${data.produtoNome} ${data.variante} — R$ ${data.preco} (${data.fornecedorNome}) @ ${quotedAt.toISOString()}`)
     continue
   }
   await upsertOferta(docId, data)
+  if (revisaoCor) await registrarCorRevisao(revisaoCor)
   console.log(`[ingest manual] ${data.produtoNome} ${data.variante} — R$ ${data.preco} (${data.fornecedorNome}) @ ${quotedAt.toISOString()}`)
 }
 process.exit(0)
