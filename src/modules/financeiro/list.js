@@ -19,6 +19,7 @@ import { createLancamento, updateLancamento, deleteLancamento, marcarLiquidado }
 import { deleteVenda } from '../vendas/service.js'
 import { deleteCompra } from '../compras/service.js'
 import { isoLocal } from '../../shared/utils/periodo.js'
+import { deleteAcerto } from '../motoboy/service.js'
 
 const TIPO_META = {
   receber: { label: 'Recebimentos', novo: '+ Novo Recebimento', situacaoOk: 'Recebida', contatoLabel: 'Recebido de' },
@@ -28,6 +29,10 @@ const TIPO_META = {
 function todayISO() {
   return isoLocal(new Date())
 }
+
+// Lançamento avulso e o gerado pelo Roteiro do motoboy são editáveis por inteiro
+// (os gerados por Venda/Compra/Pedido ficam travados: editar quebraria o vínculo).
+const origemEditavel = l => ['avulso', 'motoboy'].includes(l.origem?.tipo)
 
 // Data mostrada na coluna "Data": pendente = vencimento; liquidado = quando o
 // dinheiro de fato entrou/saiu. A ordenação usa a MESMA data — ordenar por
@@ -232,7 +237,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       const descricao = l.parcela?.total > 1 ? `${l.descricao} (${l.parcela.numero}/${l.parcela.total})` : l.descricao
 
       const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
-        canEdit: canEdit && l.origem?.tipo === 'avulso',
+        canEdit: canEdit && origemEditavel(l),
         canDelete,
         onEdit: () => abrirFormModal(l),
         onDelete: () => confirmDelete(l),
@@ -291,6 +296,20 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       return
     }
 
+    if (origemTipo === 'motoboy') {
+      openConfirm({
+        title:        'Excluir lançamento vinculado',
+        message:      `Excluir "${l.descricao}"? O Roteiro do motoboy vinculado também é excluído. Não pode ser desfeito.`,
+        confirmLabel: 'Excluir tudo',
+        danger:       true,
+        onConfirm:    async () => {
+          try { await deleteAcerto(l.origem.id); toastSuccess('Roteiro e lançamento excluídos.') }
+          catch { toastError('Erro ao excluir.') }
+        },
+      })
+      return
+    }
+
     confirmDeleteAvulso(l)
   }
 
@@ -310,7 +329,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   // ── Detalhes ──────────────────────────────────────────────────────────────
   function abrirDetalhesLancamentoModal(l) {
     const meta = TIPO_META[l.tipo]
-    const editavel = l.origem?.tipo === 'avulso'
+    const editavel = origemEditavel(l)
     abrirDetalhesModal({
       title: `Detalhes do ${l.tipo === 'receber' ? 'Recebimento' : 'Pagamento'}`,
       campos: [

@@ -55,9 +55,9 @@ const TIPS = {
     { ico: '⚠️', txt: 'Excluir um lançamento é definitivo. Preencha sempre a categoria — ela define o lugar no DRE.' },
   ],
   '/motoboy': [
-    { ico: '🏍️', txt: 'Novo acerto: importe as entregas do dia, abra cada trecho no Maps e digite o km. O total é km × valor do km + extras.' },
+    { ico: '🏍️', txt: 'Novo roteiro: importe as entregas do dia, abra cada trecho no Maps e digite o km. O total é km × valor do km + extras.' },
     { ico: '🛍️', txt: 'Acessório que o motoboy pagou? Use "+ Adicionar extra" — o valor entra no total a pagar.' },
-    { ico: '💵', txt: 'Ao salvar, o acerto vira um Pagamento no Financeiro.' },
+    { ico: '💵', txt: 'Ao salvar, o roteiro vira um Pagamento no Financeiro — você escolhe a categoria e depois pode editar o lançamento lá.' },
   ],
   '/relatorios': [
     { ico: '📈', txt: 'O DRE é por regime de caixa: conta o que foi pago/recebido de fato.' },

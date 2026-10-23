@@ -28,7 +28,7 @@ export function renderTabMotoboy(container, operacoes, onSaved) {
     el('div', { class: 'config-section' },
       el('p', { class: 'config-section-title' }, 'Motoboy'),
       el('p', { class: 'text-muted', style: 'font-size:13px;margin-bottom:10px' },
-        'Valor cobrado por quilômetro rodado — usado como padrão no acerto do motoboy (dá para ajustar em cada acerto).'),
+        'Valor cobrado por quilômetro rodado — usado como padrão no roteiro do motoboy (dá para ajustar em cada roteiro).'),
       el('div', { class: 'field' }, el('label', {}, 'Valor por km (R$)'), valorInp),
     ),
     el('div', { class: 'config-actions' }, saveBtn),

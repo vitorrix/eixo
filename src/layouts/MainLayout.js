@@ -19,7 +19,7 @@ const PAGE_LABELS = {
   '/orcamentos':    'Orçamentos',
   '/relatorios':    'Relatórios',
   '/financeiro':    'Financeiro',
-  '/motoboy':       'Acerto do Motoboy',
+  '/motoboy':       'Roteiro do Motoboy',
   '/tarefas':       'Tarefas',
   '/configuracoes': 'Configurações',
   '/usuarios':      'Usuários',

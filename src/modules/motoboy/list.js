@@ -75,7 +75,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
   )
   const tableWrap = el('div', { class: 'table-wrapper' }, table)
   const emptyState = el('div', { class: 'empty-state' },
-    el('p', {}, 'Nenhum acerto registrado ainda. Clique em "+ Novo acerto" para fechar o dia do motoboy.'))
+    el('p', {}, 'Nenhum roteiro registrado ainda. Clique em "+ Novo roteiro" para montar o dia do motoboy.'))
 
   function renderRows() {
     tableWrap.style.display = lista.length ? '' : 'none'
@@ -98,7 +98,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
   // ── Detalhes ──────────────────────────────────────────────────────────────
   function abrirDetalhes(a) {
     openModal({
-      title: `Acerto — ${dataBR(a.data)}${a.motoboy ? ' · ' + a.motoboy : ''}`,
+      title: `Roteiro — ${dataBR(a.data)}${a.motoboy ? ' · ' + a.motoboy : ''}`,
       size: 'lg',
       renderBody: (body, close) => {
         const trechosEl = a.trechos.map((t, i) => el('div', { class: 'detalhes-linha' },
@@ -127,11 +127,11 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           delBtn.addEventListener('click', () => {
             close()
             openConfirm({
-              title: 'Excluir acerto',
-              message: 'Exclui o acerto e o Pagamento dele no Financeiro. Não pode ser desfeito.',
+              title: 'Excluir roteiro',
+              message: 'Exclui o roteiro e o Pagamento dele no Financeiro. Não pode ser desfeito.',
               confirmLabel: 'Excluir', danger: true,
               onConfirm: async () => {
-                try { await deleteAcerto(a.id); toastSuccess('Acerto excluído.') }
+                try { await deleteAcerto(a.id); toastSuccess('Roteiro excluído.') }
                 catch { toastError('Erro ao excluir.') }
               },
             })
@@ -154,10 +154,10 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
     })
   }
 
-  // ── Novo acerto ───────────────────────────────────────────────────────────
+  // ── Novo roteiro ───────────────────────────────────────────────────────────
   function abrirNovoAcerto() {
     openModal({
-      title: '🏍️ Novo acerto do motoboy',
+      title: '🏍️ Novo roteiro do motoboy',
       size: 'lg',
       renderBody: (body, close) => {
         let trechos = [{ origem: '', destino: '', descricao: '', km: '' }]
@@ -171,9 +171,16 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
 
         const contas = operacoes.contas || []
         const contaSel = el('select', { class: 'field-select' },
-          el('option', { value: '' }, 'Conta (opcional)'),
+          el('option', { value: '' }, '— Selecione —'),
           ...contas.map(c => el('option', { value: c }, c)))
         const pagoChk = el('input', { type: 'checkbox' })
+        // Categoria do Pagamento no Financeiro (define onde cai no DRE): escolhida a cada
+        // roteiro — o motoboy às vezes é pago por outra categoria. Sugere a de motoboy/frete.
+        const categoriasPagar = (operacoes.categorias || []).filter(c => c.tipo === 'pagar')
+        const categoriaSel = el('select', { class: 'field-select' },
+          el('option', { value: '' }, '— Selecione —'),
+          ...categoriasPagar.map(c => el('option', { value: c.nome }, c.nome)))
+        categoriaSel.value = (categoriasPagar.find(c => /motoboy/i.test(c.nome)) || categoriasPagar.find(c => /frete/i.test(c.nome)))?.nome || ''
 
         const trechosWrap = el('div', { class: 'motoboy-trechos' })
         const extrasWrap = el('div', { class: 'motoboy-trechos' })
@@ -279,7 +286,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
 
         const cancelar = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelar.addEventListener('click', close)
-        const salvar = el('button', { type: 'button', class: 'btn btn-primary' }, 'Salvar acerto')
+        const salvar = el('button', { type: 'button', class: 'btn btn-primary' }, 'Salvar roteiro')
         salvar.addEventListener('click', async () => {
           const t = calcularAcerto({ trechos, extras, valorKm })
           if (!dataInp.value) return toastError('Informe a data.')
@@ -288,20 +295,20 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           if (trechos.some(x => (parseFloat(x.km) || 0) <= 0 && (x.origem || x.destino))) {
             return toastError('Tem trecho sem km — preencha ou remova.')
           }
-          const categoria = (operacoes.categorias || []).find(c => c.tipo === 'pagar' && /motoboy/i.test(c.nome))?.nome
-            || (operacoes.categorias || []).find(c => c.tipo === 'pagar' && /frete/i.test(c.nome))?.nome || ''
+          const categoria = categoriaSel.value
+          if (!categoria) return toastError('Escolha a categoria do lançamento no Financeiro.')
           salvar.disabled = true; salvar.textContent = 'Salvando...'
           try {
             await createAcerto(
               { data: dataInp.value, motoboy: (fornecedorPorRotulo(motoAc.getValue())?.name || motoAc.getValue()), motoboyId: fornecedorPorRotulo(motoAc.getValue())?.id || null, valorKm, trechos: trechos.filter(x => (parseFloat(x.km) || 0) > 0), extras },
               { liquidado: pagoChk.checked, conta: contaSel.value, categoria },
             )
-            toastSuccess('Acerto salvo e lançado no Financeiro (Pagamentos).')
+            toastSuccess('Roteiro salvo e lançado no Financeiro (Pagamentos).')
             close()
           } catch (err) {
             console.error(err)
-            toastError('Erro ao salvar o acerto.')
-            salvar.disabled = false; salvar.textContent = 'Salvar acerto'
+            toastError('Erro ao salvar o roteiro.')
+            salvar.disabled = false; salvar.textContent = 'Salvar roteiro'
           }
         })
 
@@ -319,9 +326,11 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           el('div', { class: 'motoboy-secao-head', style: 'margin-top:22px' }, el('h4', {}, 'Extras (pagos pelo motoboy)')),
           extrasWrap, addExtra,
           resumoEl,
+          el('div', { class: 'motoboy-secao-head', style: 'margin-top:22px' }, el('h4', {}, 'Lançamento no Financeiro (Pagamentos)')),
           el('div', { class: 'motoboy-pagamento' },
-            el('label', { class: 'checkbox-pill' }, pagoChk, el('span', {}, ' Já foi pago')),
-            contaSel,
+            el('div', { class: 'field' }, el('label', {}, 'Categoria'), categoriaSel),
+            el('div', { class: 'field' }, el('label', {}, 'Conta (opcional)'), contaSel),
+            el('label', { class: 'checkbox-pill motoboy-pago' }, pagoChk, el('span', {}, ' Já foi pago')),
           ),
           el('div', { class: 'modal-footer' }, cancelar, salvar),
         )
@@ -329,7 +338,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
     })
   }
 
-  const novoBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Novo acerto')
+  const novoBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Novo roteiro')
   novoBtn.style.display = canCreate ? '' : 'none'
   novoBtn.addEventListener('click', abrirNovoAcerto)
 

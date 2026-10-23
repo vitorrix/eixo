@@ -3597,8 +3597,8 @@ input, select, textarea {
 .motoboy-resumo > div { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
 .motoboy-resumo-total { border-top: 1px solid var(--color-border); margin-top: 6px; padding-top: 10px !important; font-size: 16px !important; }
 .motoboy-resumo-total strong { color: var(--color-primary); font-size: 20px; }
-.motoboy-pagamento { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
-.motoboy-pagamento .field-select { max-width: 240px; }
+.motoboy-pagamento { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 14px; margin-top: 4px; }
+.motoboy-pagamento .motoboy-pago { height: 42px; }
 
 /* ── Busca: revisão de cores ── */
 .toolbar .btn { margin-left: 12px; }
