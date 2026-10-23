@@ -477,7 +477,7 @@ export const GROUPS = [
           {
             titulo: 'Lançamentos',
             passos: [
-              '<strong>Automáticos</strong>: o Pedido gera os lançamentos sozinho — o <strong>Recebimento</strong> da venda e os <strong>Pagamentos</strong> das compras e das trocas. Eles só podem ser <strong>excluídos</strong>, não editados.',
+              '<strong>Automáticos</strong>: o Pedido gera os lançamentos sozinho — o <strong>Recebimento</strong> da venda e os <strong>Pagamentos</strong> das compras e das trocas. Também (como o Roteiro do motoboy) podem ser <strong>editados por inteiro</strong> — valor, categoria, conta, datas etc. — mas editar aqui <strong>não altera</strong> a Venda, a Compra ou o Roteiro de onde vieram. Excluir um deles apaga também o registro de origem.',
               '<strong>+ Novo Recebimento / + Novo Pagamento</strong>: lançamento avulso (conta de luz, salário, empréstimo...) com descrição, valor, contato, categoria, conta, forma de pagamento, vencimento e observações.',
               '<strong>Recorrente</strong>: informe o dia do mês, a data inicial e a final — o sistema cria um lançamento por mês no período (ex.: parcelas de um empréstimo).',
             ],

@@ -30,9 +30,13 @@ function todayISO() {
   return isoLocal(new Date())
 }
 
-// Lançamento avulso e o gerado pelo Roteiro do motoboy são editáveis por inteiro
-// (os gerados por Venda/Compra/Pedido ficam travados: editar quebraria o vínculo).
-const origemEditavel = l => ['avulso', 'motoboy'].includes(l.origem?.tipo)
+// Lançamentos gerados automaticamente continuam editáveis por inteiro; o texto
+// avisa que editar aqui NÃO altera a Venda/Compra/Roteiro de onde ele veio.
+const ORIGEM_TEXTO = {
+  venda:   'Gerado por uma Venda — editar aqui não altera a Venda',
+  compra:  'Gerado por uma Compra — editar aqui não altera a Compra',
+  motoboy: 'Gerado por um Roteiro do motoboy — editar aqui não altera o Roteiro',
+}
 
 // Data mostrada na coluna "Data": pendente = vencimento; liquidado = quando o
 // dinheiro de fato entrou/saiu. A ordenação usa a MESMA data — ordenar por
@@ -237,7 +241,7 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
       const descricao = l.parcela?.total > 1 ? `${l.descricao} (${l.parcela.numero}/${l.parcela.total})` : l.descricao
 
       const actionsCell = el('td', { class: 'col-actions' }, renderRowActions({
-        canEdit: canEdit && origemEditavel(l),
+        canEdit,
         canDelete,
         onEdit: () => abrirFormModal(l),
         onDelete: () => confirmDelete(l),
@@ -329,7 +333,6 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
   // ── Detalhes ──────────────────────────────────────────────────────────────
   function abrirDetalhesLancamentoModal(l) {
     const meta = TIPO_META[l.tipo]
-    const editavel = origemEditavel(l)
     abrirDetalhesModal({
       title: `Detalhes do ${l.tipo === 'receber' ? 'Recebimento' : 'Pagamento'}`,
       campos: [
@@ -344,9 +347,9 @@ export function renderFinanceiroList(container, lancamentos, { operacoes = {}, c
         ['Situação', l.liquidado ? meta.situacaoOk : 'Pendente'],
         l.numeroDocumento ? ['Nº do documento', l.numeroDocumento] : null,
         l.observacoes ? ['Observações', l.observacoes] : null,
-        !editavel ? ['Origem', l.origem?.tipo === 'venda' ? 'Gerado automaticamente por uma Venda' : 'Gerado automaticamente por uma Compra'] : null,
+        ORIGEM_TEXTO[l.origem?.tipo] ? ['Origem', ORIGEM_TEXTO[l.origem.tipo]] : null,
       ],
-      onEditar: (canEdit && editavel) ? () => abrirFormModal(l) : null,
+      onEditar: canEdit ? () => abrirFormModal(l) : null,
     })
   }
 

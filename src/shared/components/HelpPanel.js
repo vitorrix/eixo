@@ -51,6 +51,7 @@ const TIPS = {
   ],
   '/financeiro': [
     { ico: '💵', txt: 'Duas abas: Recebimentos e Pagamentos. A caixinha da Situação marca como pago/recebido.' },
+    { ico: '✏️', txt: 'Todo lançamento pode ser editado (inclusive os gerados por Pedido, Compra e Roteiro) — editar não altera a venda/compra de origem.' },
     { ico: '🔁', txt: 'Lançamento recorrente: informe dia do mês, data inicial e final para criar uma parcela por mês.' },
     { ico: '⚠️', txt: 'Excluir um lançamento é definitivo. Preencha sempre a categoria — ela define o lugar no DRE.' },
   ],
