@@ -329,6 +329,8 @@ export const GROUPS = [
           'As cores são padronizadas por um <strong>dicionário de cores por modelo</strong>: "Silver", "Prateado" e "Glacier" viram a cor oficial daquele modelo (ex.: Branco ou Azul no iPhone 18 Pro Max). Ao pesquisar um modelo, o filtro Cor mostra só as cores oficiais dele.',
           'Quando o dicionário não reconhece a cor de uma lista, a oferta entra <strong>sem cor</strong> e o texto vai para a <strong>🎨 Revisão de cores</strong> (botão ao lado do título da Busca): escolha a cor oficial do modelo e o sistema corrige as ofertas e aprende o apelido, ou use Ignorar.',
           'Modelos que ainda não estão no dicionário continuam aparecendo normalmente, com a cor como veio da lista.',
+          '<strong>Condição do aparelho:</strong> o filtro tem <strong>Lacrado</strong> (inclui os <strong>CPO</strong>, que aparecem com o selo azul "CPO") e <strong>Semi-novo</strong> (também vitrine, open box, swap, ASIS e usado). O sistema lê a condição do cabeçalho da seção da lista (ex.: "LACRADOS", "SEMINOVO"), da própria linha ou do padrão do fornecedor.',
+          'Quando a lista de um fornecedor não diz a condição, ele aparece em <strong>🏷️ Revisão de condição</strong>: escolha Lacrado ou Semi-novo e isso vira o padrão dele. Enquanto isso, as ofertas dele aparecem com um selo amarelo "?".',
           'Cada fornecedor tem só o preço atual: uma lista nova do mesmo fornecedor substitui o preço anterior.',
           'Se as ofertas pararem de atualizar, confira o alerta do bot no Dashboard.',
         ],

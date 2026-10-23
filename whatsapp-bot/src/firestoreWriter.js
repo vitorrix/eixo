@@ -41,3 +41,17 @@ export async function registrarCorRevisao({ modelo, textoCor, fornecedor, exempl
     atualizadoEm: FieldValue.serverTimestamp(),
   })
 }
+
+// Fila de revisão de condição: 1 item por fornecedor cuja lista não informa se é
+// lacrado ou semi-novo (e sem padrão decidido). Mesmo esquema do coresRevisao.
+export async function registrarCondicaoRevisao({ fornecedorId, fornecedorNome, exemplo }, ocorrencias = 1) {
+  const chave = fornecedorId || slug(fornecedorNome)
+  if (!chave) return
+  const ref = db.collection('condicaoRevisao').doc(chave)
+  try {
+    await ref.create({ fornecedorId: fornecedorId || '', fornecedorNome: fornecedorNome || '', status: 'pendente', ocorrencias: 0, exemplo: exemplo || '', criadoEm: FieldValue.serverTimestamp() })
+  } catch (err) {
+    if (err.code !== 6 && !/already exists/i.test(err.message || '')) throw err
+  }
+  await ref.update({ ocorrencias: FieldValue.increment(ocorrencias), exemplo: exemplo || '', atualizadoEm: FieldValue.serverTimestamp() })
+}

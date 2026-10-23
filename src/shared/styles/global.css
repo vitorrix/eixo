@@ -3611,3 +3611,8 @@ input, select, textarea {
 .rev-exemplo { font-size: 12px; color: var(--color-muted); margin-top: 4px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rev-acoes { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .rev-sel { width: 170px; }
+
+/* ── Busca: selos de condição ── */
+.busca-chip { margin-left: 8px; font-size: 10px; font-weight: 800; letter-spacing: .4px; padding: 2px 7px; border-radius: 999px; vertical-align: middle; }
+.busca-chip-cpo { background: #dbeafe; color: #1d4ed8; }
+.busca-chip-sem { background: #fef3c7; color: #92400e; cursor: help; }

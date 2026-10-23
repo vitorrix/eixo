@@ -6,7 +6,8 @@
 // Uso: node src/ingestManual.js "<fornecedor>" "<texto>" ["<data ISO, ex 2026-07-07T08:58:00>"] [--dry-run]
 import { readFileSync } from 'fs'
 import { mapMessageToOfertas } from './mapper.js'
-import { upsertOferta, registrarCorRevisao } from './firestoreWriter.js'
+import { upsertOferta, registrarCorRevisao, registrarCondicaoRevisao } from './firestoreWriter.js'
+import { iniciarCacheCondicaoFornecedores } from './condicaoFornecedores.js'
 
 const groups = JSON.parse(
   readFileSync(new URL('../config/groups.json', import.meta.url))
@@ -41,6 +42,8 @@ if (!groupMeta) {
 }
 
 const quotedAt = dataIso ? new Date(dataIso) : new Date()
+iniciarCacheCondicaoFornecedores()
+await new Promise(r => setTimeout(r, 1500))   // deixa o cache de padrões carregar
 const ofertas = await mapMessageToOfertas(texto, quotedAt, groupMeta)
 
 if (!ofertas.length) {
@@ -48,13 +51,14 @@ if (!ofertas.length) {
   process.exit(0)
 }
 
-for (const { docId, data, revisaoCor } of ofertas) {
+for (const { docId, data, revisaoCor, revisaoCondicao } of ofertas) {
   if (dryRun) {
     console.log(`[dry-run] ${data.produtoNome} ${data.variante} — R$ ${data.preco} (${data.fornecedorNome}) @ ${quotedAt.toISOString()}`)
     continue
   }
   await upsertOferta(docId, data)
   if (revisaoCor) await registrarCorRevisao(revisaoCor)
+  if (revisaoCondicao) await registrarCondicaoRevisao(revisaoCondicao)
   console.log(`[ingest manual] ${data.produtoNome} ${data.variante} — R$ ${data.preco} (${data.fornecedorNome}) @ ${quotedAt.toISOString()}`)
 }
 process.exit(0)

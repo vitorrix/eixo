@@ -1,6 +1,8 @@
 import { parseMessageWithAI } from './aiParser.js'
 import { normalizeColorForProduto } from './colorMap.js'
 import { aplicarCor, normalizarTexto } from '../../src/shared/utils/dicionarioCores.js'
+import { decidirCondicao, separarCpo } from '../../src/shared/utils/condicoes.js'
+import { condicaoPadraoDe } from './condicaoFornecedores.js'
 
 const STORAGE_REGEX = /(\d+)\s?(GB|TB)\b/gi
 const TAMANHO_REGEX = /(\d+)\s?MM\b/i
@@ -131,26 +133,16 @@ function linhaDaCor(texto, cor) {
   return (achou || linhas[0] || '').slice(0, 140)
 }
 
-export function buildDocId({ fornecedorKey, produtoNome, variante, seminovo }) {
+// Cauda do docId: SEMINOVO / CPO / NOVO (lacrado ou ainda sem condição). Quem
+// chama pode passar `condicao` ('lacrado'|'cpo'|'seminovo'|null) ou só `seminovo`.
+export function buildDocId({ fornecedorKey, produtoNome, variante, seminovo, condicao }) {
+  const cauda = condicao === 'cpo' ? 'CPO' : (condicao === 'seminovo' || (!condicao && seminovo)) ? 'SEMINOVO' : 'NOVO'
   return [
     slugify(fornecedorKey),
     slugify(produtoNome),
     slugify(variante) || 'SEM-VARIANTE',
-    seminovo ? 'SEMINOVO' : 'NOVO',
+    cauda,
   ].join('__')
-}
-
-// A condição cadastrada do fornecedor manda na classificação novo/semi-novo:
-// - 'novo'     → tudo lacrado (ignora a IA)
-// - 'seminovo' → tudo semi-novo (ignora a IA)
-// - 'misto'    → a IA decide item a item (fornecedor que manda lacrado e
-//                semi-novo na mesma lista)
-// Sem condicao no groupMeta (cadastro antigo), cai em 'misto' pra não mudar o
-// comportamento de quem ainda não foi migrado.
-function resolverSeminovo(condicao, seminovoIA) {
-  if (condicao === 'novo') return false
-  if (condicao === 'seminovo') return true
-  return seminovoIA === true
 }
 
 // groupMeta vem de config/groups.json (fornecedorId, fornecedorNome, phone, phoneCountry, categorias, condicao, verified)
@@ -161,10 +153,11 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
   // cadastro. Mantém o filtro de 'seminovo' por segurança com cadastro antigo,
   // já que condição virou dimensão própria (groupMeta.condicao).
   const categorias = (groupMeta.categorias || []).filter(c => c !== 'seminovo')
-  const condicao = groupMeta.condicao || 'misto'
 
   return candidatos.map(c => {
-    const { produtoNome, capacidade, ram, tamanho } = extractProdutoAtributos(c.produtoBruto)
+    // CPO deixa de ser parte do nome do modelo: vira condição própria (ver decidirCondicao).
+    const { nome: brutoSemCpo } = separarCpo(c.produtoBruto)
+    const { produtoNome, capacidade, ram, tamanho } = extractProdutoAtributos(brutoSemCpo)
     // Cor: dicionário de cores por modelo (dicionario-cores.json). Modelo fora do
     // dicionário segue o caminho antigo (colorMap.js); cor que o dicionário não
     // reconhece nunca é adivinhada — a oferta entra sem cor e o texto vai pra
@@ -180,14 +173,23 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
     // pra não colidir duas configs de RAM com a mesma capacidade de SSD (ex: MacBook
     // Pro 14" 1TB com 16GB ou 24GB de RAM são ofertas/preços distintos).
     const variante = [capacidade, ram, tamanho, origem, cor].filter(Boolean).join(' ')
-    const seminovo = resolverSeminovo(condicao, c.seminovo)
+    const dec = decidirCondicao({
+      texto: c.textoOriginal, produtoBruto: c.produtoBruto, produtoNome, capacidade, preco: c.preco,
+      padraoAprendido: condicaoPadraoDe(groupMeta.fornecedorId), padraoCadastro: groupMeta.condicao, seminovoIA: c.seminovo,
+    })
+    const seminovo = dec.condicao === 'seminovo'
+    const revisaoCondicao = dec.condicao ? null : {
+      fornecedorId: groupMeta.fornecedorId || '', fornecedorNome: groupMeta.fornecedorNome || '',
+      exemplo: `${c.produtoBruto} — R$ ${c.preco}`,
+    }
 
     const fornecedorKey = groupMeta.fornecedorId || `raw:${groupMeta.phone || 'desconhecido'}`
-    const docId = buildDocId({ fornecedorKey, produtoNome, variante, seminovo })
+    const docId = buildDocId({ fornecedorKey, produtoNome, variante, seminovo, condicao: dec.condicao })
 
     return {
       docId,
       revisaoCor,
+      revisaoCondicao,
       data: {
         fornecedorId: groupMeta.fornecedorId || null,
         fornecedorNome: groupMeta.fornecedorNome || '',
@@ -208,6 +210,8 @@ export async function mapMessageToOfertas(text, quotedAt, groupMeta) {
         variante,
         categorias,
         seminovo,
+        condicao: dec.condicao,
+        condicaoOrigem: dec.origem,
         preco: c.preco,
         quotedAt,
         sourceText: c.textoOriginal,

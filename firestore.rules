@@ -158,6 +158,12 @@ service cloud.firestore {
       allow update: if hasPermission('busca', 'edit');
       allow create, delete: if false;
     }
+    // Fila de revisão de condição (lacrado/semi-novo) por fornecedor — mesmo esquema do coresRevisao.
+    match /condicaoRevisao/{id} {
+      allow read:   if hasPermission('busca', 'view');
+      allow update: if hasPermission('busca', 'edit');
+      allow create, delete: if false;
+    }
     match /ofertas/{id} {
       allow read:  if hasPermission('busca', 'view');
       allow write: if false; // escrita só via Admin SDK do robô, nunca pelo app

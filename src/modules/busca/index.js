@@ -3,6 +3,7 @@ import { toastError } from '../../shared/components/Toast.js'
 import { subscribeOfertas } from './service.js'
 import { renderBuscaList } from './list.js'
 import { criarBotaoRevisaoCores } from './revisaoCores.js'
+import { criarBotaoRevisaoCondicao } from './revisaoCondicao.js'
 
 export function render(container) {
   const loading = el('div', { class: 'loading' }, 'Carregando ofertas...')
@@ -11,6 +12,7 @@ export function render(container) {
   let listController = null
   let firstLoad = true
   let revisao = null
+  let revisaoCond = null
 
   const unsubscribe = subscribeOfertas(
     (ofertas) => {
@@ -21,6 +23,8 @@ export function render(container) {
         // Botão da fila de revisão de cores, na barra do título
         revisao = criarBotaoRevisaoCores()
         container.querySelector('.toolbar')?.appendChild(revisao.el)
+        revisaoCond = criarBotaoRevisaoCondicao()
+        container.querySelector('.toolbar')?.appendChild(revisaoCond.el)
       } else {
         listController?.update(ofertas)
       }
@@ -32,5 +36,5 @@ export function render(container) {
     }
   )
 
-  return () => { unsubscribe?.(); revisao?.destroy() }
+  return () => { unsubscribe?.(); revisao?.destroy(); revisaoCond?.destroy() }
 }

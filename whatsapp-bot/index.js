@@ -2,7 +2,9 @@ import { readFileSync } from 'fs'
 import { proto } from '@whiskeysockets/baileys'
 import { connect } from './src/connection.js'
 import { mapMessageToOfertas } from './src/mapper.js'
-import { upsertOferta, registrarCorRevisao, db } from './src/firestoreWriter.js'
+import { upsertOferta, registrarCorRevisao, registrarCondicaoRevisao, db } from './src/firestoreWriter.js'
+import { iniciarCacheCondicaoFornecedores } from './src/condicaoFornecedores.js'
+import { watchCondicaoRevisao } from './src/condicaoWatcher.js'
 import { syncGroupsWithFornecedores } from './src/matchFornecedores.js'
 import { watchRecibosFila } from './src/reciboWatcher.js'
 import { watchCoresRevisao, carregarApelidosExtras } from './src/coresRevisaoWatcher.js'
@@ -139,10 +141,11 @@ async function handleMessages(sock, messages) {
       continue
     }
 
-    for (const { docId, data, revisaoCor } of ofertas) {
+    for (const { docId, data, revisaoCor, revisaoCondicao } of ofertas) {
       try {
         await upsertOferta(docId, data)
         if (revisaoCor) await registrarCorRevisao(revisaoCor)
+        if (revisaoCondicao) await registrarCondicaoRevisao(revisaoCondicao)
         console.log(`[ingest] ${data.produtoNome} ${data.variante} — R$ ${data.preco} (${data.fornecedorNome})`)
       } catch (err) {
         console.error('Erro ao gravar oferta:', err)
@@ -155,6 +158,7 @@ let currentSock = null
 let intervalStarted = false
 let filaWatcherStarted = false
 let coresWatcherStarted = false
+let condicaoWatcherStarted = false
 let heartbeatStarted = false
 let syncedOnce = false
 let aniversarioCheckStarted = false
@@ -231,6 +235,11 @@ async function onOpen(sock) {
     setInterval(() => {
       if (currentSock) syncAndReload(currentSock)
     }, SYNC_INTERVAL_MS)
+  }
+  if (!condicaoWatcherStarted) {
+    condicaoWatcherStarted = true
+    iniciarCacheCondicaoFornecedores()
+    watchCondicaoRevisao()
   }
   if (!coresWatcherStarted) {
     coresWatcherStarted = true

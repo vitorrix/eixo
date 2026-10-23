@@ -7,7 +7,7 @@ import { createMultiSelect } from '../../shared/components/MultiSelect.js'
 // ignora Android de propósito) — reintroduzir aqui exige a IA aprender a
 // extrair Android também, senão a pill fica lá sem nunca ter conteúdo real.
 const CATEGORIA_PILLS = [
-  { key: 'apple', label: 'Apple', emoji: '🍎' },
+  { key: 'apple', label: 'Lacrado', emoji: '🔒' },
   { key: 'seminovo', label: 'Semi-novo', emoji: '♻️' },
   { key: 'acessorios', label: 'Acessórios', emoji: '🔧' },
 ]
@@ -246,6 +246,10 @@ export function renderBuscaList(container, ofertas) {
             alt: '',
           }),
           el('span', {}, o.produtoNome || '—'),
+          // CPO aparece junto dos lacrados, com selo; oferta sem condição (fornecedor
+          // ainda sem padrão na revisão) ganha "?" pra não passar por lacrada sem aviso.
+          o.condicao === 'cpo' ? el('span', { class: 'busca-chip busca-chip-cpo', title: 'CPO — recondicionado pela Apple (conta como lacrado)' }, 'CPO') : null,
+          (!o.condicao && o.condicaoOrigem !== undefined) ? el('span', { class: 'busca-chip busca-chip-sem', title: 'A lista deste fornecedor não informa se é lacrado ou semi-novo' }, '?') : null,
         )
       )
 
