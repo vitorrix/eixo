@@ -7,7 +7,7 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { isoLocal } from '../../shared/utils/periodo.js'
-import { createAcerto, updateAcerto, getLancamentoDoAcerto, deleteAcerto, calcularAcerto, trechosDasEntregasDoDia } from './service.js'
+import { createAcerto, updateAcerto, getLancamentoDoAcerto, deleteAcerto, calcularAcerto, taxaDoTrecho, trechosDasEntregasDoDia } from './service.js'
 
 const VALOR_KM_PADRAO = 2.5
 
@@ -35,14 +35,15 @@ function resumoTexto(a) {
     if (t.item) L.push(`🛍️ ${t.item}`)
     L.push('✅ *Entrega*', t.destino || '—')
     if (t.cliente) L.push(`🙋 Cliente: ${t.cliente}`)
-    L.push(`📏 ${kmTxt(t.km)}`, '')
+    L.push(`📏 ${kmTxt(t.km)}${taxaDoTrecho(t, a.valorKm) !== a.valorKm ? ` × ${brl(taxaDoTrecho(t, a.valorKm))}` : ''}`, '')
   })
   if (a.extras?.length) {
     L.push('🧾 *Extras (pago pelo portador)*')
     a.extras.forEach(e => L.push(`• ${e.descricao || 'Item'} — ${brl(e.valor)}`))
     L.push('')
   }
-  L.push('━━━━━━━━━━━━━━', `🧮 Total: ${kmTxt(a.totalKm)} × ${brl(a.valorKm)} = ${brl(a.valorRodado)}`)
+  const variado = a.trechos.some(t => taxaDoTrecho(t, a.valorKm) !== a.valorKm)
+  L.push('━━━━━━━━━━━━━━', variado ? `🧮 Total: ${kmTxt(a.totalKm)} = ${brl(a.valorRodado)}` : `🧮 Total: ${kmTxt(a.totalKm)} × ${brl(a.valorKm)} = ${brl(a.valorRodado)}`)
   if (a.extras?.length) L.push(`➕ Extras: ${brl(a.totalExtras)}`)
   L.push(`💰 *TOTAL A PAGAR: ${brl(a.total)}*`)
   return L.join('\n')
@@ -105,7 +106,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         const trechosEl = a.trechos.map((t, i) => el('div', { class: 'detalhes-linha' },
           el('span', { class: 'detalhes-label' }, `Trecho ${i + 1}`),
           el('span', { class: 'detalhes-valor' },
-            [[t.origem, t.destino].filter(Boolean).join(' → ') || t.descricao, kmTxt(t.km)].filter(Boolean).join(' — ')),
+            [[t.origem, t.destino].filter(Boolean).join(' → ') || t.descricao, kmTxt(t.km) + (taxaDoTrecho(t, a.valorKm) !== a.valorKm ? ` × ${brl(taxaDoTrecho(t, a.valorKm))}` : '')].filter(Boolean).join(' — ')),
         ))
         const extrasEl = (a.extras || []).map(e => el('div', { class: 'detalhes-linha' },
           el('span', { class: 'detalhes-label' }, 'Extra'),
@@ -161,7 +162,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           el('div', { class: 'detalhes-grid' },
             ...trechosEl,
             linha('Total de km', kmTxt(a.totalKm)),
-            linha(`Km × ${brl(a.valorKm)}`, brl(a.valorRodado)),
+            linha(a.trechos.some(t => taxaDoTrecho(t, a.valorKm) !== a.valorKm) ? 'Km rodados (valor por km variado)' : `Km × ${brl(a.valorKm)}`, brl(a.valorRodado)),
             ...extrasEl,
             linha('Total a pagar', brl(a.total)),
             a.lancamentoNumero ? linha('Lançamento no Financeiro', `#${a.lancamentoNumero} (aba Pagamentos)`) : null,
@@ -181,8 +182,8 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
       size: 'lg',
       renderBody: (body, close) => {
         let trechos = editando
-          ? (acerto.trechos || []).map(t => ({ ...t, km: String(t.km ?? '') }))
-          : [{ origem: '', destino: '', descricao: '', km: '' }]
+          ? (acerto.trechos || []).map(t => ({ ...t, km: String(t.km ?? ''), valorKm: String(taxaDoTrecho(t, acerto.valorKm)) }))
+          : [{ origem: '', destino: '', descricao: '', km: '', valorKm: String(valorKmConfig) }]
         let extras = editando ? (acerto.extras || []).map(e => ({ ...e, valor: String(e.valor ?? '') })) : []
         let valorKm = editando ? (parseFloat(acerto.valorKm) || 0) : valorKmConfig
 
@@ -192,7 +193,13 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         const dataInp = el('input', { type: 'date', class: 'field-input', value: editando ? acerto.data : isoLocal(new Date()) })
         const motoAc = createAutocomplete({ placeholder: 'Buscar fornecedor (motoboy)...', items: rotulosFornecedores, initialValue: motoInicial })
         const valorKmInp = el('input', { type: 'number', class: 'field-input', step: '0.1', value: String(valorKm) })
-        valorKmInp.addEventListener('input', () => { valorKm = parseFloat(valorKmInp.value) || 0; atualizarResumo() })
+        // Mudar o padrão em cima atualiza só os trechos que ainda estão no padrão antigo
+        valorKmInp.addEventListener('input', () => {
+          const antigo = valorKm
+          valorKm = parseFloat(valorKmInp.value) || 0
+          trechos.forEach(t => { if (taxaDoTrecho(t, antigo) === antigo) t.valorKm = String(valorKm) })
+          renderTrechos(); atualizarResumo()
+        })
 
         const contas = operacoes.contas || []
         const contaSel = el('select', { class: 'field-select' },
@@ -223,7 +230,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           const t = calcularAcerto({ trechos, extras, valorKm })
           resumoEl.replaceChildren(
             el('div', {}, el('span', {}, 'Total de km'), el('strong', {}, kmTxt(t.totalKm))),
-            el('div', {}, el('span', {}, `Km × ${brl(valorKm)}`), el('strong', {}, brl(t.valorRodado))),
+            el('div', {}, el('span', {}, trechos.some(x => taxaDoTrecho(x, valorKm) !== valorKm) ? 'Km rodados (valor variado)' : `Km × ${brl(valorKm)}`), el('strong', {}, brl(t.valorRodado))),
             el('div', {}, el('span', {}, 'Extras'), el('strong', {}, brl(t.totalExtras))),
             el('div', { class: 'motoboy-resumo-total' }, el('span', {}, 'TOTAL A PAGAR'), el('strong', {}, brl(t.total))),
           )
@@ -241,6 +248,14 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
             const kmInp = el('input', { type: 'number', class: 'field-input motoboy-km', step: '0.1', min: '0', placeholder: '0,0' })
             kmInp.value = t.km
             kmInp.addEventListener('input', () => { t.km = kmInp.value; atualizarResumo() })
+
+            // Valor do km deste trecho — nasce no padrão; roteiro pago diferente é só alterar aqui
+            const taxaInp = el('input', { type: 'number', class: 'field-input motoboy-km', step: '0.1', min: '0', title: 'Valor por km deste trecho' })
+            taxaInp.value = t.valorKm ?? String(valorKm)
+            const taxaRotulo = el('span', { class: 'text-muted', style: 'font-size:12px' }, '')
+            const atualizarTaxaRotulo = () => { taxaRotulo.textContent = taxaDoTrecho(t, valorKm) === valorKm ? 'Valor padrão por km' : 'Valor por km alterado' }
+            atualizarTaxaRotulo()
+            taxaInp.addEventListener('input', () => { t.valorKm = taxaInp.value; atualizarTaxaRotulo(); atualizarResumo() })
 
             const mapsBtn = el('a', { class: 'btn btn-sm btn-outline', target: '_blank', rel: 'noopener', title: 'Abrir o trajeto no Google Maps (moto)' }, '🗺️ Ver no Maps')
             const atualizarMaps = () => {
@@ -270,6 +285,10 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
                 mapsBtn,
                 el('div', { class: 'motoboy-km-wrap' }, kmInp, el('span', {}, 'km')),
               ),
+              el('div', { class: 'motoboy-trecho-rodape' },
+                taxaRotulo,
+                el('div', { class: 'motoboy-km-wrap' }, el('span', {}, 'R$'), taxaInp, el('span', {}, '/km')),
+              ),
             )
           }))
         }
@@ -288,7 +307,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         }
 
         const addTrecho = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Adicionar trecho')
-        addTrecho.addEventListener('click', () => { trechos.push({ origem: '', destino: '', descricao: '', km: '' }); renderTrechos() })
+        addTrecho.addEventListener('click', () => { trechos.push({ origem: '', destino: '', descricao: '', km: '', valorKm: String(valorKm) }); renderTrechos() })
 
         const addExtra = el('button', { type: 'button', class: 'btn btn-outline btn-sm' }, '+ Adicionar extra (acessório pago etc.)')
         addExtra.addEventListener('click', () => { extras.push({ descricao: '', valor: '' }); renderExtras() })
@@ -303,7 +322,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
             const novos = r.trechos.filter(t => !jaTem.has(t.pedidoId))
             // Trecho em branco inicial some quando entram os importados
             if (novos.length && trechos.length === 1 && !trechos[0].origem && !trechos[0].destino && !trechos[0].km) trechos = []
-            trechos.push(...novos)
+            trechos.push(...novos.map(t => ({ ...t, valorKm: String(valorKm) })))
             renderTrechos(); atualizarResumo()
             importMsg.textContent = r.entregas
               ? `${novos.length} trecho(s) importado(s) de ${r.entregas} entrega(s) do dia${r.semRoteiro ? ` — ${r.semRoteiro} sem roteiro salvo` : ''}.`
@@ -353,7 +372,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           el('div', { class: 'motoboy-topo' },
             el('div', { class: 'field' }, el('label', {}, 'Data'), dataInp),
             el('div', { class: 'field' }, el('label', {}, 'Motoboy (fornecedor)'), motoAc.el),
-            el('div', { class: 'field' }, el('label', {}, 'Valor por km (R$)'), valorKmInp),
+            el('div', { class: 'field' }, el('label', {}, 'Valor padrão por km (R$)'), valorKmInp),
           ),
           el('div', { class: 'motoboy-secao-head' },
             el('h4', {}, 'Trechos (retirada → entrega)'),

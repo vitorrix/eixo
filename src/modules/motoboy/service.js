@@ -19,11 +19,18 @@ export function subscribeAcertos(callback, onError) {
 
 const arred = n => Math.round(n * 100) / 100
 
-// Totais do acerto: km rodados x valor do km + extras (ex: acessório que o
-// motoboy pagou). Usado pelo formulário (ao vivo) e na hora de gravar.
+// Valor do km de um trecho: o dele (roteiro pago por valor diferente do padrão)
+// ou, sem valor próprio, o padrão do roteiro.
+export function taxaDoTrecho(t, valorKmPadrao) {
+  const v = parseFloat(t.valorKm)
+  return Number.isFinite(v) ? v : (parseFloat(valorKmPadrao) || 0)
+}
+
+// Totais do acerto: soma de km x valor do km de cada trecho + extras (ex:
+// acessório que o motoboy pagou). Usado pelo formulário (ao vivo) e na hora de gravar.
 export function calcularAcerto({ trechos = [], extras = [], valorKm = 0 }) {
   const totalKm = arred(trechos.reduce((s, t) => s + (parseFloat(t.km) || 0), 0))
-  const valorRodado = arred(totalKm * (parseFloat(valorKm) || 0))
+  const valorRodado = arred(trechos.reduce((s, t) => s + (parseFloat(t.km) || 0) * taxaDoTrecho(t, valorKm), 0))
   const totalExtras = arred(extras.reduce((s, e) => s + (parseFloat(e.valor) || 0), 0))
   return { totalKm, valorRodado, totalExtras, total: arred(valorRodado + totalExtras) }
 }
@@ -36,18 +43,20 @@ function normalizarAcerto(data) {
     origem: (t.origem || '').trim(), destino: (t.destino || '').trim(),
     cliente: (t.cliente || '').trim(), item: (t.item || '').trim(),
     descricao: (t.descricao || '').trim(), km: parseFloat(t.km) || 0, pedidoId: t.pedidoId || null,
+    valorKm: taxaDoTrecho(t, data.valorKm),
   }))
   const extras = data.extras
     .map(e => ({ descricao: (e.descricao || '').trim(), valor: parseFloat(e.valor) || 0 }))
     .filter(e => e.descricao || e.valor)
   const valorKm = parseFloat(data.valorKm) || 0
+  const variado = trechos.some(t => t.valorKm !== valorKm)
   const totais = calcularAcerto({ trechos, extras, valorKm })
   const motoboy = (data.motoboy || '').trim()
   const [y, m, d] = data.data.split('-')
   return {
     trechos, extras, valorKm, totais, motoboy,
     descricaoLanc: `Motoboy ${motoboy} — ${d}/${m}/${y}`.replace('Motoboy  —', 'Motoboy —'),
-    obsLanc: `${totais.totalKm} km x R$ ${valorKm.toFixed(2)}${totais.totalExtras ? ` + extras R$ ${totais.totalExtras.toFixed(2)}` : ''}`,
+    obsLanc: `${totais.totalKm} km ${variado ? '(valor por km variado)' : `x R$ ${valorKm.toFixed(2)}`}${totais.totalExtras ? ` + extras R$ ${totais.totalExtras.toFixed(2)}` : ''}`,
   }
 }
 
