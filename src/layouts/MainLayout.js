@@ -13,6 +13,7 @@ const PAGE_LABELS = {
   '/vendas':        'Vendas',
   '/clientes':      'Clientes',
   '/leads':         'Leads',
+  '/desejos':       'Lista de Desejos',
   '/fornecedores':  'Fornecedores',
   '/produtos':      'Produtos',
   '/busca':         'Busca',
@@ -37,6 +38,9 @@ const NAV_ICONS = {
   clientes: [
     'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2',
     'M12 11a4 4 0 100-8 4 4 0 000 8z'
+  ],
+  desejos: [
+    'M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z'
   ],
   leads: [
     'M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z'
@@ -106,6 +110,7 @@ const NAV_ITEMS = [
   { path: '/busca',         label: 'Busca',          module: 'busca',         iconKey: 'busca' },
   { path: '/clientes',      label: 'Clientes',       module: 'clientes',      iconKey: 'clientes'      },
   { path: '/leads',         label: 'Leads',          module: 'leads',         iconKey: 'leads'         },
+  { path: '/desejos',       label: 'Desejos',        module: 'clientes',      iconKey: 'desejos'       },
   { path: '/fornecedores',  label: 'Fornecedores',   module: 'fornecedores',  iconKey: 'fornecedores' },
   { path: '/produtos',      label: 'Produtos',       module: 'produtos',      iconKey: 'produtos' },
   { path: '/relatorios',    label: 'Relatórios',     module: 'relatorios',    iconKey: 'relatorios' },
@@ -145,6 +150,7 @@ export function renderLayout(container, profile) {
   // navegação, um listener aqui ficaria aberto pra sempre sem nunca ser
   // fechado.
   let leadsBadgeEl = null
+  let desejosBadgeEl = null
 
   const navLinks = visibleItems.map(item => {
     if (item.wip) {
@@ -164,9 +170,23 @@ export function renderLayout(container, profile) {
       leadsBadgeEl.style.display = 'none'
       link.appendChild(leadsBadgeEl)
     }
+    if (item.path === '/desejos') {
+      desejosBadgeEl = el('span', { class: 'nav-lead-badge', title: 'Desejos com algo no estoque' })
+      desejosBadgeEl.style.display = 'none'
+      link.appendChild(desejosBadgeEl)
+    }
     if (currentPath === item.path) link.classList.add('active')
     return link
   })
+
+  if (desejosBadgeEl) {
+    import('../modules/desejos/service.js')
+      .then(({ contarDesejosComEstoque }) => contarDesejosComEstoque())
+      .then(n => {
+        if (n > 0) { desejosBadgeEl.textContent = String(n); desejosBadgeEl.style.display = '' }
+      })
+      .catch(err => console.error('Erro ao contar desejos com estoque:', err))
+  }
 
   if (leadsBadgeEl) {
     import('../modules/leads/service.js')

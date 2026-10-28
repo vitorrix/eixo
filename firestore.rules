@@ -76,6 +76,15 @@ service cloud.firestore {
       allow delete: if hasPermission('leads', 'delete');
     }
 
+    // ── /desejos (clientes que pediram pra ser avisados de um aparelho) ───
+    // Segue as permissões de Clientes, de onde vem a pessoa.
+    match /desejos/{id} {
+      allow read:   if hasPermission('clientes', 'view');
+      allow create: if hasPermission('clientes', 'create');
+      allow update: if hasPermission('clientes', 'edit');
+      allow delete: if hasPermission('clientes', 'delete');
+    }
+
     // ── /pedidos ──────────────────────────────────────────────────────────
     match /pedidos/{id} {
       allow read:   if hasPermission('pedidos', 'view');
