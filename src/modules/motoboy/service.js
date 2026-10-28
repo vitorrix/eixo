@@ -31,8 +31,7 @@ export function calcularAcerto({ trechos = [], extras = [], valorKm = 0 }) {
 // Grava o acerto e, junto, 1 Pagamento no Financeiro (categoria de frete/
 // motoboy) vinculado a ele — mesmo padrão dos lançamentos gerados por Pedido:
 // só pode ser excluído lá, e excluir o acerto apaga o lançamento junto.
-export async function createAcerto(data, { liquidado, conta, categoria }) {
-  const { uid } = getCurrentProfile()
+function normalizarAcerto(data) {
   const trechos = data.trechos.map(t => ({
     origem: (t.origem || '').trim(), destino: (t.destino || '').trim(),
     cliente: (t.cliente || '').trim(), item: (t.item || '').trim(),
@@ -43,23 +42,37 @@ export async function createAcerto(data, { liquidado, conta, categoria }) {
     .filter(e => e.descricao || e.valor)
   const valorKm = parseFloat(data.valorKm) || 0
   const totais = calcularAcerto({ trechos, extras, valorKm })
+  const motoboy = (data.motoboy || '').trim()
+  const [y, m, d] = data.data.split('-')
+  return {
+    trechos, extras, valorKm, totais, motoboy,
+    descricaoLanc: `Motoboy ${motoboy} — ${d}/${m}/${y}`.replace('Motoboy  —', 'Motoboy —'),
+    obsLanc: `${totais.totalKm} km x R$ ${valorKm.toFixed(2)}${totais.totalExtras ? ` + extras R$ ${totais.totalExtras.toFixed(2)}` : ''}`,
+  }
+}
+
+// Grava o acerto e, junto, 1 Pagamento no Financeiro (categoria de frete/
+// motoboy) vinculado a ele — mesmo padrão dos lançamentos gerados por Pedido:
+// só pode ser excluído lá, e excluir o acerto apaga o lançamento junto.
+export async function createAcerto(data, { liquidado, conta, categoria }) {
+  const { uid } = getCurrentProfile()
+  const { trechos, extras, valorKm, totais, motoboy, descricaoLanc, obsLanc } = normalizarAcerto(data)
 
   const acertoRef = doc(collection(db, COL))
   const batch = writeBatch(db)
   const numero = await proximoNumeroFinanceiro()
-  const [y, m, d] = data.data.split('-')
 
   batch.set(acertoRef, {
-    data: data.data, motoboy: (data.motoboy || '').trim(), motoboyId: data.motoboyId || null, valorKm,
+    data: data.data, motoboy, motoboyId: data.motoboyId || null, valorKm,
     trechos, extras, ...totais,
     lancamentoNumero: numero,
     criadoPor: uid, criadoEm: serverTimestamp(),
   })
   batch.set(doc(collection(db, 'financeiro')), {
     numero, tipo: 'pagar',
-    descricao:       `Motoboy ${(data.motoboy || '').trim()} — ${d}/${m}/${y}`.replace('Motoboy  —', 'Motoboy —'),
+    descricao:       descricaoLanc,
     valor:           totais.total,
-    contato:         (data.motoboy || '').trim(),
+    contato:         motoboy,
     contatoId:       data.motoboyId || null,
     contatoTipo:     data.motoboyId ? 'fornecedor' : null,
     categoria:       categoria || '',
@@ -69,12 +82,65 @@ export async function createAcerto(data, { liquidado, conta, categoria }) {
     dataVencimento:  data.data,
     dataLiquidacao:  liquidado ? data.data : null,
     numeroDocumento: '',
-    observacoes:     `${totais.totalKm} km x R$ ${valorKm.toFixed(2)}${totais.totalExtras ? ` + extras R$ ${totais.totalExtras.toFixed(2)}` : ''}`,
+    observacoes:     obsLanc,
     parcela:         { numero: 1, total: 1 },
     origem:          { tipo: 'motoboy', id: acertoRef.id, pedidoId: null },
     recorrencia:     null,
     criadoPor:       uid,
     criadoEm:        serverTimestamp(),
+  })
+  return batch.commit()
+}
+
+// Pagamento do Financeiro ligado ao acerto (null se alguém já apagou).
+export async function getLancamentoDoAcerto(id) {
+  const snap = await getDocs(query(
+    collection(db, 'financeiro'),
+    where('origem.tipo', '==', 'motoboy'),
+    where('origem.id', '==', id)
+  ))
+  const d = snap.docs[0]
+  return d ? { id: d.id, ...d.data() } : null
+}
+
+// Edita o roteiro e propaga pro Pagamento no Financeiro (valor, data, motoboy,
+// categoria, conta e situação paga/pendente). Se o lançamento sumiu, recria.
+export async function updateAcerto(id, data, { liquidado, conta, categoria }, lancamentoAtual) {
+  const { uid } = getCurrentProfile()
+  const { trechos, extras, valorKm, totais, motoboy, descricaoLanc, obsLanc } = normalizarAcerto(data)
+  const batch = writeBatch(db)
+
+  const campos = {
+    descricao:      descricaoLanc,
+    valor:          totais.total,
+    contato:        motoboy,
+    contatoId:      data.motoboyId || null,
+    contatoTipo:    data.motoboyId ? 'fornecedor' : null,
+    categoria:      categoria || '',
+    conta:          conta || '',
+    liquidado:      !!liquidado,
+    dataVencimento: data.data,
+    // já pago antes: mantém a data em que foi pago; recém-marcado como pago: hoje
+    dataLiquidacao: liquidado ? (lancamentoAtual?.liquidado && lancamentoAtual.dataLiquidacao) || isoLocal(new Date()) : null,
+    observacoes:    obsLanc,
+  }
+  let numero = lancamentoAtual?.numero ?? null
+  if (lancamentoAtual) {
+    batch.update(doc(db, 'financeiro', lancamentoAtual.id), campos)
+  } else {
+    numero = await proximoNumeroFinanceiro()
+    batch.set(doc(collection(db, 'financeiro')), {
+      numero, tipo: 'pagar', ...campos,
+      formaPagamento: '', numeroDocumento: '', parcela: { numero: 1, total: 1 },
+      origem: { tipo: 'motoboy', id, pedidoId: null }, recorrencia: null,
+      criadoPor: uid, criadoEm: serverTimestamp(),
+    })
+  }
+  batch.update(doc(db, COL, id), {
+    data: data.data, motoboy, motoboyId: data.motoboyId || null, valorKm,
+    trechos, extras, ...totais,
+    lancamentoNumero: numero,
+    atualizadoPor: uid, atualizadoEm: serverTimestamp(),
   })
   return batch.commit()
 }

@@ -58,6 +58,7 @@ const TIPS = {
   '/motoboy': [
     { ico: '🏍️', txt: 'Novo roteiro: importe as entregas do dia, abra cada trecho no Maps e digite o km. O total é km × valor do km + extras.' },
     { ico: '🛍️', txt: 'Acessório que o motoboy pagou? Use "+ Adicionar extra" — o valor entra no total a pagar.' },
+    { ico: '✏️', txt: 'Errou algo? Abra o roteiro e clique em Editar — o Pagamento no Financeiro (valor, categoria, pago/pendente) acompanha a edição.' },
     { ico: '💵', txt: 'Ao salvar, o roteiro vira um Pagamento no Financeiro — você escolhe a categoria e depois pode editar o lançamento lá.' },
   ],
   '/relatorios': [

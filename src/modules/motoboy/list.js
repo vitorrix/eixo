@@ -7,7 +7,7 @@ import { toastSuccess, toastError } from '../../shared/components/Toast.js'
 import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { isoLocal } from '../../shared/utils/periodo.js'
-import { createAcerto, deleteAcerto, calcularAcerto, trechosDasEntregasDoDia } from './service.js'
+import { createAcerto, updateAcerto, getLancamentoDoAcerto, deleteAcerto, calcularAcerto, trechosDasEntregasDoDia } from './service.js'
 
 const VALOR_KM_PADRAO = 2.5
 
@@ -52,6 +52,7 @@ const rotuloFornecedor = f => (f.box ? `${f.name} - ${f.box}` : f.name)
 
 export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
   const canCreate = can('financeiro', 'create')
+  const canEdit = can('financeiro', 'edit')
   const canDelete = isMaster() // exclui também o lançamento, que só o master apaga (firestore.rules)
   let lista = acertos
 
@@ -122,6 +123,23 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         fecharBtn.addEventListener('click', close)
         const botoes = [fecharBtn, copiarBtn]
 
+        if (canEdit) {
+          const editBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '✏️ Editar')
+          editBtn.addEventListener('click', async () => {
+            editBtn.disabled = true
+            try {
+              const lanc = await getLancamentoDoAcerto(a.id)
+              close()
+              abrirFormAcerto(a, lanc)
+            } catch (err) {
+              console.error(err)
+              toastError('Erro ao abrir o roteiro para edição.')
+              editBtn.disabled = false
+            }
+          })
+          botoes.push(editBtn)
+        }
+
         if (canDelete) {
           const delBtn = el('button', { type: 'button', class: 'btn btn-danger-outline' }, 'Excluir')
           delBtn.addEventListener('click', () => {
@@ -154,18 +172,25 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
     })
   }
 
-  // ── Novo roteiro ───────────────────────────────────────────────────────────
-  function abrirNovoAcerto() {
+  // ── Novo roteiro / edição ──────────────────────────────────────────────────
+  // acerto + lancAtual preenchidos = edição (propaga pro Pagamento no Financeiro).
+  function abrirFormAcerto(acerto = null, lancAtual = null) {
+    const editando = !!acerto
     openModal({
-      title: '🏍️ Novo roteiro do motoboy',
+      title: editando ? `✏️ Editar roteiro — ${dataBR(acerto.data)}` : '🏍️ Novo roteiro do motoboy',
       size: 'lg',
       renderBody: (body, close) => {
-        let trechos = [{ origem: '', destino: '', descricao: '', km: '' }]
-        let extras = []
-        let valorKm = valorKmConfig
+        let trechos = editando
+          ? (acerto.trechos || []).map(t => ({ ...t, km: String(t.km ?? '') }))
+          : [{ origem: '', destino: '', descricao: '', km: '' }]
+        let extras = editando ? (acerto.extras || []).map(e => ({ ...e, valor: String(e.valor ?? '') })) : []
+        let valorKm = editando ? (parseFloat(acerto.valorKm) || 0) : valorKmConfig
 
-        const dataInp = el('input', { type: 'date', class: 'field-input', value: isoLocal(new Date()) })
-        const motoAc = createAutocomplete({ placeholder: 'Buscar fornecedor (motoboy)...', items: rotulosFornecedores, initialValue: ultimoMotoboy() })
+        const motoInicial = editando
+          ? (() => { const f = fornecedores.find(f => f.id === acerto.motoboyId); return f ? rotuloFornecedor(f) : (acerto.motoboy || '') })()
+          : ultimoMotoboy()
+        const dataInp = el('input', { type: 'date', class: 'field-input', value: editando ? acerto.data : isoLocal(new Date()) })
+        const motoAc = createAutocomplete({ placeholder: 'Buscar fornecedor (motoboy)...', items: rotulosFornecedores, initialValue: motoInicial })
         const valorKmInp = el('input', { type: 'number', class: 'field-input', step: '0.1', value: String(valorKm) })
         valorKmInp.addEventListener('input', () => { valorKm = parseFloat(valorKmInp.value) || 0; atualizarResumo() })
 
@@ -181,6 +206,13 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           el('option', { value: '' }, '— Selecione —'),
           ...categoriasPagar.map(c => el('option', { value: c.nome }, c.nome)))
         categoriaSel.value = (categoriasPagar.find(c => /motoboy/i.test(c.nome)) || categoriasPagar.find(c => /frete/i.test(c.nome)))?.nome || ''
+        if (editando && lancAtual) {
+          // categoria/conta antigas que não existem mais na lista entram como opção pra não sumirem
+          const garantir = (sel, v) => { if (v && ![...sel.options].some(o => o.value === v)) sel.append(el('option', { value: v }, v)); sel.value = v || '' }
+          garantir(categoriaSel, lancAtual.categoria)
+          garantir(contaSel, lancAtual.conta)
+          pagoChk.checked = !!lancAtual.liquidado
+        }
 
         const trechosWrap = el('div', { class: 'motoboy-trechos' })
         const extrasWrap = el('div', { class: 'motoboy-trechos' })
@@ -286,7 +318,8 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
 
         const cancelar = el('button', { type: 'button', class: 'btn btn-ghost' }, 'Cancelar')
         cancelar.addEventListener('click', close)
-        const salvar = el('button', { type: 'button', class: 'btn btn-primary' }, 'Salvar roteiro')
+        const rotuloSalvar = editando ? 'Salvar alterações' : 'Salvar roteiro'
+        const salvar = el('button', { type: 'button', class: 'btn btn-primary' }, rotuloSalvar)
         salvar.addEventListener('click', async () => {
           const t = calcularAcerto({ trechos, extras, valorKm })
           if (!dataInp.value) return toastError('Informe a data.')
@@ -299,16 +332,20 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
           if (!categoria) return toastError('Escolha a categoria do lançamento no Financeiro.')
           salvar.disabled = true; salvar.textContent = 'Salvando...'
           try {
-            await createAcerto(
-              { data: dataInp.value, motoboy: (fornecedorPorRotulo(motoAc.getValue())?.name || motoAc.getValue()), motoboyId: fornecedorPorRotulo(motoAc.getValue())?.id || null, valorKm, trechos: trechos.filter(x => (parseFloat(x.km) || 0) > 0), extras },
-              { liquidado: pagoChk.checked, conta: contaSel.value, categoria },
-            )
-            toastSuccess('Roteiro salvo e lançado no Financeiro (Pagamentos).')
+            const dados = { data: dataInp.value, motoboy: (fornecedorPorRotulo(motoAc.getValue())?.name || motoAc.getValue()), motoboyId: fornecedorPorRotulo(motoAc.getValue())?.id || null, valorKm, trechos: trechos.filter(x => (parseFloat(x.km) || 0) > 0), extras }
+            const fin = { liquidado: pagoChk.checked, conta: contaSel.value, categoria }
+            if (editando) {
+              await updateAcerto(acerto.id, dados, fin, lancAtual)
+              toastSuccess('Roteiro atualizado e Pagamento ajustado no Financeiro.')
+            } else {
+              await createAcerto(dados, fin)
+              toastSuccess('Roteiro salvo e lançado no Financeiro (Pagamentos).')
+            }
             close()
           } catch (err) {
             console.error(err)
-            toastError('Erro ao salvar o roteiro.')
-            salvar.disabled = false; salvar.textContent = 'Salvar roteiro'
+            toastError(editando ? 'Erro ao salvar as alterações.' : 'Erro ao salvar o roteiro.')
+            salvar.disabled = false; salvar.textContent = rotuloSalvar
           }
         })
 
@@ -340,7 +377,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
 
   const novoBtn = el('button', { type: 'button', class: 'btn btn-primary' }, '+ Novo roteiro')
   novoBtn.style.display = canCreate ? '' : 'none'
-  novoBtn.addEventListener('click', abrirNovoAcerto)
+  novoBtn.addEventListener('click', () => abrirFormAcerto())
 
   mount(container,
     toolbarCard(novoBtn, el('span', { class: 'text-muted', style: 'font-size:13px' },

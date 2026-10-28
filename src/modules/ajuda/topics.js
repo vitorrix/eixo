@@ -519,6 +519,7 @@ export const GROUPS = [
           },
         ],
         avisos: [
+          'Para corrigir um roteiro, abra-o na lista e clique em <strong>✏️ Editar</strong>: dá para mudar data, motoboy, trechos, km, extras, categoria, conta e marcar/desmarcar <strong>Já foi pago</strong>. Ao salvar, o Pagamento no Financeiro é atualizado junto (valor, vencimento, situação paga ou pendente).',
           'Excluir um roteiro (só o master) apaga também o Pagamento dele no Financeiro.',
           'O Pagamento fica vinculado ao fornecedor-motoboy escolhido, então aparece no extrato dele em Relatórios → Por Categoria/Contato.',
         ],
