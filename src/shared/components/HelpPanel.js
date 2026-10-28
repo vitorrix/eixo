@@ -41,6 +41,10 @@ const TIPS = {
     { ico: '📝', txt: 'Em Follow-up, use "Nota" a cada contato e sempre reagende o retorno.' },
     { ico: '🕓', txt: 'Clique num card para ver a linha do tempo completa do atendimento.' },
   ],
+  '/desejos': [
+    { ico: '🎁', txt: 'Anote o aparelho que o cliente quer. Idêntico = mesmo modelo, capacidade e cor; Semelhante = mesmo modelo com capacidade ou cor diferente.' },
+    { ico: '💬', txt: 'Abra o desejo e use "Avisar no WhatsApp" quando aparecer algo no estoque.' },
+  ],
   '/fornecedores': [
     { ico: '✅', txt: 'Fornecedor validado por videochamada ganha o selo na Busca.' },
     { ico: '⚙️', txt: 'A "Condição dos aparelhos" define se as ofertas dele entram como novas, semi-novas ou mistas.' },

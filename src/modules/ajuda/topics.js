@@ -342,6 +342,27 @@ export const GROUPS = [
     label: 'Relacionamento',
     topics: [
       {
+        id: 'desejos',
+        icon: '🎁',
+        label: 'Lista de Desejos',
+        intro: 'Cliente pediu "me avisa quando chegar um iPhone 17 Pro Max"? Anote aqui. O Eixo compara com o estoque e sinaliza quando tem o aparelho igual ou parecido.',
+        sections: [
+          {
+            titulo: 'Cadastrar e acompanhar',
+            passos: [
+              'Em <strong>Desejos</strong>, clique em <strong>+ Novo desejo</strong>: escolha o cliente (o telefone vem do cadastro), o aparelho, a capacidade e a cor. Capacidade e cor em branco significam "qualquer".',
+              'A coluna <strong>Estoque</strong> compara com as Compras em estoque: <strong>✅ Idêntico</strong> (mesmo modelo, capacidade e cor) ou <strong>🟡 Semelhante</strong> (mesmo modelo, mas capacidade ou cor diferente). Quem tem algo no estoque sobe pro topo e o número aparece no menu.',
+              'Clique no desejo para ver os aparelhos encontrados e usar <strong>Avisar no WhatsApp</strong> (mensagem pronta). Depois marque como <strong>Atendido</strong> ou <strong>Cancelar desejo</strong>.',
+            ],
+          },
+        ],
+        avisos: [
+          'Desejo com aparelho no estoque também aparece no <strong>Mural de Recados</strong> do Dashboard, com o ícone do WhatsApp para avisar o cliente. Ao ser atendido ou cancelado, o recado some.',
+          'A comparação usa só o estoque (Compras com status Estoque). Ofertas de fornecedores na Busca não entram.',
+          'Semelhante significa mesmo modelo; outro modelo (ex.: 17 Pro em vez de 17 Pro Max) não é sinalizado.',
+        ],
+      },
+      {
         id: 'leads',
         icon: '💬',
         label: 'Leads',
