@@ -74,3 +74,16 @@ export function rotuloUnidade(u) {
   const cap = u.capacidade ? (u.capacidade >= 1024 ? `${u.capacidade / 1024}TB` : `${u.capacidade}GB`) : ''
   return [u.produto.split('·')[0].trim(), u.cor && !normalizarTexto(u.produto).includes(normalizarTexto(u.cor)) ? u.cor : ''].filter(Boolean).join(' · ') + (cap && !/\d\s?(gb|tb)/i.test(u.produto) ? ` ${cap}` : '')
 }
+
+export const rotuloDesejo = d => [d.modelo, d.capacidade, d.cor].filter(Boolean).join(' ')
+
+// Mensagem pro cliente: idêntico -> "chegou"; só semelhante -> oferece como alternativa.
+export function mensagemAviso(d, r) {
+  const nome = (d.cliente || '').trim().split(/\s+/)[0]
+  const abre = `Olá${nome ? ', ' + nome : ''}! Aqui é da Baruk Technology.`
+  if (r.identicos.length) {
+    return `${abre} Chegou o ${rotuloDesejo(d)} que você pediu pra avisar. Quer que eu separe pra você?`
+  }
+  const u = r.semelhantes[0]
+  return `${abre} Você tinha pedido pra avisar do ${rotuloDesejo(d)}. Não chegou exatamente esse, mas tenho um ${rotuloUnidade(u)} disponível. Quer saber mais?`
+}

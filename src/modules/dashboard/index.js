@@ -1,5 +1,5 @@
 import { el, svgEl, mount } from '../../shared/utils/dom.js'
-import { getCurrentProfile } from '../../auth/session.js'
+import { getCurrentProfile, can } from '../../auth/session.js'
 import { maskPhone, brl, relativeTime, toNumero, shortDate } from '../../shared/utils/formatters.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { abrirDetalhesModal, tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
@@ -7,6 +7,8 @@ import { subscribeAniversariantes } from '../clientes/service.js'
 import { subscribeBotStatus } from '../configuracoes/service.js'
 import { subscribeFinanceiro } from '../financeiro/service.js'
 import { subscribeTarefas } from '../tarefas/service.js'
+import { subscribeDesejos, subscribeEstoque } from '../desejos/service.js'
+import { compararDesejo, rotuloDesejo, rotuloUnidade, mensagemAviso } from '../../shared/utils/desejos.js'
 import { subscribeVendasEntregues, marcarPosVendaFeito, reabrirPosVenda, registrarPosVendaWhatsapp } from '../vendas/service.js'
 import { openModal } from '../../shared/components/Modal.js'
 import { toastError } from '../../shared/components/Toast.js'
@@ -87,6 +89,7 @@ const RECADO_TIPOS = {
   pagamento:   { color: '#d93025', paths: ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M16 12l-4-4-4 4', 'M12 16V8'] },
   aviso:       { color: '#3b82f6', paths: ['M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 01-3.46 0'] },
   alerta:      { color: '#d93025', paths: ['M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z', 'M12 9v4', 'M12 17h.01'] },
+  desejo:      { color: '#ec4899', paths: ['M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z'] },
   posvenda:    { color: '#8b5cf6', paths: ['M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z', 'M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12'] },
 }
 
@@ -434,6 +437,28 @@ function recadosPosVenda(vendas, clientesPorId = {}) {
     })
 }
 
+// Desejos em aberto que já têm aparelho no estoque: idêntico primeiro, depois
+// semelhante. Clicar abre a Lista de Desejos; o ícone do WhatsApp avisa o cliente.
+function recadosDesejos(desejos, unidades) {
+  return desejos
+    .filter(d => (d.status || 'aberto') === 'aberto')
+    .map(d => ({ d, r: compararDesejo(d, unidades) }))
+    .filter(({ r }) => r.identicos.length || r.semelhantes.length)
+    .sort((a, b) => (b.r.identicos.length ? 1 : 0) - (a.r.identicos.length ? 1 : 0))
+    .map(({ d, r }) => {
+      const ident = r.identicos.length > 0
+      const u = (ident ? r.identicos : r.semelhantes)[0]
+      const link = whatsappLink(d.telefone, '55', mensagemAviso(d, r))
+      return {
+        tipo: 'desejo',
+        titulo: `Desejo: ${d.cliente || 'Cliente'}`,
+        detalhe: `${ident ? 'Chegou' : 'Parecido no estoque'}: ${rotuloUnidade(u)} — queria ${rotuloDesejo(d)}.`,
+        action: link ? el('a', { href: link, target: '_blank', rel: 'noopener', class: 'mural-item-action', title: 'Avisar no WhatsApp' }, whatsappIcon()) : null,
+        onClick: () => { window.location.hash = '/desejos' },
+      }
+    })
+}
+
 function concluidosBtn(onClick) {
   const btn = el('button', { type: 'button', class: 'btn-link mural-header-link' }, 'Pós-venda concluídos')
   btn.addEventListener('click', onClick)
@@ -627,6 +652,8 @@ export function render(container) {
   let aniversariantes = []
   let botStatus = null
   let vendasEntregues = []
+  let desejos = []
+  let estoque = []
   // Telefone do cliente pro botão de WhatsApp do pós-venda — buscado só dos
   // clientes com pós-venda pendente, uma vez por id (falha de permissão/rede
   // só deixa o recado sem o botão).
@@ -655,6 +682,7 @@ export function render(container) {
     if (alertaBot) recados.push(alertaBot)
 
     recados.push(...recadosFinanceiro(lancamentos))
+    recados.push(...recadosDesejos(desejos, estoque))
     recados.push(...recadosPosVenda(vendasEntregues, clientesPorId))
 
     aniversariantes.forEach(c => {
@@ -703,6 +731,18 @@ export function render(container) {
     err => console.error('Erro ao acompanhar vendas entregues:', err)
   )
 
+  // Desejos x estoque: só pra quem pode ver Clientes (de onde vêm os desejos);
+  // sem permissão de Compras o estoque vem vazio e nenhum aviso aparece.
+  const podeDesejos = can('clientes', 'view')
+  const unsubDesejos = podeDesejos ? subscribeDesejos(
+    lista => { desejos = lista; renderMural() },
+    err => console.error('Erro ao acompanhar desejos:', err)
+  ) : null
+  const unsubEstoque = podeDesejos ? subscribeEstoque(
+    lista => { estoque = lista; renderMural() },
+    err => console.error('Erro ao acompanhar o estoque:', err)
+  ) : null
+
   // O alerta é por tempo decorrido ("sem sinal há 15min"), então precisa ser
   // reavaliado mesmo sem evento novo do Firestore — senão a tela fica dizendo
   // que está tudo bem enquanto o sinal envelhece.
@@ -714,6 +754,8 @@ export function render(container) {
     unsubBotStatus?.()
     unsubTarefas?.()
     unsubVendasEntregues?.()
+    unsubDesejos?.()
+    unsubEstoque?.()
     clearInterval(revisaoStatus)
   }
 }

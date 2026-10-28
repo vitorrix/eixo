@@ -9,22 +9,10 @@ import { createAutocomplete } from '../../shared/components/Autocomplete.js'
 import { tornarLinhaClicavel } from '../../shared/components/DetalhesModal.js'
 import { whatsappLink, whatsappIcon } from '../../shared/utils/whatsapp.js'
 import { NOMES_MODELOS, coresOficiais, normalizarTexto } from '../../shared/utils/dicionarioCores.js'
-import { CAPACIDADES, compararDesejo, rotuloUnidade } from '../../shared/utils/desejos.js'
+import { CAPACIDADES, compararDesejo, rotuloUnidade, rotuloDesejo, mensagemAviso } from '../../shared/utils/desejos.js'
 import { createDesejo, updateDesejo, mudarStatusDesejo, registrarAviso, deleteDesejo } from './service.js'
 
 const dataBR = ts => ts?.toDate ? ts.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'
-const rotuloDesejo = d => [d.modelo, d.capacidade, d.cor].filter(Boolean).join(' ')
-
-// Mensagem pro cliente: idêntico -> "chegou"; só semelhante -> oferece como alternativa.
-function mensagemAviso(d, r) {
-  const nome = (d.cliente || '').trim().split(/\s+/)[0]
-  const abre = `Olá${nome ? ', ' + nome : ''}! Aqui é da Baruk Technology.`
-  if (r.identicos.length) {
-    return `${abre} Chegou o ${rotuloDesejo(d)} que você pediu pra avisar. Quer que eu separe pra você?`
-  }
-  const u = r.semelhantes[0]
-  return `${abre} Você tinha pedido pra avisar do ${rotuloDesejo(d)}. Não chegou exatamente esse, mas tenho um ${rotuloUnidade(u)} disponível. Quer saber mais?`
-}
 
 export function renderDesejos(container, desejos, unidades, estoqueIndisponivel) {
   const canCreate = can('clientes', 'create')
