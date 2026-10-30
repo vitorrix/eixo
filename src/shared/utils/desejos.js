@@ -80,7 +80,7 @@ export const rotuloDesejo = d => [d.modelo, d.capacidade, d.cor].filter(Boolean)
 // Mensagem pro cliente: idêntico -> "chegou"; só semelhante -> oferece como alternativa.
 export function mensagemAviso(d, r) {
   const nome = (d.cliente || '').trim().split(/\s+/)[0]
-  const abre = `Olá${nome ? ', ' + nome : ''}! Aqui é da Baruk Technology.`
+  const abre = `Olá${nome ? ', ' + nome : ''}!`
   if (r.identicos.length) {
     return `${abre} Chegou o ${rotuloDesejo(d)} que você pediu pra avisar. Quer que eu separe pra você?`
   }
