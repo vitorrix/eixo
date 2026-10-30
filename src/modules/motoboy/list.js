@@ -35,7 +35,7 @@ function resumoTexto(a) {
     if (t.item) L.push(`🛍️ ${t.item}`)
     L.push('✅ *Entrega*', t.destino || '—')
     if (t.cliente) L.push(`🙋 Cliente: ${t.cliente}`)
-    L.push(`📏 ${kmTxt(t.km)}${taxaDoTrecho(t, a.valorKm) !== a.valorKm ? ` × ${brl(taxaDoTrecho(t, a.valorKm))}` : ''}`, '')
+    L.push(`📏 ${kmTxt(t.km)} × ${brl(taxaDoTrecho(t, a.valorKm))}`, '')
   })
   if (a.extras?.length) {
     L.push('🧾 *Extras (pago pelo portador)*')
@@ -106,7 +106,7 @@ export function renderMotoboy(container, acertos, { fornecedores, operacoes }) {
         const trechosEl = a.trechos.map((t, i) => el('div', { class: 'detalhes-linha' },
           el('span', { class: 'detalhes-label' }, `Trecho ${i + 1}`),
           el('span', { class: 'detalhes-valor' },
-            [[t.origem, t.destino].filter(Boolean).join(' → ') || t.descricao, kmTxt(t.km) + (taxaDoTrecho(t, a.valorKm) !== a.valorKm ? ` × ${brl(taxaDoTrecho(t, a.valorKm))}` : '')].filter(Boolean).join(' — ')),
+            [[t.origem, t.destino].filter(Boolean).join(' → ') || t.descricao, `${kmTxt(t.km)} × ${brl(taxaDoTrecho(t, a.valorKm))}`].filter(Boolean).join(' — ')),
         ))
         const extrasEl = (a.extras || []).map(e => el('div', { class: 'detalhes-linha' },
           el('span', { class: 'detalhes-label' }, 'Extra'),
