@@ -833,6 +833,12 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
           }
         }
 
+        // Roteiro salvo antes do cliente ter endereço no cadastro ficava com o
+        // campo vazio pra sempre — se está vazio, busca de novo no cadastro.
+        if (!isFresh && !(entrega.endereco || '').trim()) {
+          entrega.endereco = enderecoDoCliente(pedido.clienteId, pedido.cliente)
+        }
+
         const fornecedorNomes = fornecedores.map(f => f.box ? `${f.name} - ${f.box}` : f.name)
 
         const retiradasWrap = el('div', { class: 'roteiro-paradas' })
