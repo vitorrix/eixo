@@ -703,6 +703,8 @@ export function renderPedidoList(container, pedidos, { clientes, produtosCatalog
       onEditar:   canEdit ? () => abrirFormularioPedido(p) : null,
       onImprimir: pago ? () => abrirReciboModal(p, { autoImprimir: true }) : null,
       onRecibo:   pago ? () => abrirReciboModal(p) : null,
+      // Roteiro já salvo continua acessível depois da entrega, pra rever/ajustar.
+      onRoteiro:  canEdit && p.logistica?.roteiro ? () => abrirRoteiroModal(p) : null,
     })
   }
 

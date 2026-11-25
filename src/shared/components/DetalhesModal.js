@@ -2,9 +2,9 @@ import { el, mount } from '../utils/dom.js'
 import { openModal } from './Modal.js'
 
 // Janela de consulta genérica pra Pedido/Compra/Venda — abre ao clicar na linha
-// da tabela, só de leitura. Editar/Imprimir/Recibo (quando presentes) fecham
+// da tabela, só de leitura. Editar/Imprimir/Recibo/Roteiro (quando presentes) fecham
 // essa janela e abrem a ação real (form de edição ou o recibo).
-export function abrirDetalhesModal({ title, campos, onEditar, onImprimir, onRecibo }) {
+export function abrirDetalhesModal({ title, campos, onEditar, onImprimir, onRecibo, onRoteiro }) {
   openModal({
     title,
     size: 'md',
@@ -28,6 +28,11 @@ export function abrirDetalhesModal({ title, campos, onEditar, onImprimir, onReci
       if (onRecibo) {
         const btn = el('button', { type: 'button', class: 'btn btn-outline' }, '📄 Recibo')
         btn.addEventListener('click', () => { close(); onRecibo() })
+        footerBtns.push(btn)
+      }
+      if (onRoteiro) {
+        const btn = el('button', { type: 'button', class: 'btn btn-outline' }, '🏍️ Roteiro')
+        btn.addEventListener('click', () => { close(); onRoteiro() })
         footerBtns.push(btn)
       }
       if (onEditar) {
