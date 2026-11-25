@@ -1011,6 +1011,58 @@ function buildTroca(prodData, empresa) {
   }
 }
 
+// Painel flutuante com a tabela completa de valores de troca (a mesma de
+// Configurações > Tabela de Troca) — pra consultar "quanto pago nesse aparelho"
+// e fazer a conta rápida sem precisar abrir o dropdown nem gerar orçamento.
+// Não é modal: fica aberto ao lado enquanto se marcam as avarias.
+function buildPainelTabela(tabelaTroca, onEscolher) {
+  const rotulo = i => (i.capacidade ? `${i.modelo} ${i.capacidade}` : i.modelo)
+
+  const buscaInp = el('input', { type: 'text', class: 'search-input', placeholder: 'Buscar modelo...' })
+  const lista = el('div', { class: 'orc-tabela-lista' })
+  const fecharBtn = el('button', { type: 'button', class: 'orc-tabela-fechar', title: 'Fechar' }, '×')
+  const painel = el('aside', { class: 'orc-tabela-painel' },
+    el('div', { class: 'orc-tabela-head' }, el('strong', {}, '📋 Tabela de valores'), fecharBtn),
+    buscaInp,
+    lista,
+  )
+  const abrirBtn = el('button', { type: 'button', class: 'orc-tabela-fab' }, '📋 Tabela de valores')
+
+  function render() {
+    const q = buscaInp.value.trim().toLowerCase()
+    const grupos = [...new Set(tabelaTroca.map(i => i.linha || 'Outros'))]
+    const blocos = []
+    for (const g of grupos) {
+      const itens = tabelaTroca.filter(i => (i.linha || 'Outros') === g && (!q || rotulo(i).toLowerCase().includes(q)))
+      if (!itens.length) continue
+      blocos.push(el('div', { class: 'orc-tabela-grupo' }, g))
+      for (const i of itens) {
+        const linha = el('button', { type: 'button', class: 'orc-tabela-item' },
+          el('span', {}, rotulo(i)),
+          el('strong', { class: i.valor > 0 ? '' : 'orc-tabela-sem' }, i.valor > 0 ? R(i.valor) : 'sem valor'),
+        )
+        linha.addEventListener('click', () => onEscolher(rotulo(i), i))
+        blocos.push(linha)
+      }
+    }
+    if (!blocos.length) {
+      blocos.push(el('p', { class: 'orc-tabela-vazia' }, tabelaTroca.length
+        ? 'Nada encontrado.'
+        : 'Nenhum valor cadastrado ainda — preencha em Configurações > Tabela de Troca.'))
+    }
+    lista.replaceChildren(...blocos)
+  }
+
+  function abrir() { painel.classList.add('aberto'); abrirBtn.style.display = 'none'; buscaInp.focus() }
+  function fechar() { painel.classList.remove('aberto'); abrirBtn.style.display = '' }
+  abrirBtn.addEventListener('click', abrir)
+  fecharBtn.addEventListener('click', fechar)
+  buscaInp.addEventListener('input', render)
+  render()
+
+  return { painel, abrirBtn }
+}
+
 // ── Upgrade section ────────────────────────────────────────────────
 // Avalia o aparelho usado isoladamente (mesma lógica de avarias da Troca),
 // sem ainda saber qual será o aparelho novo. O resultado final é levado
@@ -1041,6 +1093,12 @@ function buildUpgrade(tabelaTroca) {
       selNome = v
       if (match?.valor > 0) { selVal = match.valor; valInp.value = match.valor }
     },
+  })
+  // Escolha pelo painel da tabela: mesmo efeito de selecionar no autocomplete.
+  const { painel: painelTabela, abrirBtn: abrirTabelaBtn } = buildPainelTabela(tabelaTroca, (label, item) => {
+    ac.setValue(label)
+    selNome = label
+    if (item.valor > 0) { selVal = item.valor; valInp.value = item.valor }
   })
   ac.el.classList.add('orc-input')
   ac.el.style.width = '100%'
@@ -1136,7 +1194,7 @@ function buildUpgrade(tabelaTroca) {
     calcBtn,
   )
 
-  const sec = el('div', { class: 'orc-section' }, el('div', { class: 'orc-cols' }, colL, refs.col))
+  const sec = el('div', { class: 'orc-section' }, abrirTabelaBtn, painelTabela, el('div', { class: 'orc-cols' }, colL, refs.col))
   return { sec, cliInp, getResultado: () => ultimoResultado }
 }
 

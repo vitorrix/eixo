@@ -9,7 +9,7 @@ const TIPS = {
   '/orcamentos': [
     { ico: '💳', txt: 'Parcelamento: busque o produto — o preço do catálogo é preenchido. As parcelas vão de 1x a 18x.' },
     { ico: '🔄', txt: 'Troca: cliente e aparelho desejado são levados do Parcelamento. A análise interna abate o valor da troca.' },
-    { ico: '⬆️', txt: 'Upgrade: avalia o aparelho do cliente pela Tabela de Troca (Configurações) menos as avarias.' },
+    { ico: '⬆️', txt: 'Upgrade: avalia o aparelho do cliente pela Tabela de Troca (Configurações) menos as avarias. O botão 📋 Tabela de valores mostra a lista completa pra consulta rápida.' },
     { ico: '🕓', txt: 'Todo orçamento fica salvo na aba Histórico.' },
   ],
   '/pedidos': [

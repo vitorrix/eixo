@@ -3616,3 +3616,20 @@ input, select, textarea {
 .busca-chip { margin-left: 8px; font-size: 10px; font-weight: 800; letter-spacing: .4px; padding: 2px 7px; border-radius: 999px; vertical-align: middle; }
 .busca-chip-cpo { background: #dbeafe; color: #1d4ed8; }
 .busca-chip-sem { background: #fef3c7; color: #92400e; cursor: help; }
+
+/* ── Orçamentos › Upgrade: painel flutuante da tabela de valores ───────────── */
+.orc-tabela-fab { position: fixed; top: 104px; right: 24px; z-index: 800; display: flex; align-items: center; gap: 6px; padding: 9px 16px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-text); font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.orc-tabela-fab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.orc-tabela-painel { display: none; position: fixed; top: 104px; right: 24px; z-index: 800; width: 340px; max-height: calc(100dvh - 104px - 150px); flex-direction: column; gap: 10px; padding: 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,.18); }
+.orc-tabela-painel.aberto { display: flex; }
+.orc-tabela-painel .search-input { margin-bottom: 0; }
+.orc-tabela-head { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
+.orc-tabela-fechar { border: none; background: transparent; font-size: 22px; line-height: 1; color: var(--color-muted); cursor: pointer; padding: 0 4px; }
+.orc-tabela-fechar:hover { color: var(--color-text); }
+.orc-tabela-lista { overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.orc-tabela-grupo { position: sticky; top: 0; background: var(--color-surface); padding: 8px 4px 4px; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--color-muted); }
+.orc-tabela-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 8px; border: none; border-radius: 8px; background: transparent; font-family: var(--font); font-size: 13px; color: var(--color-text); text-align: left; cursor: pointer; }
+.orc-tabela-item:hover { background: var(--color-bg); }
+.orc-tabela-item strong { white-space: nowrap; color: var(--color-primary); }
+.orc-tabela-item strong.orc-tabela-sem { color: var(--color-muted); font-weight: 500; font-size: 12px; }
+.orc-tabela-vazia { padding: 12px 4px; font-size: 13px; color: var(--color-muted); }

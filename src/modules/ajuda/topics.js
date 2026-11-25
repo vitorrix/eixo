@@ -138,6 +138,7 @@ export const GROUPS = [
             passos: [
               'Avalia só o aparelho do cliente: busque o modelo (a lista vem da <strong>Tabela de Troca</strong> em Configurações) e o valor-base aparece.',
               'Marque as avarias na análise interna: o <strong>Valor Final do Aparelho</strong> é o valor-base menos os descontos.',
+              'Para consultar rápido quanto pagamos em cada aparelho, clique em <strong>📋 Tabela de valores</strong> (canto superior direito): abre a lista completa com busca, sem gerar orçamento. Clicar num aparelho da lista já o seleciona.',
               'O aparelho avaliado vira automaticamente o "Aparelho do Cliente" na aba Troca.',
             ],
           },
