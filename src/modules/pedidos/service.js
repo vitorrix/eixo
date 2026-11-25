@@ -37,15 +37,43 @@ export async function updatePedido(id, data) {
   })
 }
 
-// Editar um pedido em qualquer status: reseta o fluxo para negociando
+// Editar um pedido em qualquer status: reseta o fluxo para negociando.
+//
+// Aparelho que veio do estoque (comprado avulso ou de uma troca) e foi
+// vinculado a este pedido é devolvido ao estoque já na edição — senão ele
+// ficava preso ao pedido (status "concluído") e sumia da lista "Já em
+// estoque" na hora de confirmar de novo. Compra gerada pelo próprio pedido
+// (tem Pagamento vinculado a ele) não é mexida aqui: continua sendo refeita
+// na reconfirmação, como sempre.
 export async function editarPedido(id, data) {
-  return updateDoc(doc(db, COL, id), {
+  const batch = writeBatch(db)
+  await liberarEstoqueDoPedido(id, batch)
+  batch.update(doc(db, COL, id), {
     ...sanitize(data),
     formaPagamento: deleteField(),
     troca:          deleteField(),
     status:         'negociando',
     logistica:      deleteField(),
     atualizadoEm:   serverTimestamp(),
+  })
+  return batch.commit()
+}
+
+async function liberarEstoqueDoPedido(pedidoId, batch) {
+  const [comprasSnap, financeiroSnap] = await Promise.all([
+    getDocs(query(collection(db, 'compras'),    where('pedidoId', '==', pedidoId))),
+    getDocs(query(collection(db, 'financeiro'), where('origem.pedidoId', '==', pedidoId))),
+  ])
+  const geradasPeloPedido = new Set(financeiroSnap.docs
+    .map(d => d.data().origem)
+    .filter(o => o?.tipo === 'compra')
+    .map(o => o.id))
+  comprasSnap.docs.forEach(d => {
+    const c = d.data()
+    if (geradasPeloPedido.has(d.id)) return
+    if (!(c.estoqueAplicado || c.status === 'concluido')) return
+    batch.update(d.ref, { pedidoId: null, cliente: '', clienteId: null, status: 'estoque' })
+    if (c.produtoId) batch.update(doc(db, 'produtos', c.produtoId), { estoqueAtual: increment(1) })
   })
 }
 
