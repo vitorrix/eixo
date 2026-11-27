@@ -16,6 +16,26 @@ const logger = pino({ level: 'silent' })
 // exponencial e descarte explícito dos listeners do socket morto.
 let reconnecting = false
 let attempt = 0
+
+// Mensagens que o bot enviou, guardadas em memória pro Baileys poder reenviar.
+// Quando um aparelho de quem recebeu — ou os SEUS próprios aparelhos (celular,
+// WhatsApp Web), que também recebem uma cópia de tudo que o bot manda — não
+// consegue descriptografar uma mensagem, ele pede um reenvio ("retry"). O
+// Baileys só atende esse pedido se `getMessage` devolver o conteúdo original.
+// Sem isso o cliente recebia normal, mas no nosso WhatsApp a mensagem ficava
+// pra sempre em "Aguardando mensagem. Essa ação pode levar alguns instantes".
+// Fica fora do connect() pra sobreviver às reconexões (cada uma cria um socket
+// novo); limitado pra não crescer sem fim.
+const MAX_MENSAGENS_ENVIADAS = 1000
+const mensagensEnviadas = new Map()
+function guardarMensagemEnviada(sent) {
+  const id = sent?.key?.id
+  if (!id || !sent.message) return
+  mensagensEnviadas.set(id, sent.message)
+  if (mensagensEnviadas.size > MAX_MENSAGENS_ENVIADAS) {
+    mensagensEnviadas.delete(mensagensEnviadas.keys().next().value)
+  }
+}
 const BASE_DELAY_MS = 2_000
 const MAX_DELAY_MS = 5 * 60 * 1000
 
@@ -47,7 +67,15 @@ export async function connect(onMessages, onOpen, onClose) {
     // nas notificações do WhatsApp como "Google Chrome (Ubuntu)" — confuso, parece
     // dispositivo desconhecido/suspeito. Identifica como o bot que realmente é.
     browser: Browsers.appropriate('EIXO Bot'),
+    getMessage: async (key) => mensagensEnviadas.get(key.id),
   })
+
+  const enviarOriginal = sock.sendMessage.bind(sock)
+  sock.sendMessage = async (...args) => {
+    const sent = await enviarOriginal(...args)
+    guardarMensagemEnviada(sent)
+    return sent
+  }
 
   sock.ev.on('creds.update', saveCreds)
 
